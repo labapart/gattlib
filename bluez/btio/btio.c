@@ -37,6 +37,7 @@
 #include <glib.h>
 
 #include "btio.h"
+#include "gattlib_internal.h"
 
 #ifndef BT_FLUSHABLE
 #define BT_FLUSHABLE	8
@@ -70,6 +71,7 @@ struct connect {
 	BtIOConnect connect;
 	gpointer user_data;
 	GDestroyNotify destroy;
+	GSource* source;
 };
 
 struct accept {
@@ -94,8 +96,10 @@ static void server_remove(struct server *server)
 
 static void connect_remove(struct connect *conn)
 {
-	if (conn->destroy)
+	g_source_destroy(conn->source);
+	if (conn->destroy) {
 		conn->destroy(conn->user_data);
+	}
 	g_free(conn);
 }
 
@@ -238,7 +242,7 @@ static void connect_add(GIOChannel *io, BtIOConnect connect,
 	conn->destroy = destroy;
 
 	cond = G_IO_OUT | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
-	g_io_add_watch_full(io, G_PRIORITY_DEFAULT, cond, connect_cb, conn,
+	conn->source = gattlib_watch_connection_full(io, cond, connect_cb, conn,
 					(GDestroyNotify) connect_remove);
 }
 

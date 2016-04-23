@@ -22,10 +22,13 @@
 
 cmake_minimum_required(VERSION 2.6)
 
+project(gattlib)
+
 find_package(PkgConfig REQUIRED)
 
-include_directories(bluez/attrib bluez/btio bluez/src)
+include_directories(include bluez/attrib bluez/btio bluez/src)
 
+# Bluez specific files
 set(gattlib_SRCS bluez/attrib/att.c
                  bluez/attrib/gatt.c
                  bluez/attrib/gattrib.c
@@ -38,14 +41,48 @@ set(gattlib_SRCS bluez/attrib/att.c
 
 add_definitions(-DVERSION="4.101")
 
+# Gattlib files
+list(APPEND gattlib_SRCS src/gattlib_connect.c
+                         src/gattlib_discover.c
+                         src/gattlib_read_write.c)
+
 # Added Glib support
 pkg_search_module(GLIB REQUIRED glib-2.0)
 include_directories(${GLIB_INCLUDE_DIRS})
 list(APPEND gattlib_LIBS ${GLIB_LIBRARIES})
 
 # gattlib
-add_library(gattlib ${gattlib_SRCS})
+add_library(gattlib SHARED ${gattlib_SRCS})
 target_link_libraries(gattlib ${gattlib_LIBS})
 
 # Examples
 add_subdirectory(examples/gatttool)
+
+#
+# Packaging
+#
+set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (default: /usr).")
+set(CPACK_PACKAGE_VERSION 0.1)
+set(CPACK_PACKAGE_CONTACT "Olivier Martin <olivier@labapart.com>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to access GATT information from a Bluetooth device.")
+set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION}")
+
+#
+# Debian package
+#
+set(CPACK_GENERATOR "DEB;RPM;ZIP")
+
+# Detect platform architecture to use it for the Debian package
+execute_process(COMMAND dpkg --print-architecture OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE OUTPUT_QUIET)
+
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libglib2.0-0")
+
+#
+# List of file to install
+#
+configure_file(gattlib.pc.in gattlib.pc @ONLY)
+install(TARGETS gattlib LIBRARY DESTINATION lib)
+install(FILES include/gattlib.h DESTINATION include)
+install(FILES ${PROJECT_BINARY_DIR}/gattlib.pc DESTINATION lib/pkgconfig)
+
+include(CPack)

@@ -31,11 +31,12 @@ extern "C" {
 #define GATTRIB_ALL_EVENTS 0xFF
 #define GATTRIB_ALL_REQS 0xFE
 
+#include "gattlib.h"
+
 struct _GAttrib;
-typedef struct _GAttrib GAttrib;
 
 typedef void (*GAttribResultFunc) (guint8 status, const guint8 *pdu,
-					guint16 len, gpointer user_data);
+								guint16 len, gpointer user_data);
 typedef void (*GAttribDisconnectFunc)(gpointer user_data);
 typedef void (*GAttribDebugFunc)(const char *str, gpointer user_data);
 typedef void (*GAttribNotifyFunc)(const guint8 *pdu, guint16 len,

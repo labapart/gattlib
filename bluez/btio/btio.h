@@ -25,6 +25,7 @@
 #define BT_IO_H
 
 #include <glib.h>
+#include "gattlib.h"
 
 typedef enum {
 	BT_IO_ERROR_DISCONNECTED,
@@ -70,13 +71,6 @@ typedef enum {
 	BT_IO_OPT_FLUSHABLE,
 	BT_IO_OPT_PRIORITY,
 } BtIOOption;
-
-typedef enum {
-	BT_IO_SEC_SDP = 0,
-	BT_IO_SEC_LOW,
-	BT_IO_SEC_MEDIUM,
-	BT_IO_SEC_HIGH,
-} BtIOSecLevel;
 
 typedef enum {
 	BT_IO_MODE_BASIC = 0,

@@ -35,6 +35,7 @@
 #include "att.h"
 #include "btio.h"
 #include "gattrib.h"
+#include "gattlib_internal.h"
 
 #define GATT_TIMEOUT 30
 
@@ -43,9 +44,9 @@ struct _GAttrib {
 	gint refs;
 	uint8_t *buf;
 	int buflen;
-	guint read_watch;
-	guint write_watch;
-	guint timeout_watch;
+	GSource* read_watch;
+	GSource* write_watch;
+	GSource* timeout_watch;
 	GQueue *requests;
 	GQueue *responses;
 	GSList *events;
@@ -193,13 +194,13 @@ static void attrib_destroy(GAttrib *attrib)
 	attrib->events = NULL;
 
 	if (attrib->timeout_watch > 0)
-		g_source_remove(attrib->timeout_watch);
+		g_source_destroy(attrib->timeout_watch);
 
 	if (attrib->write_watch > 0)
-		g_source_remove(attrib->write_watch);
+		g_source_destroy(attrib->write_watch);
 
 	if (attrib->read_watch > 0)
-		g_source_remove(attrib->read_watch);
+		g_source_destroy(attrib->read_watch);
 
 	if (attrib->io)
 		g_io_channel_unref(attrib->io);
@@ -325,9 +326,9 @@ static gboolean can_write_data(GIOChannel *io, GIOCondition cond,
 
 	cmd->sent = TRUE;
 
-	if (attrib->timeout_watch == 0)
-		attrib->timeout_watch = g_timeout_add_seconds(GATT_TIMEOUT,
-						disconnect_timeout, attrib);
+	if (attrib->timeout_watch == 0) {
+		attrib->timeout_watch = gattlib_timeout_add_seconds(GATT_TIMEOUT, disconnect_timeout, attrib);
+	}
 
 	return FALSE;
 }
@@ -346,8 +347,10 @@ static void wake_up_sender(struct _GAttrib *attrib)
 		return;
 
 	attrib = g_attrib_ref(attrib);
-	attrib->write_watch = g_io_add_watch_full(attrib->io,
-				G_PRIORITY_DEFAULT, G_IO_OUT,
+	// Tell the main loop to write the command with `can_write_data` when
+	// write can be done without blocking (G_IO_OUT).
+	attrib->write_watch = gattlib_watch_connection_full(attrib->io,
+				G_IO_OUT,
 				can_write_data, attrib, destroy_sender);
 }
 
@@ -392,7 +395,7 @@ static gboolean received_data(GIOChannel *io, GIOCondition cond, gpointer data)
 		return TRUE;
 
 	if (attrib->timeout_watch > 0) {
-		g_source_remove(attrib->timeout_watch);
+		g_source_destroy(attrib->timeout_watch);
 		attrib->timeout_watch = 0;
 	}
 
@@ -468,9 +471,9 @@ GAttrib *g_attrib_new(GIOChannel *io)
 	attrib->requests = g_queue_new();
 	attrib->responses = g_queue_new();
 
-	attrib->read_watch = g_io_add_watch(attrib->io,
+	attrib->read_watch = gattlib_watch_connection_full(attrib->io,
 			G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL,
-			received_data, attrib);
+			received_data, attrib, NULL);
 
 	return g_attrib_ref(attrib);
 }
