@@ -30,6 +30,10 @@ set(gattlib_SRCS bluez/attrib/att.c
                  bluez/attrib/gatt.c
                  bluez/attrib/gattrib.c
                  bluez/btio/btio.c
+                 bluez/lib/bluetooth.c
+                 bluez/lib/hci.c
+                 bluez/lib/sdp.c
+                 bluez/lib/uuid.c
                  bluez/src/log.c)
 
 add_definitions(-DVERSION="4.101")
