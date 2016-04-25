@@ -66,7 +66,7 @@ add_subdirectory(examples/gatttool)
 set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (default: /usr).")
 set(CPACK_PACKAGE_VERSION 0.1)
 set(CPACK_PACKAGE_CONTACT "Olivier Martin <olivier@labapart.com>")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to access GATT information from a Bluetooth device.")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to access GATT information from Bluetooth Low Power devices")
 set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION}")
 
 #
