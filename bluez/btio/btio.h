@@ -84,9 +84,6 @@ typedef void (*BtIOConfirm)(GIOChannel *io, gpointer user_data);
 
 typedef void (*BtIOConnect)(GIOChannel *io, GError *err, gpointer user_data);
 
-gboolean bt_io_accept(GIOChannel *io, BtIOConnect connect, gpointer user_data,
-					GDestroyNotify destroy, GError **err);
-
 gboolean bt_io_set(GIOChannel *io, BtIOType type, GError **err,
 						BtIOOption opt1, ...);
 
@@ -96,10 +93,5 @@ gboolean bt_io_get(GIOChannel *io, BtIOType type, GError **err,
 GIOChannel *bt_io_connect(BtIOType type, BtIOConnect connect,
 				gpointer user_data, GDestroyNotify destroy,
 				GError **err, BtIOOption opt1, ...);
-
-GIOChannel *bt_io_listen(BtIOType type, BtIOConnect connect,
-				BtIOConfirm confirm, gpointer user_data,
-				GDestroyNotify destroy, GError **err,
-				BtIOOption opt1, ...);
 
 #endif

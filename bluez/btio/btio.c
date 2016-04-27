@@ -74,26 +74,6 @@ struct connect {
 	GSource* source;
 };
 
-struct accept {
-	BtIOConnect connect;
-	gpointer user_data;
-	GDestroyNotify destroy;
-};
-
-struct server {
-	BtIOConnect connect;
-	BtIOConfirm confirm;
-	gpointer user_data;
-	GDestroyNotify destroy;
-};
-
-static void server_remove(struct server *server)
-{
-	if (server->destroy)
-		server->destroy(server->user_data);
-	g_free(server);
-}
-
 static void connect_remove(struct connect *conn)
 {
 	g_source_destroy(conn->source);
@@ -101,13 +81,6 @@ static void connect_remove(struct connect *conn)
 		conn->destroy(conn->user_data);
 	}
 	g_free(conn);
-}
-
-static void accept_remove(struct accept *accept)
-{
-	if (accept->destroy)
-		accept->destroy(accept->user_data);
-	g_free(accept);
 }
 
 static gboolean check_nval(GIOChannel *io)
@@ -120,27 +93,6 @@ static gboolean check_nval(GIOChannel *io)
 
 	if (poll(&fds, 1, 0) > 0 && (fds.revents & POLLNVAL))
 		return TRUE;
-
-	return FALSE;
-}
-
-static gboolean accept_cb(GIOChannel *io, GIOCondition cond,
-							gpointer user_data)
-{
-	struct accept *accept = user_data;
-	GError *err = NULL;
-
-	/* If the user aborted this accept attempt */
-	if ((cond & G_IO_NVAL) || check_nval(io))
-		return FALSE;
-
-	if (cond & (G_IO_HUP | G_IO_ERR))
-		g_set_error(&err, BT_IO_ERROR, BT_IO_ERROR_DISCONNECTED,
-				"HUP or ERR on socket");
-
-	accept->connect(io, err, accept->user_data);
-
-	g_clear_error(&err);
 
 	return FALSE;
 }
@@ -180,56 +132,6 @@ static gboolean connect_cb(GIOChannel *io, GIOCondition cond,
 	return FALSE;
 }
 
-static gboolean server_cb(GIOChannel *io, GIOCondition cond,
-							gpointer user_data)
-{
-	struct server *server = user_data;
-	int srv_sock, cli_sock;
-	GIOChannel *cli_io;
-
-	/* If the user closed the server */
-	if ((cond & G_IO_NVAL) || check_nval(io))
-		return FALSE;
-
-	srv_sock = g_io_channel_unix_get_fd(io);
-
-	cli_sock = accept(srv_sock, NULL, NULL);
-	if (cli_sock < 0)
-		return TRUE;
-
-	cli_io = g_io_channel_unix_new(cli_sock);
-
-	g_io_channel_set_close_on_unref(cli_io, TRUE);
-	g_io_channel_set_flags(cli_io, G_IO_FLAG_NONBLOCK, NULL);
-
-	if (server->confirm)
-		server->confirm(cli_io, server->user_data);
-	else
-		server->connect(cli_io, NULL, server->user_data);
-
-	g_io_channel_unref(cli_io);
-
-	return TRUE;
-}
-
-static void server_add(GIOChannel *io, BtIOConnect connect,
-				BtIOConfirm confirm, gpointer user_data,
-				GDestroyNotify destroy)
-{
-	struct server *server;
-	GIOCondition cond;
-
-	server = g_new0(struct server, 1);
-	server->connect = connect;
-	server->confirm = confirm;
-	server->user_data = user_data;
-	server->destroy = destroy;
-
-	cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
-	g_io_add_watch_full(io, G_PRIORITY_DEFAULT, cond, server_cb, server,
-					(GDestroyNotify) server_remove);
-}
-
 static void connect_add(GIOChannel *io, BtIOConnect connect,
 				gpointer user_data, GDestroyNotify destroy)
 {
@@ -244,22 +146,6 @@ static void connect_add(GIOChannel *io, BtIOConnect connect,
 	cond = G_IO_OUT | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	conn->source = gattlib_watch_connection_full(io, cond, connect_cb, conn,
 					(GDestroyNotify) connect_remove);
-}
-
-static void accept_add(GIOChannel *io, BtIOConnect connect, gpointer user_data,
-							GDestroyNotify destroy)
-{
-	struct accept *accept;
-	GIOCondition cond;
-
-	accept = g_new0(struct accept, 1);
-	accept->connect = connect;
-	accept->user_data = user_data;
-	accept->destroy = destroy;
-
-	cond = G_IO_OUT | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
-	g_io_add_watch_full(io, G_PRIORITY_DEFAULT, cond, accept_cb, accept,
-					(GDestroyNotify) accept_remove);
 }
 
 static int l2cap_bind(int sock, const bdaddr_t *src, uint16_t psm,
@@ -1189,36 +1075,6 @@ static gboolean get_valist(GIOChannel *io, BtIOType type, GError **err,
 	return FALSE;
 }
 
-gboolean bt_io_accept(GIOChannel *io, BtIOConnect connect, gpointer user_data,
-					GDestroyNotify destroy, GError **err)
-{
-	int sock;
-	char c;
-	struct pollfd pfd;
-
-	sock = g_io_channel_unix_get_fd(io);
-
-	memset(&pfd, 0, sizeof(pfd));
-	pfd.fd = sock;
-	pfd.events = POLLOUT;
-
-	if (poll(&pfd, 1, 0) < 0) {
-		ERROR_FAILED(err, "poll", errno);
-		return FALSE;
-	}
-
-	if (!(pfd.revents & POLLOUT)) {
-		if (read(sock, &c, 1) < 0) {
-			ERROR_FAILED(err, "read", errno);
-			return FALSE;
-		}
-	}
-
-	accept_add(io, connect, user_data, destroy);
-
-	return TRUE;
-}
-
 gboolean bt_io_set(GIOChannel *io, BtIOType type, GError **err,
 							BtIOOption opt1, ...)
 {
@@ -1409,51 +1265,6 @@ GIOChannel *bt_io_connect(BtIOType type, BtIOConnect connect,
 	}
 
 	connect_add(io, connect, user_data, destroy);
-
-	return io;
-}
-
-GIOChannel *bt_io_listen(BtIOType type, BtIOConnect connect,
-				BtIOConfirm confirm, gpointer user_data,
-				GDestroyNotify destroy, GError **err,
-				BtIOOption opt1, ...)
-{
-	GIOChannel *io;
-	va_list args;
-	struct set_opts opts;
-	int sock;
-	gboolean ret;
-
-	if (type == BT_IO_L2RAW) {
-		g_set_error(err, BT_IO_ERROR, BT_IO_ERROR_INVALID_ARGS,
-				"Server L2CAP RAW sockets not supported");
-		return NULL;
-	}
-
-	va_start(args, opt1);
-	ret = parse_set_opts(&opts, err, opt1, args);
-	va_end(args);
-
-	if (ret == FALSE)
-		return NULL;
-
-	io = create_io(type, TRUE, &opts, err);
-	if (io == NULL)
-		return NULL;
-
-	sock = g_io_channel_unix_get_fd(io);
-
-	if (confirm)
-		setsockopt(sock, SOL_BLUETOOTH, BT_DEFER_SETUP, &opts.defer,
-							sizeof(opts.defer));
-
-	if (listen(sock, 5) < 0) {
-		ERROR_FAILED(err, "listen", errno);
-		g_io_channel_unref(io);
-		return NULL;
-	}
-
-	server_add(io, connect, confirm, user_data, destroy);
 
 	return io;
 }
