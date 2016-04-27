@@ -35,10 +35,10 @@
 #include "btio.h"
 #include "gattrib.h"
 #include "gatt.h"
+#include "gattlib.h"
 #include "gatttool.h"
 
-static GIOChannel *iochannel = NULL;
-static GAttrib *attrib = NULL;
+static gatt_connection_t* g_connection = NULL;
 static GMainLoop *event_loop;
 static GString *prompt;
 
@@ -99,55 +99,16 @@ static void set_state(enum state st)
 	rl_redisplay();
 }
 
-static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
+static void connect_cb(gatt_connection_t* connection)
 {
-	uint8_t opdu[ATT_MAX_MTU];
-	uint16_t handle, i, olen;
-
-	handle = att_get_u16(&pdu[1]);
-
-	printf("\n");
-	switch (pdu[0]) {
-	case ATT_OP_HANDLE_NOTIFY:
-		printf("Notification handle = 0x%04x value: ", handle);
-		break;
-	case ATT_OP_HANDLE_IND:
-		printf("Indication   handle = 0x%04x value: ", handle);
-		break;
-	default:
-		printf("Invalid opcode\n");
-		return;
-	}
-
-	for (i = 3; i < len; i++)
-		printf("%02x ", pdu[i]);
-
-	printf("\n");
-	rl_forced_update_display();
-
-	if (pdu[0] == ATT_OP_HANDLE_NOTIFY)
-		return;
-
-	olen = enc_confirmation(opdu, sizeof(opdu));
-
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu[0], opdu, olen, NULL, NULL, NULL);
-}
-
-static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
-{
-	if (err) {
-		printf("connect error: %s\n", err->message);
+	if (connection == NULL) {
 		set_state(STATE_DISCONNECTED);
-		return;
+	} else {
+		g_connection = connection;
+		gattlib_register_notification(notification_handler);
+		gattlib_register_indication(indication_handler);
+		set_state(STATE_CONNECTED);
 	}
-
-	attrib = g_attrib_new(iochannel);
-	g_attrib_register(attrib, ATT_OP_HANDLE_NOTIFY, events_handler,
-							attrib, NULL);
-	g_attrib_register(attrib, ATT_OP_HANDLE_IND, events_handler,
-							attrib, NULL);
-	set_state(STATE_CONNECTED);
 }
 
 static void disconnect_io()
@@ -155,13 +116,8 @@ static void disconnect_io()
 	if (conn_state == STATE_DISCONNECTED)
 		return;
 
-	g_attrib_unref(attrib);
-	attrib = NULL;
+	gattlib_disconnect(g_connection);
 	opt_mtu = 0;
-
-	g_io_channel_shutdown(iochannel, FALSE, NULL);
-	g_io_channel_unref(iochannel);
-	iochannel = NULL;
 
 	set_state(STATE_DISCONNECTED);
 }
@@ -354,6 +310,10 @@ static gboolean channel_watcher(GIOChannel *chan, GIOCondition cond,
 
 static void cmd_connect(int argcp, char **argvp)
 {
+	gatt_connection_t *connection;
+	BtIOSecLevel sec_level;
+	uint8_t dst_type;
+
 	if (conn_state != STATE_DISCONNECTED)
 		return;
 
@@ -374,12 +334,15 @@ static void cmd_connect(int argcp, char **argvp)
 	}
 
 	set_state(STATE_CONNECTING);
-	iochannel = gatt_connect(opt_src, opt_dst, opt_dst_type, opt_sec_level,
-						opt_psm, opt_mtu, connect_cb);
-	if (iochannel == NULL)
+
+	dst_type = get_dest_type_from_str(opt_dst_type);
+	sec_level = get_sec_level_from_str(opt_sec_level);
+	connection = gattlib_connect_async(opt_src, opt_dst, dst_type, sec_level,
+					opt_psm, opt_mtu, connect_cb);
+	if (connection == NULL)
 		set_state(STATE_DISCONNECTED);
 	else
-		g_io_add_watch(iochannel, G_IO_HUP, channel_watcher, NULL);
+		g_io_add_watch(g_connection->io, G_IO_HUP, channel_watcher, NULL);
 }
 
 static void cmd_disconnect(int argcp, char **argvp)
@@ -397,7 +360,7 @@ static void cmd_primary(int argcp, char **argvp)
 	}
 
 	if (argcp == 1) {
-		gatt_discover_primary(attrib, NULL, primary_all_cb, NULL);
+		gatt_discover_primary(g_connection->attrib, NULL, primary_all_cb, NULL);
 		return;
 	}
 
@@ -406,7 +369,7 @@ static void cmd_primary(int argcp, char **argvp)
 		return;
 	}
 
-	gatt_discover_primary(attrib, &uuid, primary_by_uuid_cb, NULL);
+	gatt_discover_primary(g_connection->attrib, &uuid, primary_by_uuid_cb, NULL);
 }
 
 static int strtohandle(const char *src)
@@ -456,11 +419,11 @@ static void cmd_char(int argcp, char **argvp)
 			return;
 		}
 
-		gatt_discover_char(attrib, start, end, &uuid, char_cb, NULL);
+		gatt_discover_char(g_connection->attrib, start, end, &uuid, char_cb, NULL);
 		return;
 	}
 
-	gatt_discover_char(attrib, start, end, NULL, char_cb, NULL);
+	gatt_discover_char(g_connection->attrib, start, end, NULL, char_cb, NULL);
 }
 
 static void cmd_char_desc(int argcp, char **argvp)
@@ -489,7 +452,7 @@ static void cmd_char_desc(int argcp, char **argvp)
 		}
 	}
 
-	gatt_find_info(attrib, start, end, char_desc_cb, NULL);
+	gatt_find_info(g_connection->attrib, start, end, char_desc_cb, NULL);
 }
 
 static void cmd_read_hnd(int argcp, char **argvp)
@@ -524,7 +487,7 @@ static void cmd_read_hnd(int argcp, char **argvp)
 		}
 	}
 
-	gatt_read_char(attrib, handle, offset, char_read_cb, attrib);
+	gatt_read_char(g_connection->attrib, handle, offset, char_read_cb, g_connection->attrib);
 }
 
 static void cmd_read_uuid(int argcp, char **argvp)
@@ -571,7 +534,7 @@ static void cmd_read_uuid(int argcp, char **argvp)
 	char_data->end = end;
 	char_data->uuid = uuid;
 
-	gatt_read_char_by_uuid(attrib, start, end, &char_data->uuid,
+	gatt_read_char_by_uuid(g_connection->attrib, start, end, &char_data->uuid,
 					char_read_by_uuid_cb, char_data);
 }
 
@@ -621,10 +584,10 @@ static void cmd_char_write(int argcp, char **argvp)
 	}
 
 	if (g_strcmp0("char-write-req", argvp[0]) == 0)
-		gatt_write_char(attrib, handle, value, plen,
+		gatt_write_char(g_connection->attrib, handle, value, plen,
 					char_write_req_cb, NULL);
 	else
-		gatt_write_char(attrib, handle, value, plen, NULL, NULL);
+		gatt_write_char(g_connection->attrib, handle, value, plen, NULL, NULL);
 
 	g_free(value);
 }
@@ -661,7 +624,7 @@ static void cmd_sec_level(int argcp, char **argvp)
 		return;
 	}
 
-	bt_io_set(iochannel, BT_IO_L2CAP, &gerr,
+	bt_io_set(g_connection->io, BT_IO_L2CAP, &gerr,
 			BT_IO_OPT_SEC_LEVEL, sec_level,
 			BT_IO_OPT_INVALID);
 
@@ -689,7 +652,7 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
 
 	mtu = MIN(mtu, opt_mtu);
 	/* Set new value for MTU in client */
-	if (g_attrib_set_mtu(attrib, mtu))
+	if (g_attrib_set_mtu(g_connection->attrib, mtu))
 		printf("MTU was exchanged successfully: %d\n", mtu);
 	else
 		printf("Error exchanging MTU\n");
@@ -727,7 +690,7 @@ static void cmd_mtu(int argcp, char **argvp)
 		return;
 	}
 
-	gatt_exchange_mtu(attrib, opt_mtu, exchange_mtu_cb, NULL);
+	gatt_exchange_mtu(g_connection->attrib, opt_mtu, exchange_mtu_cb, NULL);
 }
 
 static struct {

@@ -22,9 +22,9 @@
 
 cmake_minimum_required(VERSION 2.6)
 
-set(gatttool_LIBS gattlib readline)
+set(read_write_LIBS gattlib)
 
-set(gatttool_SRCS gatttool.c interactive.c utils.c)
+set(read_write_SRCS read_write.c)
 
-add_executable(gatttool ${gatttool_SRCS})
-target_link_libraries(gatttool ${gatttool_LIBS})
+add_executable(read_write ${read_write_SRCS})
+target_link_libraries(read_write ${read_write_LIBS})

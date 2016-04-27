@@ -40,6 +40,7 @@
 #include "btio.h"
 #include "gattrib.h"
 #include "gatt.h"
+#include "gattlib.h"
 #include "gatttool.h"
 
 static gchar *opt_src = NULL;
@@ -72,68 +73,43 @@ struct characteristic_data {
 	uint16_t end;
 };
 
-static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	GAttrib *attrib = user_data;
-	uint8_t opdu[ATT_MAX_MTU];
-	uint16_t handle, i, olen = 0;
+void notification_handler(uint16_t handle, const uint8_t* data, size_t data_length) {
+	int i;
 
-	handle = att_get_u16(&pdu[1]);
+	g_print("Notification handle = 0x%04x value: ", handle);
 
-	switch (pdu[0]) {
-	case ATT_OP_HANDLE_NOTIFY:
-		g_print("Notification handle = 0x%04x value: ", handle);
-		break;
-	case ATT_OP_HANDLE_IND:
-		g_print("Indication   handle = 0x%04x value: ", handle);
-		break;
-	default:
-		g_print("Invalid opcode\n");
-		return;
-	}
-
-	for (i = 3; i < len; i++)
-		g_print("%02x ", pdu[i]);
+	for (i = 0; i < data_length; i++)
+		g_print("%02x ", data[i]);
 
 	g_print("\n");
-
-	if (pdu[0] == ATT_OP_HANDLE_NOTIFY)
-		return;
-
-	olen = enc_confirmation(opdu, sizeof(opdu));
-
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu[0], opdu, olen, NULL, NULL, NULL);
+	rl_forced_update_display();
 }
 
-static gboolean listen_start(gpointer user_data)
-{
-	GAttrib *attrib = user_data;
+void indication_handler(uint16_t handle, const uint8_t* data, size_t data_length) {
+	int i;
 
-	g_attrib_register(attrib, ATT_OP_HANDLE_NOTIFY, events_handler,
-							attrib, NULL);
-	g_attrib_register(attrib, ATT_OP_HANDLE_IND, events_handler,
-							attrib, NULL);
+	g_print("Indication   handle = 0x%04x value: ", handle);
 
-	return FALSE;
+	for (i = 0; i < data_length; i++)
+		g_print("%02x ", data[i]);
+
+	g_print("\n");
+	rl_forced_update_display();
 }
 
-static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
+static void connect_cb(gatt_connection_t* connection)
 {
-	GAttrib *attrib;
-
-	if (err) {
-		g_printerr("%s\n", err->message);
+	if (connection == NULL) {
 		got_error = TRUE;
 		g_main_loop_quit(event_loop);
+	} else {
+		if (opt_listen) {
+			gattlib_register_notification(notification_handler);
+			gattlib_register_indication(indication_handler);
+		}
+
+		operation(connection->attrib);
 	}
-
-	attrib = g_attrib_new(io);
-
-	if (opt_listen)
-		g_idle_add(listen_start, attrib);
-
-	operation(attrib);
 }
 
 static void primary_all_cb(GSList *services, guint8 status, gpointer user_data)
@@ -540,7 +516,9 @@ int main(int argc, char *argv[])
 	GOptionContext *context;
 	GOptionGroup *gatt_group, *params_group, *char_rw_group;
 	GError *gerr = NULL;
-	GIOChannel *chan;
+	gatt_connection_t *connection;
+	BtIOSecLevel sec_level;
+	uint8_t dest_type;
 
 	opt_dst_type = g_strdup("public");
 	opt_sec_level = g_strdup("low");
@@ -601,9 +579,11 @@ int main(int argc, char *argv[])
 		goto done;
 	}
 
-	chan = gatt_connect(opt_src, opt_dst, opt_dst_type, opt_sec_level,
+	dest_type = get_dest_type_from_str(opt_dst_type);
+	sec_level = get_sec_level_from_str(opt_sec_level);
+	connection = gattlib_connect_async(opt_src, opt_dst, dest_type, sec_level,
 					opt_psm, opt_mtu, connect_cb);
-	if (chan == NULL) {
+	if (connection == NULL) {
 		got_error = TRUE;
 		goto done;
 	}

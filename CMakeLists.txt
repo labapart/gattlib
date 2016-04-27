@@ -56,6 +56,8 @@ add_library(gattlib SHARED ${gattlib_SRCS})
 target_link_libraries(gattlib ${gattlib_LIBS})
 
 # Examples
+add_subdirectory(examples/discover)
+add_subdirectory(examples/read_write)
 add_subdirectory(examples/gatttool)
 
 #
