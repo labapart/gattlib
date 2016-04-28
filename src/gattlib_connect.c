@@ -37,9 +37,6 @@
 
 struct gattlib_thread_t g_gattlib_thread = { 0 };
 
-static gattlib_event_handler_t g_notification_handler;
-static gattlib_event_handler_t g_indication_handler;
-
 typedef struct {
 	gatt_connection_t* conn;
 	gatt_connect_cb_t  connect_cb;
@@ -47,9 +44,8 @@ typedef struct {
 	GError*            error;
 } io_connect_arg_t;
 
-static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	GAttrib *attrib = user_data;
+static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data) {
+	gatt_connection_t *conn = user_data;
 	uint8_t opdu[ATT_MAX_MTU];
 	uint16_t handle, i, olen = 0;
 
@@ -57,13 +53,13 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 
 	switch (pdu[0]) {
 	case ATT_OP_HANDLE_NOTIFY:
-		if (g_notification_handler) {
-			g_notification_handler(handle, &pdu[3], len);
+		if (conn->notification_handler) {
+			conn->notification_handler(handle, &pdu[3], len, conn->notification_user_data);
 		}
 		break;
 	case ATT_OP_HANDLE_IND:
-		if (g_indication_handler) {
-			g_indication_handler(handle, &pdu[3], len);
+		if (conn->indication_handler) {
+			conn->indication_handler(handle, &pdu[3], len, conn->indication_user_data);
 		}
 		break;
 	default:
@@ -77,14 +73,14 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 	olen = enc_confirmation(opdu, sizeof(opdu));
 
 	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu[0], opdu, olen, NULL, NULL, NULL);
+		g_attrib_send(conn->attrib, 0, opdu[0], opdu, olen, NULL, NULL, NULL);
 }
 
 static gboolean io_listen_cb(gpointer user_data) {
 	gatt_connection_t *conn = user_data;
 
-	g_attrib_register(conn->attrib, ATT_OP_HANDLE_NOTIFY, events_handler, conn->attrib, NULL);
-	g_attrib_register(conn->attrib, ATT_OP_HANDLE_IND, events_handler, conn->attrib, NULL);
+	g_attrib_register(conn->attrib, ATT_OP_HANDLE_NOTIFY, events_handler, conn, NULL);
+	g_attrib_register(conn->attrib, ATT_OP_HANDLE_IND, events_handler, conn, NULL);
 
 	return FALSE;
 }
@@ -326,12 +322,14 @@ GSource* gattlib_timeout_add_seconds(guint interval, GSourceFunc function, gpoin
 	return source;
 }
 
-void gattlib_register_notification(gattlib_event_handler_t notification_handler) {
-	g_notification_handler = notification_handler;
+void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
+	connection->notification_handler = notification_handler;
+	connection->notification_user_data = user_data;
 }
 
-void gattlib_register_indication(gattlib_event_handler_t indication_handler) {
-	g_indication_handler = indication_handler;
+void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
+	connection->indication_handler = indication_handler;
+	connection->indication_user_data = user_data;
 }
 
 int gattlib_uuid_to_string(const bt_uuid_t *uuid, char *str, size_t n) {

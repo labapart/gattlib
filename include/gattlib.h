@@ -40,10 +40,18 @@ typedef enum {
 
 typedef struct _GAttrib GAttrib;
 
+typedef void (*gattlib_event_handler_t)(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data);
+
 typedef struct _gatt_connection_t {
 	GIOChannel *io;
 
 	GAttrib *attrib;
+
+	gattlib_event_handler_t notification_handler;
+	void* notification_user_data;
+
+	gattlib_event_handler_t indication_handler;
+	void* indication_user_data;
 } gatt_connection_t;
 
 typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection);
@@ -87,9 +95,8 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, bt_uuid_t* uu
 
 int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, void* buffer, size_t buffer_len);
 
-typedef void (*gattlib_event_handler_t)(uint16_t handle, const uint8_t* data, size_t data_length);
-void gattlib_register_notification(gattlib_event_handler_t notification_handler);
-void gattlib_register_indication(gattlib_event_handler_t indication_handler);
+void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data);
+void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data);
 
 int gattlib_uuid_to_string(const bt_uuid_t *uuid, char *str, size_t n);
 int gattlib_string_to_uuid(bt_uuid_t *uuid, const char *str);

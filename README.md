@@ -54,7 +54,7 @@ Examples
 * Notification is also supported. Example:
 
 ```
-void notification_cb(uint16_t handle, const uint8_t* data, size_t data_length) {
+void notification_cb(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data) {
 	printf("Notification on handle 0x%02x : ", handle);
 }
 
@@ -65,7 +65,7 @@ main() {
 	// Enable Status Notification
 	gattlib_write_char_by_handle(connection, status_handle + 1, &enable_notification, sizeof(enable_notification));
 	// Register notification handler
-	gattlib_register_notification(notification_cb);
+	gattlib_register_notification(connection, notification_cb, NULL);
 }
 ```
 
