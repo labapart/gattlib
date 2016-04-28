@@ -6,6 +6,13 @@ It has been introduced to allow to build applications hosted on platform with a 
 
 Potentially, D-BUS API could also be added to GattLib to provide an abstraction layer between different versions of BlueZ.
 
+Latest GattLib Release packages
+===============================
+
+- ZIP: <https://github.com/labapart/gattlib/releases/download/v0.1/gattlib-0.1.zip>
+- DEB: <https://github.com/labapart/gattlib/releases/download/v0.1/gattlib-0.1.deb>
+- RPM: <https://github.com/labapart/gattlib/releases/download/v0.1/gattlib-0.1.rpm>
+
 Build GattLib
 =============
 
