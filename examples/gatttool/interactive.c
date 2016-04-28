@@ -105,8 +105,8 @@ static void connect_cb(gatt_connection_t* connection)
 		set_state(STATE_DISCONNECTED);
 	} else {
 		g_connection = connection;
-		gattlib_register_notification(notification_handler);
-		gattlib_register_indication(indication_handler);
+		gattlib_register_notification(connection, notification_handler, NULL);
+		gattlib_register_indication(connection, indication_handler, NULL);
 		set_state(STATE_CONNECTED);
 	}
 }

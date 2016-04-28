@@ -73,7 +73,7 @@ struct characteristic_data {
 	uint16_t end;
 };
 
-void notification_handler(uint16_t handle, const uint8_t* data, size_t data_length) {
+void notification_handler(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data) {
 	int i;
 
 	g_print("Notification handle = 0x%04x value: ", handle);
@@ -85,7 +85,7 @@ void notification_handler(uint16_t handle, const uint8_t* data, size_t data_leng
 	rl_forced_update_display();
 }
 
-void indication_handler(uint16_t handle, const uint8_t* data, size_t data_length) {
+void indication_handler(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data) {
 	int i;
 
 	g_print("Indication   handle = 0x%04x value: ", handle);
@@ -104,8 +104,8 @@ static void connect_cb(gatt_connection_t* connection)
 		g_main_loop_quit(event_loop);
 	} else {
 		if (opt_listen) {
-			gattlib_register_notification(notification_handler);
-			gattlib_register_indication(indication_handler);
+			gattlib_register_notification(connection, notification_handler, NULL);
+			gattlib_register_indication(connection, indication_handler, NULL);
 		}
 
 		operation(connection->attrib);
