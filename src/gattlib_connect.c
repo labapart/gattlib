@@ -193,7 +193,7 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 		return NULL;
 	}
 
-	gatt_connection_t* conn = malloc(sizeof(gatt_connection_t));
+	gatt_connection_t* conn = calloc(sizeof(gatt_connection_t), 1);
 	if (conn == NULL) {
 		return NULL;
 	}
