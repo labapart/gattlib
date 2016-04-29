@@ -31,6 +31,16 @@
 #include <bluetooth/sdp.h>
 #include <bluetooth/uuid.h>
 
+#ifndef BDADDR_BREDR
+  /* GattLib note: BD Address have only been introduced into Bluez v4.100.   */
+  /*               Prior to this version, only BDADDR_BREDR can be supported */
+
+  /* BD Address type */
+  #define BDADDR_BREDR           0x00
+  #define BDADDR_LE_PUBLIC       0x01
+  #define BDADDR_LE_RANDOM       0x02
+#endif
+
 typedef enum {
 	BT_IO_SEC_SDP = 0,
 	BT_IO_SEC_LOW,

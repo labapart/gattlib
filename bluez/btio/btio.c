@@ -185,7 +185,14 @@ static int l2cap_connect(int sock, const bdaddr_t *dst, uint8_t dst_type,
 	else
 		addr.l2_psm = htobs(psm);
 
+#if BLUEZ_VERSION < BLUEZ_VERSIONS(4, 100)
+	if (dst_type != BDADDR_BREDR) {
+		fprintf(stderr, "Require Bluez >= 4.100 to support BLE connections.\n");
+		return -1;
+	}
+#else
 	addr.l2_bdaddr_type = dst_type;
+#endif
 
 	err = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
 	if (err < 0 && !(errno == EAGAIN || errno == EINPROGRESS))
