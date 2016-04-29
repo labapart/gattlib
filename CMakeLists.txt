@@ -51,6 +51,17 @@ pkg_search_module(GLIB REQUIRED glib-2.0)
 include_directories(${GLIB_INCLUDE_DIRS})
 list(APPEND gattlib_LIBS ${GLIB_LIBRARIES})
 
+# Added Bluetooth support
+pkg_search_module(BLUEZ REQUIRED bluez)
+include_directories(${BLUEZ_INCLUDE_DIRS})
+link_directories(${BLUEZ_LIBRARY_DIRS})
+list(APPEND gattlib_LIBS ${BLUEZ_LIBRARIES})
+# Extract Bluez version
+string(REPLACE "." ";" BLUEZ_VERSIONS "${BLUEZ_VERSION}")
+list(GET BLUEZ_VERSIONS 0 BLUEZ_VERSION_MAJOR)
+list(GET BLUEZ_VERSIONS 1 BLUEZ_VERSION_MINOR)
+add_definitions(-DBLUEZ_VERSION_MAJOR=${BLUEZ_VERSION_MAJOR} -DBLUEZ_VERSION_MINOR=${BLUEZ_VERSION_MINOR})
+
 # gattlib
 add_library(gattlib SHARED ${gattlib_SRCS})
 target_link_libraries(gattlib ${gattlib_LIBS})
