@@ -69,6 +69,12 @@ main() {
 }
 ```
 
+Known limitations
+-----------------
+
+* **gattlib and BLE**: gattlib requires at least Bluez v4.100 to work with Bluetooth Low Energy (BLE) devices. Bluez does not allow to connect to BLE device prior to this version. But gattlib can still work with Bluetooth Classic (BR/EDR) prior to Bluez v4.100.  
+Debian 7 "Wheezy" (supported until 31st of May 2018) relies on Bluez v4.99 while Debian 8 "Jessie" (supported until April/May 2020) uses Bluez v5.23.
+
 TODO List
 =========
 
