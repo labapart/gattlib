@@ -1,5 +1,4 @@
 #
-#
 #  GattLib - GATT Library
 #
 #  Copyright (C) 2016  Olivier Martin <olivier@labapart.org>
@@ -21,6 +20,10 @@
 #
 
 cmake_minimum_required(VERSION 2.6)
+
+# Add Cross-Compilation support when the environment variables
+# CROSS_COMPILE and SYSROOT are defined
+include(CrossCompilation.cmake)
 
 project(gattlib)
 
@@ -78,7 +81,7 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (defaul
 set(CPACK_PACKAGE_VERSION 0.1)
 set(CPACK_PACKAGE_CONTACT "Olivier Martin <olivier@labapart.com>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to access GATT information from Bluetooth Low Energy (BLE) devices")
-set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION}")
+set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_PACKAGE_ARCHITECTURE}")
 
 #
 # Debian package

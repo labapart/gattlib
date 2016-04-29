@@ -23,6 +23,24 @@ cmake ..
 make
 ```
 
+### Cross-Compilation
+
+To cross-compile GattLib, you must provide the following environment variables:
+
+- `CROSS_COMPILE`: prefix of your cross-compile toolchain
+- `SYSROOT`: an existing system root that contains the libraries and include files required by your application
+
+Example:
+
+```
+cd <gattlib-src-root>
+mkdir build && cd build
+export CROSS_COMPILE=~/Toolchains/gcc-linaro-4.9-2015.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+export SYSROOT=~/Distributions/debian-wheezy
+cmake ..
+make
+```
+
 Package GattLib
 ===============
 
