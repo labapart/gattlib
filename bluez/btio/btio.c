@@ -65,6 +65,7 @@ struct set_opts {
 	uint8_t mode;
 	int flushable;
 	uint32_t priority;
+	int timeout;
 };
 
 struct connect {
@@ -172,10 +173,26 @@ static int l2cap_bind(int sock, const bdaddr_t *src, uint16_t psm,
 }
 
 static int l2cap_connect(int sock, const bdaddr_t *dst, uint8_t dst_type,
-						uint16_t psm, uint16_t cid)
+						uint16_t psm, uint16_t cid, uint16_t timeout)
 {
 	int err;
 	struct sockaddr_l2 addr;
+
+	if (timeout > 0) {
+		struct timeval timeout;
+		timeout.tv_sec = 2;
+		timeout.tv_usec = 0;
+
+		if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+			fprintf(stderr, "l2cap_connect: Failed to setsockopt for receive timeout.\n");
+			return -1;
+		}
+
+		if (setsockopt (sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+			fprintf(stderr, "l2cap_connect: Failed to setsockopt for sending timeout.\n");
+			return -1;
+		}
+	}
 
 	memset(&addr, 0, sizeof(addr));
 	addr.l2_family = AF_BLUETOOTH;
@@ -599,6 +616,7 @@ static gboolean parse_set_opts(struct set_opts *opts, GError **err,
 	opts->flushable = -1;
 	opts->priority = 0;
 	opts->dst_type = BDADDR_BREDR;
+	opts->timeout = 0;
 
 	while (opt != BT_IO_OPT_INVALID) {
 		switch (opt) {
@@ -659,6 +677,9 @@ static gboolean parse_set_opts(struct set_opts *opts, GError **err,
 			break;
 		case BT_IO_OPT_PRIORITY:
 			opts->priority = va_arg(args, int);
+			break;
+		case BT_IO_OPT_TIMEOUT:
+			opts->timeout = va_arg(args, int);
 			break;
 		default:
 			g_set_error(err, BT_IO_ERROR, BT_IO_ERROR_INVALID_ARGS,
@@ -1245,12 +1266,12 @@ GIOChannel *bt_io_connect(BtIOType type, BtIOConnect connect,
 	switch (type) {
 	case BT_IO_L2RAW:
 		err = l2cap_connect(sock, &opts.dst, opts.dst_type, 0,
-								opts.cid);
+								opts.cid, opts.timeout);
 		break;
 	case BT_IO_L2CAP:
 	case BT_IO_L2ERTM:
 		err = l2cap_connect(sock, &opts.dst, opts.dst_type,
-							opts.psm, opts.cid);
+							opts.psm, opts.cid, opts.timeout);
 		break;
 	case BT_IO_RFCOMM:
 		err = rfcomm_connect(sock, &opts.dst, opts.channel);
