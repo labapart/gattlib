@@ -56,14 +56,18 @@ To change the install directory to `/usr/local` run: `cpack -DCPACK_PACKAGE_INST
 Examples
 ========
 
-* Demonstrate discovering of primary services and characteristics:
+* [Demonstrate discovering of primary services and characteristics](/examples/discover/discover.c):
 
         ./examples/discover/discover 78:A5:04:22:45:4F
 
-* Demonstrate characteristic read/write:
+* [Demonstrate characteristic read/write](/examples/read_write/read_write.c):
 
         ./examples/read_write/read_write 78:A5:04:22:45:4F read 00002a29-0000-1000-8000-00805f9b34fb
         ./examples/read_write/read_write 78:A5:04:22:45:4F write 00002a6b-0000-1000-8000-00805f9b34fb 0x1234
+
+* [Demonstrate BLE scanning and connection](/examples/ble_scan/ble_scan.c):
+
+        sudo ./examples/ble_scan/ble_scan
 
 **Note:** `examples/gatttool` has been partially ported to gattlib. There are two reasons the laziness
  (some of the GATT functions could be replaced by their gattlib equivalent) and the completeness (there
