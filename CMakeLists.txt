@@ -42,8 +42,6 @@ set(gattlib_SRCS bluez/attrib/att.c
                  bluez/lib/uuid.c
                  bluez/src/log.c)
 
-add_definitions(-DVERSION="4.101")
-
 # Gattlib files
 list(APPEND gattlib_SRCS src/gattlib_connect.c
                          src/gattlib_discover.c
