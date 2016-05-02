@@ -1,6 +1,6 @@
 GattLib is a library used to access Generic Attribute Profile (GATT) protocol of BLE (Bluetooth Low Energy) devices.
 
-It is based on Bluez 4.101 GATT code (prior to Bluez D-BUS API).
+It is based on Bluez 4.101 GATT code (prior to Bluez D-BUS API). Some changes has been made to support additional features and former versions of Bluez.
 
 It has been introduced to allow to build applications hosted on platform with a version of Bluez prior to v5.x that could easily communicate with BLE devices.
 
@@ -9,9 +9,9 @@ Potentially, D-BUS API could also be added to GattLib to provide an abstraction 
 Latest GattLib Release packages
 ===============================
 
-- ZIP: <https://github.com/labapart/gattlib/releases/download/v0.1/gattlib-0.1.zip>
-- DEB: <https://github.com/labapart/gattlib/releases/download/v0.1/gattlib-0.1.deb>
-- RPM: <https://github.com/labapart/gattlib/releases/download/v0.1/gattlib-0.1.rpm>
+- ZIP: <https://github.com/labapart/gattlib/releases/download/v0.2/gattlib_0.2_x86_64.zip>
+- DEB: <https://github.com/labapart/gattlib/releases/download/v0.2/gattlib_0.2_x86_64.deb>
+- RPM: <https://github.com/labapart/gattlib/releases/download/v0.2/gattlib_0.2_x86_64.rpm>
 
 Build GattLib
 =============
