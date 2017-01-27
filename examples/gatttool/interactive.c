@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <glib.h>
 
-#include <bluetooth/uuid.h>
+#include "uuid.h"
 
 #include <readline/readline.h>
 #include <readline/history.h>
