@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <glib.h>
-#include <bluetooth/uuid.h>
+#include "uuid.h"
 #include <bluetooth/sdp.h>
 #include <bluetooth/sdp_lib.h>
 

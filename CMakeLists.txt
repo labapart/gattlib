@@ -29,7 +29,7 @@ project(gattlib)
 
 find_package(PkgConfig REQUIRED)
 
-include_directories(include bluez/attrib bluez/btio bluez/src)
+include_directories(include bluez/attrib bluez/btio bluez/src bluez/lib)
 
 # Bluez specific files
 set(gattlib_SRCS bluez/attrib/att.c

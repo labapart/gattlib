@@ -29,7 +29,7 @@
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/sdp.h>
-#include <bluetooth/uuid.h>
+#include "uuid.h"
 
 #ifndef BDADDR_BREDR
   /* GattLib note: BD Address have only been introduced into Bluez v4.100.   */

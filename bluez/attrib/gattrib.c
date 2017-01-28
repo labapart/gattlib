@@ -29,7 +29,7 @@
 #include <stdio.h>
 
 #include <bluetooth/bluetooth.h>
-#include <bluetooth/uuid.h>
+#include "uuid.h"
 
 #include "log.h"
 #include "att.h"

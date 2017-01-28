@@ -27,7 +27,7 @@
 #include <unistd.h>
 
 #include <bluetooth/bluetooth.h>
-#include <bluetooth/uuid.h>
+#include "uuid.h"
 
 #include "gattlib_internal.h"
 
