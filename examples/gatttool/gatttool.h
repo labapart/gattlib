@@ -21,6 +21,8 @@
  *
  */
 
+#include <readline/readline.h>
+
 void notification_handler(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data);
 void indication_handler(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data);
 
