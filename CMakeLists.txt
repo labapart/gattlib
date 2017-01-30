@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2016  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2016-2017  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -29,18 +29,18 @@ project(gattlib)
 
 find_package(PkgConfig REQUIRED)
 
-include_directories(include bluez/attrib bluez/btio bluez/src bluez/lib)
+include_directories(include bluez4/attrib bluez4/btio bluez4/src bluez4/lib)
 
 # Bluez specific files
-set(gattlib_SRCS bluez/attrib/att.c
-                 bluez/attrib/gatt.c
-                 bluez/attrib/gattrib.c
-                 bluez/btio/btio.c
-                 bluez/lib/bluetooth.c
-                 bluez/lib/hci.c
-                 bluez/lib/sdp.c
-                 bluez/lib/uuid.c
-                 bluez/src/log.c)
+set(gattlib_SRCS bluez4/attrib/att.c
+                 bluez4/attrib/gatt.c
+                 bluez4/attrib/gattrib.c
+                 bluez4/btio/btio.c
+                 bluez4/lib/bluetooth.c
+                 bluez4/lib/hci.c
+                 bluez4/lib/sdp.c
+                 bluez4/lib/uuid.c
+                 bluez4/src/log.c)
 
 # Gattlib files
 list(APPEND gattlib_SRCS src/gattlib_connect.c
