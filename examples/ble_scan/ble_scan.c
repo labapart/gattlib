@@ -1,3 +1,4 @@
+#include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -130,6 +131,7 @@ static int ble_scan(int device_desc, ble_discovered_device_t discovered_device_c
 		return 1;
 	}
 
+#if BLUEZ_VERSION_MAJOR == 4
 	wait.tv_sec = timeout;
 	int ts = time(NULL);
 
@@ -138,8 +140,9 @@ static int ble_scan(int device_desc, ble_discovered_device_t discovered_device_c
 		FD_SET(device_desc, &read_set);
 
 		int err = select(FD_SETSIZE, &read_set, NULL, NULL, &wait);
-		if (err <= 0)
+		if (err <= 0) {
 			break;
+		}
 
 		len = read(device_desc, buffer, sizeof(buffer));
 
@@ -156,14 +159,43 @@ static int ble_scan(int device_desc, ble_discovered_device_t discovered_device_c
 		}
 
 		int elapsed = time(NULL) - ts;
-		if (elapsed >= timeout)
+		if (elapsed >= timeout) {
+			printf("Err2");
 			break;
+		}
 
 		wait.tv_sec = timeout - elapsed;
 	}
+#else
+	while (1) {
+		struct pollfd fds;
+		fds.fd     = device_desc;
+		fds.events = POLLIN;
+
+		int err = poll(&fds, 1, timeout * 1000);
+		if (err <= 0) {
+			break;
+		} else if ((fds.revents & POLLIN) == 0) {
+			continue;
+		}
+
+		len = read(device_desc, buffer, sizeof(buffer));
+
+		if (meta->subevent != 0x02 || (uint8_t)buffer[BLE_EVENT_TYPE] != BLE_SCAN_RESPONSE)
+			continue;
+
+		info = (le_advertising_info*) (meta->data + 1);
+		ba2str(&info->bdaddr, addr);
+
+		char* name = parse_name(info->data, info->length);
+		discovered_device_cb(addr, name);
+		if (name) {
+			free(name);
+		}
+	}
+#endif
 
 	setsockopt(device_desc, SOL_HCI, HCI_FILTER, &old_options, sizeof(old_options));
-
 	return 0;
 }
 
@@ -310,5 +342,6 @@ int main(int argc, char *argv[]) {
 		free(connection);
 	}
 
+	hci_close_dev(device_desc);
 	return 0;
 }
