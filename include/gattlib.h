@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016  Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2017 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -30,6 +30,7 @@
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/sdp.h>
 #include "uuid.h"
+#include "btio.h"
 
 #ifndef BDADDR_BREDR
   /* GattLib note: BD Address have only been introduced into Bluez v4.100.   */
@@ -41,12 +42,18 @@
   #define BDADDR_LE_RANDOM       0x02
 #endif
 
+#if BLUEZ_VERSION_MAJOR == 5
+  #define ATT_MAX_MTU ATT_MAX_VALUE_LEN
+#endif
+
+#if BLUEZ_VERSION_MAJOR == 4
 typedef enum {
 	BT_IO_SEC_SDP = 0,
 	BT_IO_SEC_LOW,
 	BT_IO_SEC_MEDIUM,
 	BT_IO_SEC_HIGH,
 } BtIOSecLevel;
+#endif
 
 typedef struct _GAttrib GAttrib;
 
@@ -65,7 +72,6 @@ typedef struct _gatt_connection_t {
 } gatt_connection_t;
 
 typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection);
-typedef void (*gatt_cb_t) (GSList *l, guint8 status, gpointer user_data);
 typedef void* (*gatt_read_cb_t)(void* buffer, size_t buffer_len);
 
 /**
@@ -92,13 +98,23 @@ typedef struct {
 } gattlib_primary_service_t;
 
 typedef struct {
+	uint16_t  handle;
 	uint8_t   properties;
 	uint16_t  value_handle;
 	bt_uuid_t uuid;
 } gattlib_characteristic_t;
 
+typedef struct {
+	char uuid[MAX_LEN_UUID_STR + 1];
+	uint16_t handle;
+	uint16_t uuid16;
+} gattlib_descriptor_t;
+
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count);
+int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count);
 int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristic_count);
+int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count);
+int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count);
 
 int gattlib_read_char_by_uuid(gatt_connection_t* connection, bt_uuid_t* uuid, void* buffer, size_t buffer_len);
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, bt_uuid_t* uuid, gatt_read_cb_t gatt_read_cb);

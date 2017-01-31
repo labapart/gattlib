@@ -29,6 +29,11 @@
 
 #include "gattlib.h"
 
+#if BLUEZ_VERSION_MAJOR == 5
+  #include "src/shared/att-types.h"
+  #include "src/shared/util.h"
+#endif
+
 struct gattlib_thread_t {
 	int           ref;
 	pthread_t     thread;

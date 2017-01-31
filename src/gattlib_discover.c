@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016  Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2017 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -36,7 +36,11 @@ struct primary_all_cb_t {
 	int discovered;
 };
 
+#if BLUEZ_VERSION_MAJOR == 4
 static void primary_all_cb(GSList *services, guint8 status, gpointer user_data) {
+#else
+static void primary_all_cb(uint8_t status, GSList *services, void *user_data) {
+#endif
 	struct primary_all_cb_t* data = user_data;
 	GSList *l;
 	int i;
@@ -94,7 +98,11 @@ struct characteristic_cb_t {
 	int discovered;
 };
 
+#if BLUEZ_VERSION_MAJOR == 4
 static void characteristic_cb(GSList *characteristics, guint8 status, gpointer user_data) {
+#else
+static void characteristic_cb(uint8_t status, GSList *characteristics, void *user_data) {
+#endif
 	struct characteristic_cb_t* data = user_data;
 	GSList *l;
 	int i;
@@ -111,8 +119,9 @@ static void characteristic_cb(GSList *characteristics, guint8 status, gpointer u
 	for (i = 0, l = characteristics; l; l = l->next, i++) {
 		struct gatt_char *chars = l->data;
 
-		data->characteristics[i].properties = chars->properties;
-		data->characteristics[i].value_handle   = chars->value_handle;
+		data->characteristics[i].handle       = chars->handle;
+		data->characteristics[i].properties   = chars->properties;
+		data->characteristics[i].value_handle = chars->value_handle;
 		bt_string_to_uuid(&data->characteristics[i].uuid, chars->uuid);
 
 		assert(i < data->characteristics_count);
@@ -122,10 +131,8 @@ done:
 	data->discovered = TRUE;
 }
 
-int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristics_count) {
+int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	struct characteristic_cb_t user_data;
-	const int start = 0x0001;
-	const int end   = 0xffff;
 	guint ret;
 
 	bzero(&user_data, sizeof(user_data));
@@ -146,4 +153,122 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 	*characteristics_count = user_data.characteristics_count;
 
 	return 0;
+}
+
+int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristics_count) {
+	return gattlib_discover_char_range(connection, 0x0001, 0xffff, characteristics, characteristics_count);
+}
+
+struct descriptor_cb_t {
+	gattlib_descriptor_t* descriptors;
+	int descriptors_count;
+	int discovered;
+};
+
+#if BLUEZ_VERSION_MAJOR == 4
+static void char_desc_cb(guint8 status, const guint8 *pdu, guint16 plen, gpointer user_data)
+{
+	struct descriptor_cb_t* data = user_data;
+	struct att_data_list *list;
+	guint8 format;
+	int i;
+
+	if (status) {
+		fprintf(stderr, "Discover all descriptors failed: %s\n", att_ecode2str(status));
+		goto done;
+	}
+
+	list = dec_find_info_resp(pdu, plen, &format);
+	if (list == NULL)
+		goto done;
+
+	// Allocate array
+	data->descriptors_count = list->num;
+	data->descriptors = malloc(data->descriptors_count * sizeof(gattlib_descriptor_t));
+
+	for (i = 0; i < list->num; i++) {
+		uint16_t handle;
+		uint8_t *value;
+		bt_uuid_t uuid;
+
+		value = list->data[i];
+		data->descriptors[i].handle = att_get_u16(value);
+
+		if (format == 0x01) {
+			data->descriptors[i].uuid16 = *(uint16_t*)&value[2];
+			uuid = att_get_uuid16(&value[2]);
+		} else {
+			uuid = att_get_uuid128(&value[2]);
+		}
+
+		bt_uuid_to_string(&uuid, data->descriptors[i].uuid, MAX_LEN_UUID_STR);
+
+		assert(i < data->descriptors_count);
+	}
+
+	att_data_list_free(list);
+
+done:
+	data->discovered = TRUE;
+}
+#else
+static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
+{
+	struct descriptor_cb_t* data = user_data;
+	GSList *l;
+	int i;
+
+	if (status) {
+		fprintf(stderr, "Discover all descriptors failed: %s\n", att_ecode2str(status));
+		goto done;
+	}
+
+	// Allocate array
+	data->descriptors_count = g_slist_length(descriptors);
+	data->descriptors = malloc(data->descriptors_count * sizeof(gattlib_descriptor_t));
+
+	for (i = 0, l = descriptors; l; l = l->next, i++) {
+		struct gatt_desc *desc = l->data;
+
+		data->descriptors[i].handle = desc->handle;
+		data->descriptors[i].uuid16 = desc->uuid16;
+		strncpy(data->descriptors[i].uuid, desc->uuid, MAX_LEN_UUID_STR);
+
+		assert(i < data->descriptors_count);
+	}
+
+done:
+	data->discovered = TRUE;
+}
+#endif
+
+int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count) {
+	struct descriptor_cb_t descriptor_data;
+	guint ret;
+
+	bzero(&descriptor_data, sizeof(descriptor_data));
+
+#if BLUEZ_VERSION_MAJOR == 4
+	ret = gatt_find_info(connection->attrib, start, end, char_desc_cb, &descriptor_data);
+#else
+	ret = gatt_discover_desc(connection->attrib, start, end, NULL, char_desc_cb, &descriptor_data);
+#endif
+	if (ret == 0) {
+		fprintf(stderr, "Fail to discover descriptors.\n");
+		return 1;
+	}
+
+	// Wait for completion
+	while(descriptor_data.discovered == FALSE) {
+		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+	}
+
+	*descriptors      = descriptor_data.descriptors;
+	*descriptor_count = descriptor_data.descriptors_count;
+
+	return 0;
+}
+
+int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count) {
+	return gattlib_discover_desc_range(connection, 0x0001, 0xffff, descriptors, descriptor_count);
 }
