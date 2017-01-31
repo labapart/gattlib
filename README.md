@@ -1,10 +1,8 @@
 GattLib is a library used to access Generic Attribute Profile (GATT) protocol of BLE (Bluetooth Low Energy) devices.
 
-It is based on Bluez 4.101 GATT code (prior to Bluez D-BUS API). Some changes has been made to support additional features and former versions of Bluez.
+It is based on Bluez 4.101 and Bluez 5.43 GATT code. Some changes has been made to support additional features and former versions of Bluez.
 
-It has been introduced to allow to build applications hosted on platform with a version of Bluez prior to v5.x that could easily communicate with BLE devices.
-
-Potentially, D-BUS API could also be added to GattLib to provide an abstraction layer between different versions of BlueZ.
+It has been introduced to allow to build applications that could easily communicate with BLE devices.
 
 Latest GattLib Release packages
 ===============================
@@ -73,7 +71,7 @@ Examples
 
         sudo ./examples/ble_scan/ble_scan
 
-**Note:** `examples/gatttool` has been partially ported to gattlib. There are two reasons the laziness
+**Note:** `examples/gatttool` has been partially ported to gattlib. There are two reasons: the laziness
  (some of the GATT functions could be replaced by their gattlib equivalent) and the completeness (there
  are still some missing functions in gattlib).
 
@@ -105,5 +103,4 @@ TODO List
 =========
 
 - Complete `examples/gatttool` port to GattLib to demonstrate the completeness of GattLib.
-- Support Bluez v5.x GATT D-BUS API in addition to the current Bluez v4.101 support.
 - Remove GLib dependencies to GattLib (mainly replacing GLib IO Channels by Unix Domain Socket).
