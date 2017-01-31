@@ -240,9 +240,7 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 				BT_IO_OPT_DEST_TYPE, dest_type,
 				BT_IO_OPT_CID, ATT_CID,
 				BT_IO_OPT_SEC_LEVEL, sec_level,
-#if BLUEZ_VERSION_MAJOR == 4
 				BT_IO_OPT_TIMEOUT, CONNECTION_TIMEOUT,
-#endif
 				BT_IO_OPT_INVALID);
 	else
 		conn->io = bt_io_connect(
@@ -258,9 +256,7 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 				BT_IO_OPT_PSM, psm,
 				BT_IO_OPT_IMTU, mtu,
 				BT_IO_OPT_SEC_LEVEL, sec_level,
-#if BLUEZ_VERSION_MAJOR == 4
 				BT_IO_OPT_TIMEOUT, CONNECTION_TIMEOUT,
-#endif
 				BT_IO_OPT_INVALID);
 
 	if (err) {

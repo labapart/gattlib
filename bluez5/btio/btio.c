@@ -79,6 +79,7 @@ struct set_opts {
 	int flushable;
 	uint32_t priority;
 	uint16_t voice;
+	int timeout;
 };
 
 struct connect {
@@ -344,10 +345,26 @@ static int l2cap_bind(int sock, const bdaddr_t *src, uint8_t src_type,
 }
 
 static int l2cap_connect(int sock, const bdaddr_t *dst, uint8_t dst_type,
-						uint16_t psm, uint16_t cid)
+						uint16_t psm, uint16_t cid, uint16_t timeout)
 {
 	int err;
 	struct sockaddr_l2 addr;
+
+	if (timeout > 0) {
+		struct timeval timeout;
+		timeout.tv_sec = 2;
+		timeout.tv_usec = 0;
+
+		if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+			fprintf(stderr, "l2cap_connect: Failed to setsockopt for receive timeout.\n");
+			return -1;
+		}
+
+		if (setsockopt (sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+			fprintf(stderr, "l2cap_connect: Failed to setsockopt for sending timeout.\n");
+			return -1;
+		}
+	}
 
 	memset(&addr, 0, sizeof(addr));
 	addr.l2_family = AF_BLUETOOTH;
@@ -805,6 +822,7 @@ static gboolean parse_set_opts(struct set_opts *opts, GError **err,
 	opts->priority = 0;
 	opts->src_type = BDADDR_BREDR;
 	opts->dst_type = BDADDR_BREDR;
+	opts->timeout = 0;
 
 	while (opt != BT_IO_OPT_INVALID) {
 		switch (opt) {
@@ -871,6 +889,9 @@ static gboolean parse_set_opts(struct set_opts *opts, GError **err,
 			break;
 		case BT_IO_OPT_PRIORITY:
 			opts->priority = va_arg(args, int);
+			break;
+		case BT_IO_OPT_TIMEOUT:
+			opts->timeout = va_arg(args, int);
 			break;
 		case BT_IO_OPT_VOICE:
 			opts->voice = va_arg(args, int);
@@ -1612,7 +1633,7 @@ GIOChannel *bt_io_connect(BtIOConnect connect, gpointer user_data,
 	switch (opts.type) {
 	case BT_IO_L2CAP:
 		err = l2cap_connect(sock, &opts.dst, opts.dst_type,
-							opts.psm, opts.cid);
+							opts.psm, opts.cid, opts.timeout);
 		break;
 	case BT_IO_RFCOMM:
 		err = rfcomm_connect(sock, &opts.dst, opts.channel);
