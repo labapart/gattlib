@@ -35,7 +35,7 @@
 #include <string.h>
 #include <sys/socket.h>
 
-#include "bluetooth.h"
+#include <bluetooth/bluetooth.h>
 #include "hci.h"
 
 void baswap(bdaddr_t *dst, const bdaddr_t *src)

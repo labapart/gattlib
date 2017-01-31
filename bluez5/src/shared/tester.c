@@ -801,7 +801,7 @@ void tester_init(int *argc, char ***argv)
 	g_option_context_free(context);
 
 	if (option_version == TRUE) {
-		g_print("%s\n", VERSION);
+		g_print("%d.%d\n", BLUEZ_VERSION_MAJOR, BLUEZ_VERSION_MINOR);
 		exit(EXIT_SUCCESS);
 	}
 

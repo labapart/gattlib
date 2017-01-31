@@ -318,7 +318,7 @@ void __btd_log_init(const char *debug, int detach)
 
 	openlog(LOG_IDENT, option, LOG_DAEMON);
 
-	info("Bluetooth daemon %s", VERSION);
+	info("Bluetooth daemon %d.%d", BLUEZ_VERSION_MAJOR, BLUEZ_VERSION_MINOR);
 }
 
 void __btd_log_cleanup(void)

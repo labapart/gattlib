@@ -36,7 +36,7 @@
 
 #include <glib.h>
 
-#include "lib/bluetooth.h"
+#include <bluetooth/bluetooth.h>
 #include "lib/l2cap.h"
 #include "lib/rfcomm.h"
 #include "lib/sco.h"

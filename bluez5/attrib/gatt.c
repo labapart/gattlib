@@ -33,7 +33,7 @@
 
 #include "lib/sdp.h"
 #include "lib/sdp_lib.h"
-#include "lib/uuid.h"
+#include "uuid.h"
 
 #include "src/shared/util.h"
 #include "att.h"

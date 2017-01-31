@@ -28,6 +28,8 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 #define GATTRIB_ALL_REQS 0xFE
 #define GATTRIB_ALL_HANDLES 0x0000
 
