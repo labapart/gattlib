@@ -34,6 +34,9 @@
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
+#if BLUEZ_VERSION_MAJOR == 5
+  #include "lib/sdp.h"
+#endif
 #include "uuid.h"
 
 #include "att.h"
@@ -108,32 +111,16 @@ static void connect_cb(gatt_connection_t* connection)
 			gattlib_register_indication(connection, indication_handler, NULL);
 		}
 
-		operation(connection->attrib);
+		operation(connection);
 	}
 }
 
-static void primary_all_cb(GSList *services, guint8 status, gpointer user_data)
-{
-	GSList *l;
-
-	if (status) {
-		g_printerr("Discover all primary services failed: %s\n",
-							att_ecode2str(status));
-		goto done;
-	}
-
-	for (l = services; l; l = l->next) {
-		struct gatt_primary *prim = l->data;
-		g_print("attr handle = 0x%04x, end grp handle = 0x%04x "
-			"uuid: %s\n", prim->range.start, prim->range.end, prim->uuid);
-	}
-
-done:
-	g_main_loop_quit(event_loop);
-}
-
+#if BLUEZ_VERSION_MAJOR == 4
 static void primary_by_uuid_cb(GSList *ranges, guint8 status,
 							gpointer user_data)
+#else
+static void primary_by_uuid_cb(uint8_t status, GSList *ranges, void *user_data)
+#endif
 {
 	GSList *l;
 
@@ -155,48 +142,53 @@ done:
 
 static gboolean primary(gpointer user_data)
 {
-	GAttrib *attrib = user_data;
+	gatt_connection_t* connection = (gatt_connection_t*)user_data;
+	GAttrib *attrib = connection->attrib;
+	char uuid_str[MAX_LEN_UUID_STR + 1];
 
 	if (opt_uuid)
 		gatt_discover_primary(attrib, opt_uuid, primary_by_uuid_cb,
 									NULL);
-	else
-		gatt_discover_primary(attrib, NULL, primary_all_cb, NULL);
+	else {
+		gattlib_primary_service_t* services;
+		int services_count;
+
+		int ret = gattlib_discover_primary(connection, &services, &services_count);
+		if (ret == 0) {
+			for (int i = 0; i < services_count; i++) {
+				gattlib_uuid_to_string(&services[i].uuid, uuid_str, sizeof(uuid_str));
+
+				g_print("attr handle = 0x%04x, end grp handle = 0x%04x uuid: %s\n",
+						services[i].attr_handle_start, services[i].attr_handle_end, uuid_str);
+			}
+		}
+	}
 
 	return FALSE;
-}
-
-static void char_discovered_cb(GSList *characteristics, guint8 status,
-							gpointer user_data)
-{
-	GSList *l;
-
-	if (status) {
-		g_printerr("Discover all characteristics failed: %s\n",
-							att_ecode2str(status));
-		goto done;
-	}
-
-	for (l = characteristics; l; l = l->next) {
-		struct gatt_char *chars = l->data;
-
-		g_print("handle = 0x%04x, char properties = 0x%02x, char value "
-			"handle = 0x%04x, uuid = %s\n", chars->handle,
-			chars->properties, chars->value_handle, chars->uuid);
-	}
-
-done:
-	g_main_loop_quit(event_loop);
 }
 
 static gboolean characteristics(gpointer user_data)
 {
-	GAttrib *attrib = user_data;
+	gatt_connection_t* connection = (gatt_connection_t*)user_data;
+	gattlib_characteristic_t* characteristics;
+	int characteristic_count;
 
-	gatt_discover_char(attrib, opt_start, opt_end, opt_uuid,
-						char_discovered_cb, NULL);
+	int ret = gattlib_discover_char(connection, &characteristics, &characteristic_count);
+	if (ret) {
+		return FALSE;
+	} else {
+		char uuid_str[MAX_LEN_UUID_STR + 1];
 
-	return FALSE;
+		for (int i = 0; i < characteristic_count; i++) {
+			gattlib_uuid_to_string(&characteristics[i].uuid, uuid_str, sizeof(uuid_str));
+
+			g_print("handle = 0x%04x, char properties = 0x%02x, char value "
+				"handle = 0x%04x, uuid = %s\n",
+				characteristics[i].handle, characteristics[i].properties, characteristics[i].value_handle, uuid_str);
+		}
+		free(characteristics);
+		return TRUE;
+	}
 }
 
 static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
@@ -210,7 +202,13 @@ static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
 							att_ecode2str(status));
 		goto done;
 	}
-	if (!dec_read_resp(pdu, plen, value, &vlen)) {
+#if BLUEZ_VERSION_MAJOR == 4
+	vlen = dec_read_resp(pdu, plen, value, &vlen);
+#else
+	vlen = sizeof(value);
+	vlen = dec_read_resp(pdu, plen, value, vlen);
+#endif
+	if (vlen <= 0) {
 		g_printerr("Protocol error\n");
 		goto done;
 	}
@@ -224,63 +222,26 @@ done:
 		g_main_loop_quit(event_loop);
 }
 
-static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
-					guint16 plen, gpointer user_data)
-{
-	struct characteristic_data *char_data = user_data;
-	struct att_data_list *list;
-	int i;
-
-	if (status == ATT_ECODE_ATTR_NOT_FOUND &&
-					char_data->start != opt_start)
-		goto done;
-
-	if (status != 0) {
-		g_printerr("Read characteristics by UUID failed: %s\n",
-							att_ecode2str(status));
-		goto done;
-	}
-
-	list = dec_read_by_type_resp(pdu, plen);
-	if (list == NULL)
-		goto done;
-
-	for (i = 0; i < list->num; i++) {
-		uint8_t *value = list->data[i];
-		int j;
-
-		char_data->start = att_get_u16(value) + 1;
-
-		g_print("handle: 0x%04x \t value: ", att_get_u16(value));
-		value += 2;
-		for (j = 0; j < list->len - 2; j++, value++)
-			g_print("%02x ", *value);
-		g_print("\n");
-	}
-
-	att_data_list_free(list);
-
-done:
-	g_free(char_data);
-	g_main_loop_quit(event_loop);
-}
-
 static gboolean characteristics_read(gpointer user_data)
 {
-	GAttrib *attrib = user_data;
+	gatt_connection_t* connection = (gatt_connection_t*)user_data;
+	GAttrib *attrib = connection->attrib;
 
 	if (opt_uuid != NULL) {
-		struct characteristic_data *char_data;
+		uint8_t buffer[0x100];
 
-		char_data = g_new(struct characteristic_data, 1);
-		char_data->attrib = attrib;
-		char_data->start = opt_start;
-		char_data->end = opt_end;
+		int len = gattlib_read_char_by_uuid(connection, opt_uuid, buffer, sizeof(buffer));
+		if (len == 0) {
+			return FALSE;
+		} else {
+			g_print("value: ");
+			for (int i = 0; i < len; i++) {
+				g_print("%02x ", buffer[i]);
+			}
+			g_print("\n");
 
-		gatt_read_char_by_uuid(attrib, opt_start, opt_end, opt_uuid,
-						char_read_by_uuid_cb, char_data);
-
-		return FALSE;
+			return TRUE;
+		}
 	}
 
 	if (opt_handle <= 0) {
@@ -289,7 +250,11 @@ static gboolean characteristics_read(gpointer user_data)
 		return FALSE;
 	}
 
-	gatt_read_char(attrib, opt_handle, opt_offset, char_read_cb, attrib);
+	gatt_read_char(attrib, opt_handle,
+#if BLUEZ_VERSION_MAJOR == 4
+			opt_offset,
+#endif
+			char_read_cb, attrib);
 
 	return FALSE;
 }
@@ -304,7 +269,7 @@ static void mainloop_quit(gpointer user_data)
 
 static gboolean characteristics_write(gpointer user_data)
 {
-	GAttrib *attrib = user_data;
+	GAttrib *attrib = ((gatt_connection_t*)user_data)->attrib;
 	uint8_t *value;
 	size_t len;
 
@@ -326,6 +291,7 @@ static gboolean characteristics_write(gpointer user_data)
 
 	gatt_write_cmd(attrib, opt_handle, value, len, mainloop_quit, value);
 
+	g_free(value);
 	return FALSE;
 
 error:
@@ -342,7 +308,11 @@ static void char_write_req_cb(guint8 status, const guint8 *pdu, guint16 plen,
 		goto done;
 	}
 
+#if BLUEZ_VERSION_MAJOR == 4
 	if (!dec_write_resp(pdu, plen)) {
+#else
+	if (!dec_write_resp(pdu, plen) && !dec_exec_write_resp(pdu, plen)) {
+#endif
 		g_printerr("Protocol error\n");
 		goto done;
 	}
@@ -356,7 +326,7 @@ done:
 
 static gboolean characteristics_write_req(gpointer user_data)
 {
-	GAttrib *attrib = user_data;
+	GAttrib *attrib = ((gatt_connection_t*)user_data)->attrib;
 	uint8_t *value;
 	size_t len;
 
@@ -379,6 +349,7 @@ static gboolean characteristics_write_req(gpointer user_data)
 	gatt_write_char(attrib, opt_handle, value, len, char_write_req_cb,
 									NULL);
 
+	g_free(value);
 	return FALSE;
 
 error:
@@ -386,55 +357,22 @@ error:
 	return FALSE;
 }
 
-static void char_desc_cb(guint8 status, const guint8 *pdu, guint16 plen,
-							gpointer user_data)
-{
-	struct att_data_list *list;
-	guint8 format;
-	int i;
-
-	if (status != 0) {
-		g_printerr("Discover all characteristic descriptors failed: "
-						"%s\n", att_ecode2str(status));
-		goto done;
-	}
-
-	list = dec_find_info_resp(pdu, plen, &format);
-	if (list == NULL)
-		goto done;
-
-	for (i = 0; i < list->num; i++) {
-		char uuidstr[MAX_LEN_UUID_STR];
-		uint16_t handle;
-		uint8_t *value;
-		bt_uuid_t uuid;
-
-		value = list->data[i];
-		handle = att_get_u16(value);
-
-		if (format == 0x01)
-			uuid = att_get_uuid16(&value[2]);
-		else
-			uuid = att_get_uuid128(&value[2]);
-
-		bt_uuid_to_string(&uuid, uuidstr, MAX_LEN_UUID_STR);
-		g_print("handle = 0x%04x, uuid = %s\n", handle, uuidstr);
-	}
-
-	att_data_list_free(list);
-
-done:
-	if (opt_listen == FALSE)
-		g_main_loop_quit(event_loop);
-}
-
 static gboolean characteristics_desc(gpointer user_data)
 {
-	GAttrib *attrib = user_data;
+	gatt_connection_t* connection = (gatt_connection_t*)user_data;
+	gattlib_descriptor_t* descriptors;
+	int descriptor_count;
 
-	gatt_find_info(attrib, opt_start, opt_end, char_desc_cb, NULL);
-
-	return FALSE;
+	int ret = gattlib_discover_desc(connection, &descriptors, &descriptor_count);
+	if (ret) {
+		return FALSE;
+	} else {
+		for (int i = 0; i < descriptor_count; i++) {
+			g_print("handle = 0x%04x, uuid = %s\n", descriptors[i].handle, descriptors[i].uuid);
+		}
+		free(descriptors);
+		return TRUE;
+	}
 }
 
 static gboolean parse_uuid(const char *key, const char *value,

@@ -26,6 +26,11 @@
 #include <stdio.h>
 #include <glib.h>
 
+#if BLUEZ_VERSION_MAJOR == 5
+#include <bluetooth/bluetooth.h>
+#include "lib/sdp.h"
+#include "src/shared/util.h"
+#endif
 #include "uuid.h"
 
 #include <readline/readline.h>
@@ -63,6 +68,12 @@ enum state {
 	STATE_CONNECTING,
 	STATE_CONNECTED
 } conn_state;
+
+#define error(fmt, arg...) \
+	printf(COLOR_RED "Error: " COLOR_OFF fmt, ## arg)
+
+#define failed(fmt, arg...) \
+	printf(COLOR_RED "Command Failed: " COLOR_OFF fmt, ## arg)
 
 static char *get_prompt(void)
 {
@@ -122,28 +133,12 @@ static void disconnect_io()
 	set_state(STATE_DISCONNECTED);
 }
 
-static void primary_all_cb(GSList *services, guint8 status, gpointer user_data)
-{
-	GSList *l;
-
-	if (status) {
-		printf("Discover all primary services failed: %s\n",
-							att_ecode2str(status));
-		return;
-	}
-
-	printf("\n");
-	for (l = services; l; l = l->next) {
-		struct gatt_primary *prim = l->data;
-		printf("attr handle: 0x%04x, end grp handle: 0x%04x "
-			"uuid: %s\n", prim->range.start, prim->range.end, prim->uuid);
-	}
-
-	rl_forced_update_display();
-}
-
+#if BLUEZ_VERSION_MAJOR == 4
 static void primary_by_uuid_cb(GSList *ranges, guint8 status,
 							gpointer user_data)
+#else
+static void primary_by_uuid_cb(uint8_t status, GSList *ranges, void *user_data)
+#endif
 {
 	GSList *l;
 
@@ -163,7 +158,11 @@ static void primary_by_uuid_cb(GSList *ranges, guint8 status,
 	rl_forced_update_display();
 }
 
+#if BLUEZ_VERSION_MAJOR == 4
 static void char_cb(GSList *characteristics, guint8 status, gpointer user_data)
+#else
+static void char_cb(uint8_t status, GSList *characteristics, void *user_data)
+#endif
 {
 	GSList *l;
 
@@ -186,47 +185,6 @@ static void char_cb(GSList *characteristics, guint8 status, gpointer user_data)
 	rl_forced_update_display();
 }
 
-static void char_desc_cb(guint8 status, const guint8 *pdu, guint16 plen,
-							gpointer user_data)
-{
-	struct att_data_list *list;
-	guint8 format;
-	int i;
-
-	if (status != 0) {
-		printf("Discover all characteristic descriptors failed: "
-						"%s\n", att_ecode2str(status));
-		return;
-	}
-
-	list = dec_find_info_resp(pdu, plen, &format);
-	if (list == NULL)
-		return;
-
-	printf("\n");
-	for (i = 0; i < list->num; i++) {
-		char uuidstr[MAX_LEN_UUID_STR];
-		uint16_t handle;
-		uint8_t *value;
-		bt_uuid_t uuid;
-
-		value = list->data[i];
-		handle = att_get_u16(value);
-
-		if (format == 0x01)
-			uuid = att_get_uuid16(&value[2]);
-		else
-			uuid = att_get_uuid128(&value[2]);
-
-		bt_uuid_to_string(&uuid, uuidstr, MAX_LEN_UUID_STR);
-		printf("handle: 0x%04x, uuid: %s\n", handle, uuidstr);
-	}
-
-	att_data_list_free(list);
-
-	rl_forced_update_display();
-}
-
 static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
 							gpointer user_data)
 {
@@ -239,7 +197,13 @@ static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
 		return;
 	}
 
-	if (!dec_read_resp(pdu, plen, value, &vlen)) {
+#if BLUEZ_VERSION_MAJOR == 4
+	vlen = dec_read_resp(pdu, plen, value, &vlen);
+#else
+	vlen = sizeof(value);
+	vlen = dec_read_resp(pdu, plen, value, vlen);
+#endif
+	if (vlen <= 0) {
 		printf("Protocol error\n");
 		return;
 	}
@@ -277,9 +241,11 @@ static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
 		uint8_t *value = list->data[i];
 		int j;
 
-		char_data->start = att_get_u16(value) + 1;
-
+#if BLUEZ_VERSION_MAJOR == 4
 		printf("\nhandle: 0x%04x \t value: ", att_get_u16(value));
+#else
+		printf("\nhandle: 0x%04x \t value: ", get_le16(value));
+#endif
 		value += 2;
 		for (j = 0; j < list->len - 2; j++, value++)
 			printf("%02x ", *value);
@@ -360,7 +326,21 @@ static void cmd_primary(int argcp, char **argvp)
 	}
 
 	if (argcp == 1) {
-		gatt_discover_primary(g_connection->attrib, NULL, primary_all_cb, NULL);
+		char uuid_str[MAX_LEN_UUID_STR + 1];
+		gattlib_primary_service_t* services;
+		int services_count;
+
+		int ret = gattlib_discover_primary(g_connection, &services, &services_count);
+		if (ret == 0) {
+			for (int i = 0; i < services_count; i++) {
+				gattlib_uuid_to_string(&services[i].uuid, uuid_str, sizeof(uuid_str));
+
+				printf("attr handle: 0x%04x, end grp handle: 0x%04x uuid: %s\n",
+						services[i].attr_handle_start, services[i].attr_handle_end, uuid_str);
+			}
+
+			rl_forced_update_display();
+		}
 		return;
 	}
 
@@ -387,6 +367,9 @@ static int strtohandle(const char *src)
 
 static void cmd_char(int argcp, char **argvp)
 {
+	char uuid_str[MAX_LEN_UUID_STR + 1];
+	gattlib_characteristic_t* characteristics;
+	int characteristics_count;
 	int start = 0x0001;
 	int end = 0xffff;
 
@@ -423,11 +406,24 @@ static void cmd_char(int argcp, char **argvp)
 		return;
 	}
 
-	gatt_discover_char(g_connection->attrib, start, end, NULL, char_cb, NULL);
+	int ret = gattlib_discover_char_range(g_connection, start, end, &characteristics, &characteristics_count);
+	if (ret == 0) {
+		for (int i = 0; i < characteristics_count; i++) {
+			gattlib_uuid_to_string(&characteristics[i].uuid, uuid_str, sizeof(uuid_str));
+
+			printf("handle: 0x%04x, char properties: 0x%02x, char value "
+					"handle: 0x%04x, uuid: %s\n", characteristics[i].handle,
+					characteristics[i].properties, characteristics[i].value_handle,
+					uuid_str);
+		}
+		free(characteristics);
+	}
 }
 
 static void cmd_char_desc(int argcp, char **argvp)
 {
+	gattlib_descriptor_t* descriptors;
+	int descriptor_count;
 	int start = 0x0001;
 	int end = 0xffff;
 
@@ -452,7 +448,13 @@ static void cmd_char_desc(int argcp, char **argvp)
 		}
 	}
 
-	gatt_find_info(g_connection->attrib, start, end, char_desc_cb, NULL);
+	int ret = gattlib_discover_desc_range(g_connection, start, end, &descriptors, &descriptor_count);
+	if (ret == 0) {
+		for (int i = 0; i < descriptor_count; i++) {
+			printf("handle: 0x%04x, uuid: %s\n", descriptors[i].handle, descriptors[i].uuid);
+		}
+		free(descriptors);
+	}
 }
 
 static void cmd_read_hnd(int argcp, char **argvp)
@@ -487,7 +489,11 @@ static void cmd_read_hnd(int argcp, char **argvp)
 		}
 	}
 
-	gatt_read_char(g_connection->attrib, handle, offset, char_read_cb, g_connection->attrib);
+	gatt_read_char(g_connection->attrib, handle,
+#if BLUEZ_VERSION_MAJOR == 4
+			offset,
+#endif
+			char_read_cb, g_connection->attrib);
 }
 
 static void cmd_read_uuid(int argcp, char **argvp)
@@ -624,7 +630,11 @@ static void cmd_sec_level(int argcp, char **argvp)
 		return;
 	}
 
-	bt_io_set(g_connection->io, BT_IO_L2CAP, &gerr,
+	bt_io_set(g_connection->io,
+#if BLUEZ_VERSION_MAJOR == 4
+			BT_IO_L2CAP,
+#endif
+			&gerr,
 			BT_IO_OPT_SEC_LEVEL, sec_level,
 			BT_IO_OPT_INVALID);
 
