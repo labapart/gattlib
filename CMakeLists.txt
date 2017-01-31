@@ -29,23 +29,53 @@ project(gattlib)
 
 find_package(PkgConfig REQUIRED)
 
-include_directories(include bluez4/attrib bluez4/btio bluez4/src bluez4/lib)
-
 # Bluez specific files
-set(gattlib_SRCS bluez4/attrib/att.c
-                 bluez4/attrib/gatt.c
-                 bluez4/attrib/gattrib.c
-                 bluez4/btio/btio.c
-                 bluez4/lib/bluetooth.c
-                 bluez4/lib/hci.c
-                 bluez4/lib/sdp.c
-                 bluez4/lib/uuid.c
-                 bluez4/src/log.c)
+set(bluez4_SRCS bluez4/attrib/att.c
+                bluez4/attrib/gatt.c
+                bluez4/attrib/gattrib.c
+                bluez4/btio/btio.c
+                bluez4/lib/bluetooth.c
+                bluez4/lib/hci.c
+                bluez4/lib/sdp.c
+                bluez4/lib/uuid.c
+                bluez4/src/log.c)
+
+set(bluez5_SRCS bluez5/attrib/att.c
+                bluez5/attrib/gatt.c
+                bluez5/attrib/gattrib.c
+                bluez5/btio/btio.c
+                bluez5/lib/bluetooth.c
+                bluez5/lib/hci.c
+                bluez5/lib/sdp.c
+                bluez5/lib/uuid.c
+                bluez5/src/log.c
+                bluez5/src/shared/queue.c
+                bluez5/src/shared/util.c
+                bluez5/src/shared/mgmt.c
+                bluez5/src/shared/crypto.c
+                bluez5/src/shared/ecc.c
+                bluez5/src/shared/ringbuf.c
+                bluez5/src/shared/tester.c
+                bluez5/src/shared/hci.c
+                bluez5/src/shared/hci-crypto.c
+                bluez5/src/shared/hfp.c
+                bluez5/src/shared/uhid.c
+                bluez5/src/shared/pcap.c
+                bluez5/src/shared/btsnoop.c
+                bluez5/src/shared/ad.c
+                bluez5/src/shared/att.c
+                bluez5/src/shared/gatt-helpers.c
+                bluez5/src/shared/gatt-client.c
+                bluez5/src/shared/gatt-server.c
+                bluez5/src/shared/gatt-db.c
+                bluez5/src/shared/gap.c
+                bluez5/src/shared/io-glib.c
+                bluez5/src/shared/timeout-glib.c)
 
 # Gattlib files
-list(APPEND gattlib_SRCS src/gattlib_connect.c
-                         src/gattlib_discover.c
-                         src/gattlib_read_write.c)
+set(gattlib_SRCS src/gattlib_connect.c
+                 src/gattlib_discover.c
+                 src/gattlib_read_write.c)
 
 # Added Glib support
 pkg_search_module(GLIB REQUIRED glib-2.0)
@@ -62,6 +92,15 @@ string(REPLACE "." ";" BLUEZ_VERSIONS "${BLUEZ_VERSION}")
 list(GET BLUEZ_VERSIONS 0 BLUEZ_VERSION_MAJOR)
 list(GET BLUEZ_VERSIONS 1 BLUEZ_VERSION_MINOR)
 add_definitions(-DBLUEZ_VERSION_MAJOR=${BLUEZ_VERSION_MAJOR} -DBLUEZ_VERSION_MINOR=${BLUEZ_VERSION_MINOR})
+
+if(BLUEZ_VERSION_MAJOR STREQUAL "4")
+  list(APPEND gattlib_SRCS ${bluez4_SRCS})
+  include_directories(include bluez4/attrib bluez4/btio bluez4/src bluez4/lib)
+else()
+  list(APPEND gattlib_SRCS ${bluez5_SRCS})
+  include_directories(include bluez5 bluez5/attrib bluez5/btio bluez5/lib)
+  add_definitions(-D_GNU_SOURCE)
+endif()
 
 # gattlib
 add_library(gattlib SHARED ${gattlib_SRCS})
