@@ -30,10 +30,11 @@
 #include <glib.h>
 
 #include "src/shared/io.h"
+#include "gattlib_internal.h"
 
 struct io_watch {
 	struct io *io;
-	guint id;
+	GSource* id;
 	io_callback_func_t callback;
 	io_destroy_func_t destroy;
 	void *user_data;
@@ -114,17 +115,17 @@ void io_destroy(struct io *io)
 		return;
 
 	if (io->read_watch) {
-		g_source_remove(io->read_watch->id);
+		g_source_destroy(io->read_watch->id);
 		io->read_watch = NULL;
 	}
 
 	if (io->write_watch) {
-		g_source_remove(io->write_watch->id);
+		g_source_destroy(io->write_watch->id);
 		io->write_watch = NULL;
 	}
 
 	if (io->disconnect_watch) {
-		g_source_remove(io->disconnect_watch->id);
+		g_source_destroy(io->disconnect_watch->id);
 		io->disconnect_watch = NULL;
 	}
 
@@ -189,11 +190,11 @@ static struct io_watch *watch_new(struct io *io, GIOCondition cond,
 	watch->destroy = destroy;
 	watch->user_data = user_data;
 
-	watch->id = g_io_add_watch_full(io->channel, G_PRIORITY_DEFAULT,
-						cond | G_IO_ERR | G_IO_NVAL,
-						watch_callback, watch,
-						watch_destroy);
-	if (watch->id == 0) {
+	watch->id = gattlib_watch_connection_full(io->channel,
+			cond | G_IO_ERR | G_IO_NVAL,
+			watch_callback, watch,
+			watch_destroy);
+	if (watch->id == NULL) {
 		watch_destroy(watch);
 		return NULL;
 	}
@@ -228,7 +229,7 @@ static bool io_set_handler(struct io *io, GIOCondition cond,
 	}
 
 	if (*watch) {
-		g_source_remove((*watch)->id);
+		g_source_destroy((*watch)->id);
 		*watch = NULL;
 	}
 
