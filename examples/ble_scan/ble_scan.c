@@ -213,9 +213,9 @@ static void *ble_connect_device(void *arg) {
 
 	printf("------------START %s ---------------\n", addr);
 
-	gatt_connection = gattlib_connect(NULL, addr, BDADDR_LE_PUBLIC, BT_IO_SEC_LOW, 0, 0);
+	gatt_connection = gattlib_connect(NULL, addr, BDADDR_LE_PUBLIC, BT_SEC_LOW, 0, 0);
 	if (gatt_connection == NULL) {
-		gatt_connection = gattlib_connect(NULL, addr, BDADDR_LE_RANDOM, BT_IO_SEC_LOW, 0, 0);
+		gatt_connection = gattlib_connect(NULL, addr, BDADDR_LE_RANDOM, BT_SEC_LOW, 0, 0);
 		if (gatt_connection == NULL) {
 			fprintf(stderr, "Fail to connect to the bluetooth device.\n");
 			//gattlib_disconnect(connection);

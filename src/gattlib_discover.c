@@ -23,9 +23,11 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "gattlib_internal.h"
 
+#include "uuid.h"
 #include "att.h"
 #include "gattrib.h"
 #include "gatt.h"
@@ -59,7 +61,7 @@ static void primary_all_cb(uint8_t status, GSList *services, void *user_data) {
 
 		data->services[i].attr_handle_start = prim->range.start;
 		data->services[i].attr_handle_end   = prim->range.end;
-		bt_string_to_uuid(&data->services[i].uuid, prim->uuid);
+		gattlib_string_to_uuid(prim->uuid, MAX_LEN_UUID_STR + 1, &data->services[i].uuid);
 
 		assert(i < data->services_count);
 	}
@@ -122,7 +124,7 @@ static void characteristic_cb(uint8_t status, GSList *characteristics, void *use
 		data->characteristics[i].handle       = chars->handle;
 		data->characteristics[i].properties   = chars->properties;
 		data->characteristics[i].value_handle = chars->value_handle;
-		bt_string_to_uuid(&data->characteristics[i].uuid, chars->uuid);
+		gattlib_string_to_uuid(chars->uuid, MAX_LEN_UUID_STR + 1, &data->characteristics[i].uuid);
 
 		assert(i < data->characteristics_count);
 	}
@@ -232,7 +234,7 @@ static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
 
 		data->descriptors[i].handle = desc->handle;
 		data->descriptors[i].uuid16 = desc->uuid16;
-		strncpy(data->descriptors[i].uuid, desc->uuid, MAX_LEN_UUID_STR);
+		gattlib_string_to_uuid(desc->uuid, MAX_LEN_UUID_STR + 1, &data->descriptors[i].uuid);
 
 		assert(i < data->descriptors_count);
 	}

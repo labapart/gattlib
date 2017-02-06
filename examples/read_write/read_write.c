@@ -30,7 +30,7 @@
 typedef enum { READ, WRITE} operation_t;
 operation_t g_operation;
 
-static bt_uuid_t g_uuid;
+static uuid_t g_uuid;
 long int value_data;
 
 static void usage(char *argv[]) {
@@ -63,12 +63,12 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	if (bt_string_to_uuid(&g_uuid, argv[3]) < 0) {
+	if (gattlib_string_to_uuid(argv[3], strlen(argv[3]) + 1, &g_uuid) < 0) {
 		usage(argv);
 		return 1;
 	}
 
-	connection = gattlib_connect(NULL, argv[1], BDADDR_LE_PUBLIC, BT_IO_SEC_LOW, 0, 0);
+	connection = gattlib_connect(NULL, argv[1], BDADDR_LE_PUBLIC, BT_SEC_LOW, 0, 0);
 	if (connection == NULL) {
 		fprintf(stderr, "Fail to connect to the bluetooth device.\n");
 		return 1;
