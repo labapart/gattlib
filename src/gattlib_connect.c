@@ -51,7 +51,7 @@ typedef struct {
 static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data) {
 	gatt_connection_t *conn = user_data;
 	uint8_t opdu[ATT_MAX_MTU];
-	uint16_t handle, i, olen = 0;
+	uint16_t handle, olen = 0;
 
 #if BLUEZ_VERSION_MAJOR == 4
 	handle = att_get_u16(&pdu[1]);

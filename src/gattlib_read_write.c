@@ -59,7 +59,6 @@ static void gattlib_result_read_uuid_cb(guint8 status, const guint8 *pdu, guint1
 
 	for (i = 0; i < list->num; i++) {
 		uint8_t *value = list->data[i];
-		int j;
 
 		value += 2;
 
@@ -150,7 +149,6 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	const int start = 0x0001;
 	const int end   = 0xffff;
 	bt_uuid_t bt_uuid;
-	int i;
 
 	gattlib_result = malloc(sizeof(struct gattlib_result_read_uuid_t));
 	if (gattlib_result == NULL) {

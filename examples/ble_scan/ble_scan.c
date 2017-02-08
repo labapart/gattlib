@@ -108,13 +108,15 @@ static int ble_scan(int device_desc, ble_discovered_device_t discovered_device_c
 	struct hci_filter old_options;
 	socklen_t slen = sizeof(old_options);
 	struct hci_filter new_options;
-	int len;
 	unsigned char buffer[HCI_MAX_EVENT_SIZE];
 	evt_le_meta_event* meta = (evt_le_meta_event*)(buffer + HCI_EVENT_HDR_SIZE + 1);
 	le_advertising_info* info;
+	char addr[18];
+	int len;
+#if BLUEZ_VERSION_MAJOR == 4
 	struct timeval wait;
 	fd_set read_set;
-	char addr[18];
+#endif
 
 	if (getsockopt(device_desc, SOL_HCI, HCI_FILTER, &old_options, &slen) < 0) {
 		fprintf(stderr, "ERROR: Could not get socket options.\n");

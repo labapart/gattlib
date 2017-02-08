@@ -463,7 +463,6 @@ static void cmd_char_desc(int argcp, char **argvp)
 static void cmd_read_hnd(int argcp, char **argvp)
 {
 	int handle;
-	int offset = 0;
 
 	if (conn_state != STATE_CONNECTED) {
 		printf("Command failed: disconnected\n");
@@ -481,6 +480,9 @@ static void cmd_read_hnd(int argcp, char **argvp)
 		return;
 	}
 
+#if BLUEZ_VERSION_MAJOR == 4
+	int offset = 0;
+
 	if (argcp > 2) {
 		char *e;
 
@@ -491,6 +493,7 @@ static void cmd_read_hnd(int argcp, char **argvp)
 			return;
 		}
 	}
+#endif
 
 	gatt_read_char(g_connection->attrib, handle,
 #if BLUEZ_VERSION_MAJOR == 4
