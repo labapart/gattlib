@@ -32,7 +32,7 @@
 
 #include <glib.h>
 
-#include <bluetooth/bluetooth.h>
+#include "lib/bluetooth.h"
 #include "uuid.h"
 
 #include "src/shared/util.h"
