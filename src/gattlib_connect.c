@@ -27,7 +27,6 @@
 #include <unistd.h>
 
 #include <bluetooth/bluetooth.h>
-#include "uuid.h"
 
 #include "gattlib_internal.h"
 
@@ -268,13 +267,29 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 	}
 }
 
+static BtIOSecLevel get_bt_io_sec_level(gattlib_bt_sec_level_t sec_level) {
+	switch(sec_level) {
+	case BT_SEC_SDP:
+		return BT_IO_SEC_SDP;
+	case BT_SEC_LOW:
+		return BT_IO_SEC_LOW;
+	case BT_SEC_MEDIUM:
+		return BT_IO_SEC_MEDIUM;
+	case BT_SEC_HIGH:
+		return BT_IO_SEC_HIGH;
+	default:
+		return BT_IO_SEC_SDP;
+	}
+}
+
 gatt_connection_t *gattlib_connect_async(const gchar *src, const gchar *dst,
-				uint8_t dest_type, BtIOSecLevel sec_level, int psm, int mtu,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 				gatt_connect_cb_t connect_cb)
 {
 	io_connect_arg_t* io_connect_arg = malloc(sizeof(io_connect_arg_t));
+	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);
 
-	return initialize_gattlib_connection(src, dst, dest_type, sec_level,
+	return initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
 			psm, mtu, connect_cb, io_connect_arg);
 }
 
@@ -295,12 +310,13 @@ static gboolean connection_timeout(gpointer user_data) {
  * @param mtu       Specify the MTU size
  */
 gatt_connection_t *gattlib_connect(const gchar *src, const gchar *dst,
-				uint8_t dest_type, BtIOSecLevel sec_level, int psm, int mtu)
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu)
 {
+	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);
 	io_connect_arg_t io_connect_arg;
 	GSource* timeout;
 
-	gatt_connection_t *conn = initialize_gattlib_connection(src, dst, dest_type, sec_level,
+	gatt_connection_t *conn = initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
 			psm, mtu, NULL, &io_connect_arg);
 	if (conn == NULL) {
 		if (io_connect_arg.error) {
@@ -401,10 +417,43 @@ void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_ha
 	connection->indication_user_data = user_data;
 }
 
-int gattlib_uuid_to_string(const bt_uuid_t *uuid, char *str, size_t n) {
-	return bt_uuid_to_string(uuid, str, n);
+int gattlib_uuid_to_string(const uuid_t *uuid, char *str, size_t n) {
+	if (uuid->type == SDP_UUID16) {
+		snprintf(str, n, "0x%.4x", uuid->value.uuid16);
+	} else if (uuid->type == SDP_UUID32) {
+		snprintf(str, n, "0x%.8x", uuid->value.uuid32);
+	} else if (uuid->type == SDP_UUID128) {
+		unsigned int data0;
+		unsigned short data1;
+		unsigned short data2;
+		unsigned short data3;
+		unsigned int data4;
+		unsigned short data5;
+
+		memcpy(&data0, &uuid->value.uuid128.data[0], 4);
+		memcpy(&data1, &uuid->value.uuid128.data[4], 2);
+		memcpy(&data2, &uuid->value.uuid128.data[6], 2);
+		memcpy(&data3, &uuid->value.uuid128.data[8], 2);
+		memcpy(&data4, &uuid->value.uuid128.data[10], 4);
+		memcpy(&data5, &uuid->value.uuid128.data[14], 2);
+
+		snprintf(str, n, "0x%.8x-%.4x-%.4x-%.4x-%.8x%.4x",
+				ntohl(data0), ntohs(data1), ntohs(data2),
+				ntohs(data3), ntohl(data4), ntohs(data5));
+	} else {
+		snprintf(str, n, "Unsupported type:%d", uuid->type);
+		return -1;
+	}
+	return 0;
 }
 
-int gattlib_string_to_uuid(bt_uuid_t *uuid, const char *str) {
-	return bt_string_to_uuid(uuid, str);
+int gattlib_string_to_uuid(const char *str, size_t n, uuid_t *uuid) {
+	bt_uuid_t bt_uuid;
+
+	int ret = bt_string_to_uuid(&bt_uuid, str);
+	if (ret == 0) {
+		bt_uuid_to_uuid(&bt_uuid, uuid);
+	}
+
+	return ret;
 }

@@ -29,6 +29,8 @@
 
 #include "gattlib.h"
 
+#include "uuid.h"
+
 #if BLUEZ_VERSION_MAJOR == 5
   #include "src/shared/att-types.h"
   #include "src/shared/util.h"
@@ -49,5 +51,8 @@ extern struct gattlib_thread_t g_gattlib_thread;
 GSource* gattlib_watch_connection_full(GIOChannel* io, GIOCondition condition,
 								 GIOFunc func, gpointer user_data, GDestroyNotify notify);
 GSource* gattlib_timeout_add_seconds(guint interval, GSourceFunc function, gpointer data);
+
+void uuid_to_bt_uuid(uuid_t* uuid, bt_uuid_t* bt_uuid);
+void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid);
 
 #endif

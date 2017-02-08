@@ -451,7 +451,10 @@ static void cmd_char_desc(int argcp, char **argvp)
 	int ret = gattlib_discover_desc_range(g_connection, start, end, &descriptors, &descriptor_count);
 	if (ret == 0) {
 		for (int i = 0; i < descriptor_count; i++) {
-			printf("handle: 0x%04x, uuid: %s\n", descriptors[i].handle, descriptors[i].uuid);
+			char uuid_str[MAX_LEN_UUID_STR + 1];
+
+			gattlib_uuid_to_string(&descriptors[i].uuid, uuid_str, MAX_LEN_UUID_STR + 1);
+			printf("handle: 0x%04x, uuid: %s\n", descriptors[i].handle, uuid_str);
 		}
 		free(descriptors);
 	}

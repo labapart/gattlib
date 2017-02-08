@@ -29,8 +29,7 @@
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/sdp.h>
-#include "uuid.h"
-#include "btio.h"
+#include <bluetooth/sdp_lib.h>
 
 #ifndef BDADDR_BREDR
   /* GattLib note: BD Address have only been introduced into Bluez v4.100.   */
@@ -46,14 +45,12 @@
   #define ATT_MAX_MTU ATT_MAX_VALUE_LEN
 #endif
 
-#if BLUEZ_VERSION_MAJOR == 4
 typedef enum {
-	BT_IO_SEC_SDP = 0,
-	BT_IO_SEC_LOW,
-	BT_IO_SEC_MEDIUM,
-	BT_IO_SEC_HIGH,
-} BtIOSecLevel;
-#endif
+	BT_SEC_SDP = 0,
+	BT_SEC_LOW,
+	BT_SEC_MEDIUM,
+	BT_SEC_HIGH,
+} gattlib_bt_sec_level_t;
 
 typedef struct _GAttrib GAttrib;
 
@@ -83,10 +80,10 @@ typedef void* (*gatt_read_cb_t)(void* buffer, size_t buffer_len);
  * @param mtu       Specify the MTU size
  */
 gatt_connection_t *gattlib_connect(const gchar *src, const gchar *dst,
-				uint8_t dest_type, BtIOSecLevel sec_level, int psm, int mtu);
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu);
 
 gatt_connection_t *gattlib_connect_async(const gchar *src, const gchar *dst,
-				uint8_t dest_type, BtIOSecLevel sec_level, int psm, int mtu,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 				gatt_connect_cb_t connect_cb);
 
 int gattlib_disconnect(gatt_connection_t* connection);
@@ -94,20 +91,20 @@ int gattlib_disconnect(gatt_connection_t* connection);
 typedef struct {
 	uint16_t  attr_handle_start;
 	uint16_t  attr_handle_end;
-	bt_uuid_t uuid;
+	uuid_t    uuid;
 } gattlib_primary_service_t;
 
 typedef struct {
 	uint16_t  handle;
 	uint8_t   properties;
 	uint16_t  value_handle;
-	bt_uuid_t uuid;
+	uuid_t    uuid;
 } gattlib_characteristic_t;
 
 typedef struct {
-	char uuid[MAX_LEN_UUID_STR + 1];
 	uint16_t handle;
 	uint16_t uuid16;
+	uuid_t   uuid;
 } gattlib_descriptor_t;
 
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count);
@@ -116,15 +113,15 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count);
 int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count);
 
-int gattlib_read_char_by_uuid(gatt_connection_t* connection, bt_uuid_t* uuid, void* buffer, size_t buffer_len);
-int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, bt_uuid_t* uuid, gatt_read_cb_t gatt_read_cb);
+int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t buffer_len);
+int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb);
 
 int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, void* buffer, size_t buffer_len);
 
 void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data);
 void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data);
 
-int gattlib_uuid_to_string(const bt_uuid_t *uuid, char *str, size_t n);
-int gattlib_string_to_uuid(bt_uuid_t *uuid, const char *str);
+int gattlib_uuid_to_string(const uuid_t *uuid, char *str, size_t n);
+int gattlib_string_to_uuid(const char *str, size_t n, uuid_t *uuid);
 
 #endif

@@ -25,6 +25,7 @@
 
 #include "gattlib_internal.h"
 
+#include "uuid.h"
 #include "att.h"
 #include "gattrib.h"
 #include "gatt.h"
@@ -81,10 +82,37 @@ done:
 	}
 }
 
-int gattlib_read_char_by_uuid(gatt_connection_t* connection, bt_uuid_t* uuid,
+void uuid_to_bt_uuid(uuid_t* uuid, bt_uuid_t* bt_uuid) {
+	memcpy(&bt_uuid->value, &uuid->value, sizeof(bt_uuid->value));
+	if (uuid->type == SDP_UUID16) {
+		bt_uuid->type = BT_UUID16;
+	} else if (uuid->type == SDP_UUID32) {
+		bt_uuid->type = BT_UUID32;
+	} else if (uuid->type == SDP_UUID128) {
+		bt_uuid->type = BT_UUID128;
+	} else {
+		bt_uuid->type = BT_UUID_UNSPEC;
+	}
+}
+
+void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid) {
+	memcpy(&uuid->value, &bt_uuid->value, sizeof(uuid->value));
+	if (bt_uuid->type == BT_UUID16) {
+		uuid->type = SDP_UUID16;
+	} else if (bt_uuid->type == BT_UUID32) {
+		uuid->type = SDP_UUID32;
+	} else if (bt_uuid->type == BT_UUID128) {
+		uuid->type = SDP_UUID128;
+	} else {
+		uuid->type = SDP_UUID_UNSPEC;
+	}
+}
+
+int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 							void* buffer, size_t buffer_len)
 {
 	struct gattlib_result_read_uuid_t* gattlib_result;
+	bt_uuid_t bt_uuid;
 	const int start = 0x0001;
 	const int end   = 0xffff;
 	int len;
@@ -99,7 +127,9 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, bt_uuid_t* uuid,
 	gattlib_result->callback       = NULL;
 	gattlib_result->completed      = FALSE;
 
-	gatt_read_char_by_uuid(connection->attrib, start, end, uuid,
+	uuid_to_bt_uuid(uuid, &bt_uuid);
+
+	gatt_read_char_by_uuid(connection->attrib, start, end, &bt_uuid,
 							gattlib_result_read_uuid_cb, gattlib_result);
 
 	// Wait for completion of the event
@@ -113,12 +143,13 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, bt_uuid_t* uuid,
 	return len;
 }
 
-int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, bt_uuid_t* uuid,
+int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 									gatt_read_cb_t gatt_read_cb)
 {
 	struct gattlib_result_read_uuid_t* gattlib_result;
 	const int start = 0x0001;
 	const int end   = 0xffff;
+	bt_uuid_t bt_uuid;
 	int i;
 
 	gattlib_result = malloc(sizeof(struct gattlib_result_read_uuid_t));
@@ -131,7 +162,9 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, bt_uuid_t* uu
 	gattlib_result->callback       = gatt_read_cb;
 	gattlib_result->completed      = FALSE;
 
-	return gatt_read_char_by_uuid(connection->attrib, start, end, uuid,
+	uuid_to_bt_uuid(uuid, &bt_uuid);
+
+	return gatt_read_char_by_uuid(connection->attrib, start, end, &bt_uuid,
 								gattlib_result_read_uuid_cb, gattlib_result);
 }
 

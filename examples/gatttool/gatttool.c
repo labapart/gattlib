@@ -222,6 +222,19 @@ done:
 		g_main_loop_quit(event_loop);
 }
 
+static void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid) {
+	memcpy(&uuid->value, &bt_uuid->value, sizeof(uuid->value));
+	if (bt_uuid->type == BT_UUID16) {
+		uuid->type = SDP_UUID16;
+	} else if (bt_uuid->type == BT_UUID32) {
+		uuid->type = SDP_UUID32;
+	} else if (bt_uuid->type == BT_UUID128) {
+		uuid->type = SDP_UUID128;
+	} else {
+		uuid->type = SDP_UUID_UNSPEC;
+	}
+}
+
 static gboolean characteristics_read(gpointer user_data)
 {
 	gatt_connection_t* connection = (gatt_connection_t*)user_data;
@@ -229,8 +242,11 @@ static gboolean characteristics_read(gpointer user_data)
 
 	if (opt_uuid != NULL) {
 		uint8_t buffer[0x100];
+		uuid_t uuid;
 
-		int len = gattlib_read_char_by_uuid(connection, opt_uuid, buffer, sizeof(buffer));
+		bt_uuid_to_uuid(opt_uuid, &uuid);
+
+		int len = gattlib_read_char_by_uuid(connection, &uuid, buffer, sizeof(buffer));
 		if (len == 0) {
 			return FALSE;
 		} else {
@@ -368,7 +384,10 @@ static gboolean characteristics_desc(gpointer user_data)
 		return FALSE;
 	} else {
 		for (int i = 0; i < descriptor_count; i++) {
-			g_print("handle = 0x%04x, uuid = %s\n", descriptors[i].handle, descriptors[i].uuid);
+			char uuid_str[MAX_LEN_UUID_STR + 1];
+
+			gattlib_uuid_to_string(&descriptors[i].uuid, uuid_str, MAX_LEN_UUID_STR + 1);
+			g_print("handle = 0x%04x, uuid = %s\n", descriptors[i].handle, uuid_str);
 		}
 		free(descriptors);
 		return TRUE;
