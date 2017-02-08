@@ -328,11 +328,11 @@ static void cmd_primary(int argcp, char **argvp)
 	if (argcp == 1) {
 		char uuid_str[MAX_LEN_UUID_STR + 1];
 		gattlib_primary_service_t* services;
-		int services_count;
+		int services_count, ret, i;
 
-		int ret = gattlib_discover_primary(g_connection, &services, &services_count);
+		ret = gattlib_discover_primary(g_connection, &services, &services_count);
 		if (ret == 0) {
-			for (int i = 0; i < services_count; i++) {
+			for (i = 0; i < services_count; i++) {
 				gattlib_uuid_to_string(&services[i].uuid, uuid_str, sizeof(uuid_str));
 
 				printf("attr handle: 0x%04x, end grp handle: 0x%04x uuid: %s\n",
@@ -369,7 +369,7 @@ static void cmd_char(int argcp, char **argvp)
 {
 	char uuid_str[MAX_LEN_UUID_STR + 1];
 	gattlib_characteristic_t* characteristics;
-	int characteristics_count;
+	int characteristics_count, ret, i;
 	int start = 0x0001;
 	int end = 0xffff;
 
@@ -406,9 +406,9 @@ static void cmd_char(int argcp, char **argvp)
 		return;
 	}
 
-	int ret = gattlib_discover_char_range(g_connection, start, end, &characteristics, &characteristics_count);
+	ret = gattlib_discover_char_range(g_connection, start, end, &characteristics, &characteristics_count);
 	if (ret == 0) {
-		for (int i = 0; i < characteristics_count; i++) {
+		for (i = 0; i < characteristics_count; i++) {
 			gattlib_uuid_to_string(&characteristics[i].uuid, uuid_str, sizeof(uuid_str));
 
 			printf("handle: 0x%04x, char properties: 0x%02x, char value "
@@ -423,7 +423,7 @@ static void cmd_char(int argcp, char **argvp)
 static void cmd_char_desc(int argcp, char **argvp)
 {
 	gattlib_descriptor_t* descriptors;
-	int descriptor_count;
+	int descriptor_count, ret, i;
 	int start = 0x0001;
 	int end = 0xffff;
 
@@ -448,9 +448,9 @@ static void cmd_char_desc(int argcp, char **argvp)
 		}
 	}
 
-	int ret = gattlib_discover_desc_range(g_connection, start, end, &descriptors, &descriptor_count);
+	ret = gattlib_discover_desc_range(g_connection, start, end, &descriptors, &descriptor_count);
 	if (ret == 0) {
-		for (int i = 0; i < descriptor_count; i++) {
+		for (i = 0; i < descriptor_count; i++) {
 			char uuid_str[MAX_LEN_UUID_STR + 1];
 
 			gattlib_uuid_to_string(&descriptors[i].uuid, uuid_str, MAX_LEN_UUID_STR + 1);

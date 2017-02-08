@@ -151,11 +151,11 @@ static gboolean primary(gpointer user_data)
 									NULL);
 	else {
 		gattlib_primary_service_t* services;
-		int services_count;
+		int services_count, i;
 
 		int ret = gattlib_discover_primary(connection, &services, &services_count);
 		if (ret == 0) {
-			for (int i = 0; i < services_count; i++) {
+			for (i = 0; i < services_count; i++) {
 				gattlib_uuid_to_string(&services[i].uuid, uuid_str, sizeof(uuid_str));
 
 				g_print("attr handle = 0x%04x, end grp handle = 0x%04x uuid: %s\n",
@@ -171,7 +171,7 @@ static gboolean characteristics(gpointer user_data)
 {
 	gatt_connection_t* connection = (gatt_connection_t*)user_data;
 	gattlib_characteristic_t* characteristics;
-	int characteristic_count;
+	int characteristic_count, i;
 
 	int ret = gattlib_discover_char(connection, &characteristics, &characteristic_count);
 	if (ret) {
@@ -179,7 +179,7 @@ static gboolean characteristics(gpointer user_data)
 	} else {
 		char uuid_str[MAX_LEN_UUID_STR + 1];
 
-		for (int i = 0; i < characteristic_count; i++) {
+		for (i = 0; i < characteristic_count; i++) {
 			gattlib_uuid_to_string(&characteristics[i].uuid, uuid_str, sizeof(uuid_str));
 
 			g_print("handle = 0x%04x, char properties = 0x%02x, char value "
@@ -243,15 +243,16 @@ static gboolean characteristics_read(gpointer user_data)
 	if (opt_uuid != NULL) {
 		uint8_t buffer[0x100];
 		uuid_t uuid;
+		int len, i;
 
 		bt_uuid_to_uuid(opt_uuid, &uuid);
 
-		int len = gattlib_read_char_by_uuid(connection, &uuid, buffer, sizeof(buffer));
+		len = gattlib_read_char_by_uuid(connection, &uuid, buffer, sizeof(buffer));
 		if (len == 0) {
 			return FALSE;
 		} else {
 			g_print("value: ");
-			for (int i = 0; i < len; i++) {
+			for (i = 0; i < len; i++) {
 				g_print("%02x ", buffer[i]);
 			}
 			g_print("\n");
@@ -377,13 +378,13 @@ static gboolean characteristics_desc(gpointer user_data)
 {
 	gatt_connection_t* connection = (gatt_connection_t*)user_data;
 	gattlib_descriptor_t* descriptors;
-	int descriptor_count;
+	int descriptor_count, i;
 
 	int ret = gattlib_discover_desc(connection, &descriptors, &descriptor_count);
 	if (ret) {
 		return FALSE;
 	} else {
-		for (int i = 0; i < descriptor_count; i++) {
+		for (i = 0; i < descriptor_count; i++) {
 			char uuid_str[MAX_LEN_UUID_STR + 1];
 
 			gattlib_uuid_to_string(&descriptors[i].uuid, uuid_str, MAX_LEN_UUID_STR + 1);
