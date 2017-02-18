@@ -352,16 +352,16 @@ static int l2cap_connect(int sock, const bdaddr_t *dst, uint8_t dst_type,
 	struct sockaddr_l2 addr;
 
 	if (timeout > 0) {
-		struct timeval timeout;
-		timeout.tv_sec = 2;
-		timeout.tv_usec = 0;
+		struct timeval timeval;
+		timeval.tv_sec = timeout;
+		timeval.tv_usec = 0;
 
-		if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+		if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeval, sizeof(timeval)) < 0) {
 			fprintf(stderr, "l2cap_connect: Failed to setsockopt for receive timeout.\n");
 			return -1;
 		}
 
-		if (setsockopt (sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+		if (setsockopt (sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeval, sizeof(timeval)) < 0) {
 			fprintf(stderr, "l2cap_connect: Failed to setsockopt for sending timeout.\n");
 			return -1;
 		}
