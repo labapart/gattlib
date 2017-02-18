@@ -351,10 +351,12 @@ gatt_connection_t *gattlib_connect(const gchar *src, const gchar *dst,
 }
 
 int gattlib_disconnect(gatt_connection_t* connection) {
+#if BLUEZ_VERSION_MAJOR == 4
 	// Stop the I/O Channel
 	GIOStatus status = g_io_channel_shutdown(connection->io, FALSE, NULL);
 	assert(status == G_IO_STATUS_NORMAL);
 	g_io_channel_unref(connection->io);
+#endif
 
 	g_attrib_unref(connection->attrib);
 
