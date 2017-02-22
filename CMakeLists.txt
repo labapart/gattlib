@@ -114,6 +114,7 @@ add_subdirectory(examples/ble_scan)
 add_subdirectory(examples/discover)
 add_subdirectory(examples/read_write)
 add_subdirectory(examples/gatttool)
+add_subdirectory(examples/nordic_uart)
 
 #
 # Packaging
