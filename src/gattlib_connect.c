@@ -459,3 +459,29 @@ int gattlib_string_to_uuid(const char *str, size_t n, uuid_t *uuid) {
 
 	return ret;
 }
+
+int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2) {
+	if (uuid1->type != uuid2->type) {
+		return 1;
+	} else if (uuid1->type == SDP_UUID16) {
+		if (uuid1->value.uuid16 == uuid2->value.uuid16) {
+			return 0;
+		} else {
+			return 2;
+		}
+	} else if (uuid1->type == SDP_UUID32) {
+		if (uuid1->value.uuid32 == uuid2->value.uuid32) {
+			return 0;
+		} else {
+			return 2;
+		}
+	} else if (uuid1->type == SDP_UUID128) {
+		if (memcmp(&uuid1->value.uuid128, &uuid2->value.uuid128, sizeof(uuid1->value.uuid128)) == 0) {
+			return 0;
+		} else {
+			return 2;
+		}
+	} else {
+		return 3;
+	}
+}
