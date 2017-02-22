@@ -439,7 +439,7 @@ int gattlib_uuid_to_string(const uuid_t *uuid, char *str, size_t n) {
 		memcpy(&data4, &uuid->value.uuid128.data[10], 4);
 		memcpy(&data5, &uuid->value.uuid128.data[14], 2);
 
-		snprintf(str, n, "0x%.8x-%.4x-%.4x-%.4x-%.8x%.4x",
+		snprintf(str, n, "%.8x-%.4x-%.4x-%.4x-%.8x%.4x",
 				ntohl(data0), ntohs(data1), ntohs(data2),
 				ntohs(data3), ntohl(data4), ntohs(data5));
 	} else {
