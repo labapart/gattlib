@@ -79,7 +79,7 @@ Examples
 
 ```
 void notification_cb(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data) {
-	printf("Notification on handle 0x%02x : ", handle);
+	printf("Notification on handle 0x%02x\n", handle);
 }
 
 main() {
