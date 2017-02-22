@@ -162,8 +162,14 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 
 	uuid_to_bt_uuid(uuid, &bt_uuid);
 
-	return gatt_read_char_by_uuid(connection->attrib, start, end, &bt_uuid,
+	guint id = gatt_read_char_by_uuid(connection->attrib, start, end, &bt_uuid,
 								gattlib_result_read_uuid_cb, gattlib_result);
+
+	if (id) {
+		return 0;
+	} else {
+		return -1;
+	}
 }
 
 void gattlib_write_result_cb(guint8 status, const guint8 *pdu, guint16 len, gpointer user_data) {
