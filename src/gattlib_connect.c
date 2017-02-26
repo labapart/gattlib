@@ -62,12 +62,12 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 	switch (pdu[0]) {
 	case ATT_OP_HANDLE_NOTIFY:
 		if (conn->notification_handler) {
-			conn->notification_handler(handle, &pdu[3], len, conn->notification_user_data);
+			conn->notification_handler(handle, &pdu[3], len - 3, conn->notification_user_data);
 		}
 		break;
 	case ATT_OP_HANDLE_IND:
 		if (conn->indication_handler) {
-			conn->indication_handler(handle, &pdu[3], len, conn->indication_user_data);
+			conn->indication_handler(handle, &pdu[3], len - 3, conn->indication_user_data);
 		}
 		break;
 	default:
