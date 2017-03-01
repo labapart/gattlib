@@ -34,7 +34,8 @@
 gatt_connection_t* m_connection;
 
 void notification_cb(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data) {
-	for(int i = 0; i < data_length; i++) {
+	int i;
+	for(i = 0; i < data_length; i++) {
 		printf("%c", data[i]);
 	}
 }
