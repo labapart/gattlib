@@ -24,6 +24,10 @@
 #ifndef __GATTLIB_H__
 #define __GATTLIB_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <glib.h>
 #include <stdint.h>
 
@@ -124,5 +128,9 @@ void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_ha
 int gattlib_uuid_to_string(const uuid_t *uuid, char *str, size_t n);
 int gattlib_string_to_uuid(const char *str, size_t n, uuid_t *uuid);
 int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
