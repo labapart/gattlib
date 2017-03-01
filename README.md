@@ -92,7 +92,7 @@ main() {
 	gattlib_register_notification(connection, notification_cb, NULL);
 }
 
-Add LD_LIBRARY_PATH to the environment:
+Add LD_LIBRARY_PATH to the envoronment:
 
  - export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
 ```

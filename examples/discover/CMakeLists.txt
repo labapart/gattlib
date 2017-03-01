@@ -22,14 +22,6 @@
 
 cmake_minimum_required(VERSION 2.6)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GLIB_PKG glib-2.0)
-
-if (GLIB_PKG_FOUND)
-    message(Found glib-2.0)
-endif()
-include_directories(${GLIB_PKG_INCLUDE_DIRS})
-
 set(discover_LIBS gattlib)
 
 set(discover_SRCS discover.c)
