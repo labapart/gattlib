@@ -82,30 +82,7 @@ int main(int argc, char *argv[]) {
 			printf("%02x ", buffer[i]);
 		printf("\n");
 	} else {
-		uint16_t handle = 0;
-
-		// Look for handle for the corresponding UUID
-		gattlib_characteristic_t* characteristics;
-		int characteristic_count;
-		ret = gattlib_discover_char(connection, &characteristics, &characteristic_count);
-		if (ret) {
-			fprintf(stderr, "Fail to discover characteristic.\n");
-			return 1;
-		}
-
-		for (i = 0; i < characteristic_count; i++) {
-			if (gattlib_uuid_cmp(&characteristics[i].uuid, &g_uuid) == 0) {
-				handle = characteristics[i].value_handle;
-				break;
-			}
-		}
-		if (handle == 0) {
-			fprintf(stderr, "Fail to find handle for UUID.\n");
-			return 1;
-		}
-		free(characteristics);
-
-		ret = gattlib_write_char_by_handle(connection, handle, buffer, sizeof(buffer));
+		ret = gattlib_write_char_by_uuid(connection, &g_uuid, buffer, sizeof(buffer));
 		assert(ret == 0);
 	}
 

@@ -181,3 +181,16 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 
 	return 0;
 }
+
+int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t buffer_len) {
+	uint16_t handle = 0;
+	int ret;
+
+	ret = get_handle_from_uuid(connection, uuid, &handle);
+	if (ret) {
+		fprintf(stderr, "Fail to find handle for UUID.\n");
+		return ret;
+	}
+
+	return gattlib_write_char_by_handle(connection, handle, buffer, sizeof(buffer));
+}
