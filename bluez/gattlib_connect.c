@@ -282,7 +282,7 @@ static BtIOSecLevel get_bt_io_sec_level(gattlib_bt_sec_level_t sec_level) {
 	}
 }
 
-gatt_connection_t *gattlib_connect_async(const gchar *src, const gchar *dst,
+gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 				gatt_connect_cb_t connect_cb)
 {
@@ -309,7 +309,7 @@ static gboolean connection_timeout(gpointer user_data) {
  * @param psm       Specify the PSM for GATT/ATT over BR/EDR
  * @param mtu       Specify the MTU size
  */
-gatt_connection_t *gattlib_connect(const gchar *src, const gchar *dst,
+gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu)
 {
 	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);

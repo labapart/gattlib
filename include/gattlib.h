@@ -28,7 +28,6 @@
 extern "C" {
 #endif
 
-#include <glib.h>
 #include <stdint.h>
 
 #include <bluetooth/bluetooth.h>
@@ -61,7 +60,7 @@ typedef struct _GAttrib GAttrib;
 typedef void (*gattlib_event_handler_t)(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data);
 
 typedef struct _gatt_connection_t {
-	GIOChannel *io;
+	void *io; // Mapped to 'GIOChannel*' when using Glib
 
 	GAttrib *attrib;
 
@@ -83,10 +82,10 @@ typedef void* (*gatt_read_cb_t)(void* buffer, size_t buffer_len);
  * @param psm       Specify the PSM for GATT/ATT over BR/EDR
  * @param mtu       Specify the MTU size
  */
-gatt_connection_t *gattlib_connect(const gchar *src, const gchar *dst,
+gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu);
 
-gatt_connection_t *gattlib_connect_async(const gchar *src, const gchar *dst,
+gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 				gatt_connect_cb_t connect_cb);
 

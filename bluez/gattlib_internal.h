@@ -24,6 +24,8 @@
 #ifndef __GATTLIB_INTERNAL_H__
 #define __GATTLIB_INTERNAL_H__
 
+#include <glib.h>
+
 #define BLUEZ_VERSIONS(major, minor)	(((major) << 8) | (minor))
 #define BLUEZ_VERSION					BLUEZ_VERSIONS(BLUEZ_VERSION_MAJOR, BLUEZ_VERSION_MINOR)
 
