@@ -70,7 +70,8 @@ set(bluez5_SRCS ${bluez5_DIR}/attrib/att.c
                 ${bluez5_DIR}/src/shared/timeout-glib.c)
 
 # Gattlib files
-set(gattlib_SRCS gattlib_connect.c
+set(gattlib_SRCS gattlib_adapter.c
+                 gattlib_connect.c
                  gattlib_discover.c
                  gattlib_read_write.c)
 

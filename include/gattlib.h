@@ -79,8 +79,20 @@ typedef struct _gatt_connection_t {
 	void* indication_user_data;
 } gatt_connection_t;
 
+typedef void (*gattlib_discovered_device_t)(const char* addr, const char* name);
 typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection);
 typedef void* (*gatt_read_cb_t)(const void* buffer, size_t buffer_len);
+
+
+/**
+ * Open Bluetooth adapter
+ *
+ * @adapter_name    With value NULL, the default adapter will be selected.
+ */
+int gattlib_adapter_open(const char* adapter_name, void** adapter);
+int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout);
+int gattlib_adapter_scan_disable(void* adapter);
+int gattlib_adapter_close(void* adapter);
 
 /**
  * @param src		Local Adaptater interface
