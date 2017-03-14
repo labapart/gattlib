@@ -94,19 +94,6 @@ void uuid_to_bt_uuid(uuid_t* uuid, bt_uuid_t* bt_uuid) {
 	}
 }
 
-void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid) {
-	memcpy(&uuid->value, &bt_uuid->value, sizeof(uuid->value));
-	if (bt_uuid->type == BT_UUID16) {
-		uuid->type = SDP_UUID16;
-	} else if (bt_uuid->type == BT_UUID32) {
-		uuid->type = SDP_UUID32;
-	} else if (bt_uuid->type == BT_UUID128) {
-		uuid->type = SDP_UUID128;
-	} else {
-		uuid->type = SDP_UUID_UNSPEC;
-	}
-}
-
 int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 							void* buffer, size_t buffer_len)
 {

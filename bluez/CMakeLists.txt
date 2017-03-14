@@ -73,7 +73,8 @@ set(bluez5_SRCS ${bluez5_DIR}/attrib/att.c
 set(gattlib_SRCS gattlib_adapter.c
                  gattlib_connect.c
                  gattlib_discover.c
-                 gattlib_read_write.c)
+                 gattlib_read_write.c
+                 ../gattlib_common.c)
 
 # Added Glib support
 pkg_search_module(GLIB REQUIRED glib-2.0)
