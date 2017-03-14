@@ -22,9 +22,11 @@
 
 cmake_minimum_required(VERSION 2.6)
 
-set(nordic_uart_LIBS gattlib)
+find_package(PkgConfig REQUIRED)
+
+pkg_search_module(GATTLIB REQUIRED gattlib)
 
 set(nordic_uart_SRCS nordic_uart.c)
 
 add_executable(nordic_uart ${nordic_uart_SRCS})
-target_link_libraries(nordic_uart ${nordic_uart_LIBS})
+target_link_libraries(nordic_uart ${GATTLIB_LIBRARIES})

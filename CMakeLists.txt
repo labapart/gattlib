@@ -109,6 +109,11 @@ set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 add_library(gattlib SHARED ${gattlib_SRCS})
 target_link_libraries(gattlib ${gattlib_LIBS})
 
+# Generate pkg-config file before building the examples
+configure_file(gattlib.pc.in gattlib.pc @ONLY)
+# Add the build directory to PKG_CONFIG_PATH
+set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
+
 # Examples
 add_subdirectory(examples/ble_scan)
 add_subdirectory(examples/discover)
@@ -138,7 +143,6 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "libglib2.0-0")
 #
 # List of file to install
 #
-configure_file(gattlib.pc.in gattlib.pc @ONLY)
 install(TARGETS gattlib LIBRARY DESTINATION lib)
 install(FILES include/gattlib.h DESTINATION include)
 install(FILES ${PROJECT_BINARY_DIR}/gattlib.pc DESTINATION lib/pkgconfig)

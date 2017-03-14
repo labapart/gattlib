@@ -2,7 +2,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2016  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2016-2017  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -22,9 +22,11 @@
 
 cmake_minimum_required(VERSION 2.6)
 
-set(read_write_LIBS gattlib)
+find_package(PkgConfig REQUIRED)
+
+pkg_search_module(GATTLIB REQUIRED gattlib)
 
 set(read_write_SRCS read_write.c)
 
 add_executable(read_write ${read_write_SRCS})
-target_link_libraries(read_write ${read_write_LIBS})
+target_link_libraries(read_write ${GATTLIB_LIBRARIES})
