@@ -1,0 +1,34 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+	"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+
+<node>
+	<interface name="org.bluez.GattCharacteristic1">
+		<method name="ReadValue">
+			<arg name="value" type="ay" direction="out">
+				<annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
+			</arg>
+			<!--<arg name="options" type="a{sv}" direction="in"/>-->
+		</method>
+		<method name="WriteValue">
+			<arg name="value" type="ay" direction="in">
+				<annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
+			</arg>
+			<!--<arg name="options" type="a{sv}" direction="in"/>-->
+		</method>
+		<method name="StartNotify"/>
+		<method name="StopNotify"/>
+
+		<property name="UUID" type="s" access="read"/>
+		<property name="Service" type="o" access="read"/>
+		<property name="Value" type="ay" access="read"/>
+		<property name="Notifying" type="b" access="read"/>
+		<property name="Flags" type="as" access="read"/>
+		<property name="Descriptors" type="ao" access="read"/>
+		
+		<signal name="PropertiesChanged">
+			<arg name="interface" type="s"/>
+			<arg name="changed_properties" type="a{sv}"/>
+			<arg name="invalidated_properties" type="as"/>
+		</signal>
+	</interface>
+</node>

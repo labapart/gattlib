@@ -48,6 +48,14 @@ extern "C" {
   #define ATT_MAX_MTU ATT_MAX_VALUE_LEN
 #endif
 
+/* GATT Characteristic Properties Bitfield values */
+#define GATTLIB_CHARACTERISTIC_BROADCAST			0x01
+#define GATTLIB_CHARACTERISTIC_READ					0x02
+#define GATTLIB_CHARACTERISTIC_WRITE_WITHOUT_RESP	0x04
+#define GATTLIB_CHARACTERISTIC_WRITE				0x08
+#define GATTLIB_CHARACTERISTIC_NOTIFY				0x10
+#define GATTLIB_CHARACTERISTIC_INDICATE				0x20
+
 typedef enum {
 	BT_SEC_SDP = 0,
 	BT_SEC_LOW,
@@ -72,7 +80,7 @@ typedef struct _gatt_connection_t {
 } gatt_connection_t;
 
 typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection);
-typedef void* (*gatt_read_cb_t)(void* buffer, size_t buffer_len);
+typedef void* (*gatt_read_cb_t)(const void* buffer, size_t buffer_len);
 
 /**
  * @param src		Local Adaptater interface

@@ -27,6 +27,8 @@ include(CrossCompilation.cmake)
 
 project(gattlib)
 
+set(GATTLIB_DBUS TRUE CACHE BOOLEAN "Build gattlib with D-Bus support")
+
 find_package(PkgConfig REQUIRED)
 
 # Show all the warnings
@@ -34,11 +36,17 @@ set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 # Expose 'gattlib.h' to all sub-directories
 include_directories(include)
 
-# Build bluez-based gattlib
-add_subdirectory(bluez)
+if (GATTLIB_DBUS)
+  # Build dbus-based gattlib
+  add_subdirectory(dbus)
+else()
+  # Build bluez-based gattlib
+  add_subdirectory(bluez)
+endif()
 
 # Generate pkg-config file before building the examples
-configure_file(gattlib.pc.in gattlib.pc @ONLY)
+configure_file(dbus/gattlib.pc.in ${PROJECT_BINARY_DIR}/gattlib.pc @ONLY)
+
 # Add the build directory to PKG_CONFIG_PATH
 set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
 
@@ -46,8 +54,12 @@ set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
 add_subdirectory(examples/ble_scan)
 add_subdirectory(examples/discover)
 add_subdirectory(examples/read_write)
-add_subdirectory(examples/gatttool)
 add_subdirectory(examples/nordic_uart)
+
+# Some examples require Bluez code and other DBus support
+if (NOT GATTLIB_DBUS)
+  add_subdirectory(examples/gatttool)
+endif()
 
 #
 # Packaging
