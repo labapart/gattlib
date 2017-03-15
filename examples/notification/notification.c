@@ -28,6 +28,9 @@
 
 #include "gattlib.h"
 
+// Battery Level UUID
+const uuid_t g_battery_level_uuid = CREATE_UUID16(0x2A19);
+
 void notification_handler(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data) {
 	int i;
 
@@ -60,13 +63,7 @@ int main(int argc, char *argv[]) {
 
 	gattlib_register_notification(connection, notification_handler, NULL);
 
-	// Battery Level UUID
-	uuid_t battery_level_uuid = {
-		.type= SDP_UUID16,
-		.value.uuid16= 0x2A19
-	};
-
-	ret = gattlib_notification_start(connection, &battery_level_uuid);
+	ret = gattlib_notification_start(connection, &g_battery_level_uuid);
 	if (ret) {
 		fprintf(stderr, "Fail to start notification\n.");
 		return 1;

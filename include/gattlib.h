@@ -56,6 +56,8 @@ extern "C" {
 #define GATTLIB_CHARACTERISTIC_NOTIFY				0x10
 #define GATTLIB_CHARACTERISTIC_INDICATE				0x20
 
+#define CREATE_UUID16(value16) { .type=SDP_UUID16, .value.uuid16=(value16) }
+
 typedef enum {
 	BT_SEC_SDP = 0,
 	BT_SEC_LOW,
