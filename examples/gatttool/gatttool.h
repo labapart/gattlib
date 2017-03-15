@@ -31,3 +31,12 @@ int interactive(const gchar *src, const gchar *dst, const gchar *dst_type,
 size_t gatt_attr_data_from_string(const char *str, uint8_t **data);
 uint8_t get_dest_type_from_str(const char* dst_type);
 BtIOSecLevel get_sec_level_from_str(const char* sec_level);
+
+typedef struct {
+	GIOChannel*               io;
+	GAttrib*                  attrib;
+
+	// We keep a list of characteristics to make the correspondence handle/UUID.
+	gattlib_characteristic_t* characteristics;
+	int                       characteristic_count;
+} gattlib_context_t;

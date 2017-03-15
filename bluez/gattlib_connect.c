@@ -80,23 +80,26 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 
 	olen = enc_confirmation(opdu, sizeof(opdu));
 
-	if (olen > 0)
-		g_attrib_send(conn->attrib, 0,
+	if (olen > 0) {
+		gattlib_context_t* conn_context = conn->context;
+		g_attrib_send(conn_context->attrib, 0,
 #if BLUEZ_VERSION_MAJOR == 4
 				opdu[0],
 #endif
 				opdu, olen, NULL, NULL, NULL);
+	}
 }
 
 static gboolean io_listen_cb(gpointer user_data) {
 	gatt_connection_t *conn = user_data;
+	gattlib_context_t* conn_context = conn->context;
 
-	g_attrib_register(conn->attrib, ATT_OP_HANDLE_NOTIFY,
+	g_attrib_register(conn_context->attrib, ATT_OP_HANDLE_NOTIFY,
 #if BLUEZ_VERSION_MAJOR == 5
 			GATTRIB_ALL_HANDLES,
 #endif
 			events_handler, conn, NULL);
-	g_attrib_register(conn->attrib, ATT_OP_HANDLE_IND,
+	g_attrib_register(conn_context->attrib, ATT_OP_HANDLE_IND,
 #if BLUEZ_VERSION_MAJOR == 5
 			GATTRIB_ALL_HANDLES,
 #endif
@@ -116,10 +119,12 @@ static void io_connect_cb(GIOChannel *io, GError *err, gpointer user_data) {
 			io_connect_arg->connect_cb(NULL);
 		}
 	} else {
+		gattlib_context_t* conn_context = io_connect_arg->conn->context;
+
 #if BLUEZ_VERSION_MAJOR == 4
-		io_connect_arg->conn->attrib = g_attrib_new(io);
+		conn_context->attrib = g_attrib_new(io);
 #else
-		io_connect_arg->conn->attrib = g_attrib_new(io, BT_ATT_DEFAULT_LE_MTU, false);
+		conn_context->attrib = g_attrib_new(io, BT_ATT_DEFAULT_LE_MTU, false);
 #endif
 
 		//
@@ -213,10 +218,17 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 		return NULL;
 	}
 
+	gattlib_context_t* conn_context = calloc(sizeof(gattlib_context_t), 1);
+	if (conn_context == NULL) {
+		return NULL;
+	}
+
 	gatt_connection_t* conn = calloc(sizeof(gatt_connection_t), 1);
 	if (conn == NULL) {
 		return NULL;
 	}
+
+	conn->context = conn_context;
 
 	/* Intialize bt_io_connect argument */
 	io_connect_arg->conn       = conn;
@@ -225,8 +237,8 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 	io_connect_arg->timeout    = FALSE;
 	io_connect_arg->error      = NULL;
 
-	if (psm == 0)
-		conn->io = bt_io_connect(
+	if (psm == 0) {
+		conn_context->io = bt_io_connect(
 #if BLUEZ_VERSION_MAJOR == 4
 				BT_IO_L2CAP,
 #endif
@@ -241,8 +253,8 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 				BT_IO_OPT_SEC_LEVEL, sec_level,
 				BT_IO_OPT_TIMEOUT, CONNECTION_TIMEOUT,
 				BT_IO_OPT_INVALID);
-	else
-		conn->io = bt_io_connect(
+	} else {
+		conn_context->io = bt_io_connect(
 #if BLUEZ_VERSION_MAJOR == 4
 				BT_IO_L2CAP,
 #endif
@@ -257,10 +269,13 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 				BT_IO_OPT_SEC_LEVEL, sec_level,
 				BT_IO_OPT_TIMEOUT, CONNECTION_TIMEOUT,
 				BT_IO_OPT_INVALID);
+	}
 
 	if (err) {
 		fprintf(stderr, "%s\n", err->message);
 		g_error_free(err);
+		free(conn_context);
+		free(conn);
 		return NULL;
 	} else {
 		return conn;
@@ -351,15 +366,19 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 }
 
 int gattlib_disconnect(gatt_connection_t* connection) {
+	gattlib_context_t* conn_context = connection->context;
+
 #if BLUEZ_VERSION_MAJOR == 4
 	// Stop the I/O Channel
-	GIOStatus status = g_io_channel_shutdown(connection->io, FALSE, NULL);
+	GIOStatus status = g_io_channel_shutdown(conn_context->io, FALSE, NULL);
 	assert(status == G_IO_STATUS_NORMAL);
-	g_io_channel_unref(connection->io);
+	g_io_channel_unref(conn_context->io);
 #endif
 
-	g_attrib_unref(connection->attrib);
+	g_attrib_unref(conn_context->attrib);
 
+	free(conn_context->characteristics);
+	free(connection->context);
 	free(connection);
 
 	//TODO: Add a mutex around this code to avoid a race condition

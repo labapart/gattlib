@@ -45,6 +45,15 @@ struct gattlib_thread_t {
 	GMainLoop*    loop;
 };
 
+typedef struct {
+	GIOChannel*               io;
+	GAttrib*                  attrib;
+
+	// We keep a list of characteristics to make the correspondence handle/UUID.
+	gattlib_characteristic_t* characteristics;
+	int                       characteristic_count;
+} gattlib_context_t;
+
 extern struct gattlib_thread_t g_gattlib_thread;
 
 /**

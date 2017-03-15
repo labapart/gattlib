@@ -143,7 +143,8 @@ done:
 static gboolean primary(gpointer user_data)
 {
 	gatt_connection_t* connection = (gatt_connection_t*)user_data;
-	GAttrib *attrib = connection->attrib;
+	gattlib_context_t* conn_context = connection->context;
+	GAttrib *attrib = conn_context->attrib;
 	char uuid_str[MAX_LEN_UUID_STR + 1];
 
 	if (opt_uuid)
@@ -238,7 +239,8 @@ static void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid) {
 static gboolean characteristics_read(gpointer user_data)
 {
 	gatt_connection_t* connection = (gatt_connection_t*)user_data;
-	GAttrib *attrib = connection->attrib;
+	gattlib_context_t* conn_context = connection->context;
+	GAttrib *attrib = conn_context->attrib;
 
 	if (opt_uuid != NULL) {
 		uint8_t buffer[0x100];
@@ -286,7 +288,8 @@ static void mainloop_quit(gpointer user_data)
 
 static gboolean characteristics_write(gpointer user_data)
 {
-	GAttrib *attrib = ((gatt_connection_t*)user_data)->attrib;
+	gattlib_context_t* conn_context = ((gatt_connection_t*)user_data)->context;
+	GAttrib *attrib = conn_context->attrib;
 	uint8_t *value;
 	size_t len;
 
@@ -343,7 +346,8 @@ done:
 
 static gboolean characteristics_write_req(gpointer user_data)
 {
-	GAttrib *attrib = ((gatt_connection_t*)user_data)->attrib;
+	gattlib_context_t* conn_context = ((gatt_connection_t*)user_data)->context;
+	GAttrib *attrib = conn_context->attrib;
 	uint8_t *value;
 	size_t len;
 

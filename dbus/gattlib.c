@@ -230,9 +230,16 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 	// Generate object path like: /org/bluez/hci0/dev_DA_94_40_95_E0_87
 	snprintf(object_path, sizeof(object_path), "/org/bluez/%s/dev_%s", adapter_name, device_address_str);
 
+	gattlib_context_t* conn_context = calloc(sizeof(gattlib_context_t), 1);
+	if (conn_context == NULL) {
+		return NULL;
+	}
+
 	gatt_connection_t* connection = calloc(sizeof(gatt_connection_t), 1);
 	if (connection == NULL) {
 		return NULL;
+	} else {
+		connection->context = conn_context;
 	}
 
 	OrgBluezDevice1* device = org_bluez_device1_proxy_new_for_bus_sync(
@@ -245,7 +252,8 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 	if (device == NULL) {
 		goto FREE_CONNECTION;
 	} else {
-		connection->io = device;
+		conn_context->device = device;
+		conn_context->device_object_path = strdup(object_path);
 	}
 
 	error = NULL;
@@ -272,7 +280,8 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 	return connection;
 
 FREE_DEVICE:
-	g_object_unref(connection->io);
+	free(conn_context->device_object_path);
+	g_object_unref(conn_context->device);
 
 FREE_CONNECTION:
 	free(connection);
@@ -287,7 +296,15 @@ gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 }
 
 int gattlib_disconnect(gatt_connection_t* connection) {
-	g_object_unref(connection->io);
+	gattlib_context_t* conn_context = connection->context;
+	GError *error = NULL;
+
+	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
+
+	free(conn_context->device_object_path);
+	g_object_unref(conn_context->device);
+
+	free(connection->context);
 	free(connection);
 	return 0;
 }
@@ -295,6 +312,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 38)
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
+	gattlib_context_t* conn_context = connection->context;
 	OrgBluezDevice1* device = conn_context->device;
 	const gchar* const* service_str;
 	GError *error = NULL;
@@ -445,6 +463,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 38)
 int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristic_count) {
+	gattlib_context_t* conn_context = connection->context;
 	OrgBluezDevice1* device = conn_context->device;
 	GError *error = NULL;
 

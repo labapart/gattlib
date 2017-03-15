@@ -97,6 +97,7 @@ void uuid_to_bt_uuid(uuid_t* uuid, bt_uuid_t* bt_uuid) {
 int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 							void* buffer, size_t buffer_len)
 {
+	gattlib_context_t* conn_context = connection->context;
 	struct gattlib_result_read_uuid_t* gattlib_result;
 	bt_uuid_t bt_uuid;
 	const int start = 0x0001;
@@ -115,7 +116,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 
 	uuid_to_bt_uuid(uuid, &bt_uuid);
 
-	gatt_read_char_by_uuid(connection->attrib, start, end, &bt_uuid,
+	gatt_read_char_by_uuid(conn_context->attrib, start, end, &bt_uuid,
 							gattlib_result_read_uuid_cb, gattlib_result);
 
 	// Wait for completion of the event
@@ -132,6 +133,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 									gatt_read_cb_t gatt_read_cb)
 {
+	gattlib_context_t* conn_context = connection->context;
 	struct gattlib_result_read_uuid_t* gattlib_result;
 	const int start = 0x0001;
 	const int end   = 0xffff;
@@ -149,7 +151,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 
 	uuid_to_bt_uuid(uuid, &bt_uuid);
 
-	guint id = gatt_read_char_by_uuid(connection->attrib, start, end, &bt_uuid,
+	guint id = gatt_read_char_by_uuid(conn_context->attrib, start, end, &bt_uuid,
 								gattlib_result_read_uuid_cb, gattlib_result);
 
 	if (id) {
@@ -166,9 +168,10 @@ void gattlib_write_result_cb(guint8 status, const guint8 *pdu, guint16 len, gpoi
 }
 
 int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, void* buffer, size_t buffer_len) {
+	gattlib_context_t* conn_context = connection->context;
 	int write_completed = FALSE;
 
-	guint ret = gatt_write_char(connection->attrib, handle, buffer, buffer_len,
+	guint ret = gatt_write_char(conn_context->attrib, handle, buffer, buffer_len,
 								gattlib_write_result_cb, &write_completed);
 	if (ret == 0) {
 		return 1;

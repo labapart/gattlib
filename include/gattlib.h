@@ -68,9 +68,7 @@ typedef struct _GAttrib GAttrib;
 typedef void (*gattlib_event_handler_t)(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data);
 
 typedef struct _gatt_connection_t {
-	void *io; // Mapped to 'GIOChannel*' when using Glib
-
-	GAttrib *attrib;
+	void* context;
 
 	gattlib_event_handler_t notification_handler;
 	void* notification_user_data;

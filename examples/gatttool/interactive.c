@@ -305,10 +305,12 @@ static void cmd_connect(int argcp, char **argvp)
 	sec_level = get_sec_level_from_str(opt_sec_level);
 	connection = gattlib_connect_async(opt_src, opt_dst, dst_type, sec_level,
 					opt_psm, opt_mtu, connect_cb);
-	if (connection == NULL)
+	if (connection == NULL) {
 		set_state(STATE_DISCONNECTED);
-	else
-		g_io_add_watch(g_connection->io, G_IO_HUP, channel_watcher, NULL);
+	} else {
+		gattlib_context_t* conn_context = g_connection->context;
+		g_io_add_watch(conn_context->io, G_IO_HUP, channel_watcher, NULL);
+	}
 }
 
 static void cmd_disconnect(int argcp, char **argvp)
@@ -318,6 +320,7 @@ static void cmd_disconnect(int argcp, char **argvp)
 
 static void cmd_primary(int argcp, char **argvp)
 {
+	gattlib_context_t* conn_context = g_connection->context;
 	bt_uuid_t uuid;
 
 	if (conn_state != STATE_CONNECTED) {
@@ -349,7 +352,7 @@ static void cmd_primary(int argcp, char **argvp)
 		return;
 	}
 
-	gatt_discover_primary(g_connection->attrib, &uuid, primary_by_uuid_cb, NULL);
+	gatt_discover_primary(conn_context->attrib, &uuid, primary_by_uuid_cb, NULL);
 }
 
 static int strtohandle(const char *src)
@@ -367,6 +370,7 @@ static int strtohandle(const char *src)
 
 static void cmd_char(int argcp, char **argvp)
 {
+	gattlib_context_t* conn_context = g_connection->context;
 	char uuid_str[MAX_LEN_UUID_STR + 1];
 	gattlib_characteristic_t* characteristics;
 	int characteristics_count, ret, i;
@@ -402,7 +406,7 @@ static void cmd_char(int argcp, char **argvp)
 			return;
 		}
 
-		gatt_discover_char(g_connection->attrib, start, end, &uuid, char_cb, NULL);
+		gatt_discover_char(conn_context->attrib, start, end, &uuid, char_cb, NULL);
 		return;
 	}
 
@@ -462,6 +466,7 @@ static void cmd_char_desc(int argcp, char **argvp)
 
 static void cmd_read_hnd(int argcp, char **argvp)
 {
+	gattlib_context_t* conn_context = g_connection->context;
 	int handle;
 
 	if (conn_state != STATE_CONNECTED) {
@@ -495,15 +500,16 @@ static void cmd_read_hnd(int argcp, char **argvp)
 	}
 #endif
 
-	gatt_read_char(g_connection->attrib, handle,
+	gatt_read_char(conn_context->attrib, handle,
 #if BLUEZ_VERSION_MAJOR == 4
 			offset,
 #endif
-			char_read_cb, g_connection->attrib);
+			char_read_cb, conn_context->attrib);
 }
 
 static void cmd_read_uuid(int argcp, char **argvp)
 {
+	gattlib_context_t* conn_context = g_connection->context;
 	struct characteristic_data *char_data;
 	int start = 0x0001;
 	int end = 0xffff;
@@ -546,7 +552,7 @@ static void cmd_read_uuid(int argcp, char **argvp)
 	char_data->end = end;
 	char_data->uuid = uuid;
 
-	gatt_read_char_by_uuid(g_connection->attrib, start, end, &char_data->uuid,
+	gatt_read_char_by_uuid(conn_context->attrib, start, end, &char_data->uuid,
 					char_read_by_uuid_cb, char_data);
 }
 
@@ -569,6 +575,7 @@ static void char_write_req_cb(guint8 status, const guint8 *pdu, guint16 plen,
 
 static void cmd_char_write(int argcp, char **argvp)
 {
+	gattlib_context_t* conn_context = g_connection->context;
 	uint8_t *value;
 	size_t plen;
 	int handle;
@@ -596,16 +603,17 @@ static void cmd_char_write(int argcp, char **argvp)
 	}
 
 	if (g_strcmp0("char-write-req", argvp[0]) == 0)
-		gatt_write_char(g_connection->attrib, handle, value, plen,
+		gatt_write_char(conn_context->attrib, handle, value, plen,
 					char_write_req_cb, NULL);
 	else
-		gatt_write_char(g_connection->attrib, handle, value, plen, NULL, NULL);
+		gatt_write_char(conn_context->attrib, handle, value, plen, NULL, NULL);
 
 	g_free(value);
 }
 
 static void cmd_sec_level(int argcp, char **argvp)
 {
+	gattlib_context_t* conn_context = g_connection->context;
 	GError *gerr = NULL;
 	BtIOSecLevel sec_level;
 
@@ -636,7 +644,7 @@ static void cmd_sec_level(int argcp, char **argvp)
 		return;
 	}
 
-	bt_io_set(g_connection->io,
+	bt_io_set(conn_context->io,
 #if BLUEZ_VERSION_MAJOR == 4
 			BT_IO_L2CAP,
 #endif
@@ -653,6 +661,7 @@ static void cmd_sec_level(int argcp, char **argvp)
 static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
 							gpointer user_data)
 {
+	gattlib_context_t* conn_context = g_connection->context;
 	uint16_t mtu;
 
 	if (status != 0) {
@@ -668,7 +677,7 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
 
 	mtu = MIN(mtu, opt_mtu);
 	/* Set new value for MTU in client */
-	if (g_attrib_set_mtu(g_connection->attrib, mtu))
+	if (g_attrib_set_mtu(conn_context->attrib, mtu))
 		printf("MTU was exchanged successfully: %d\n", mtu);
 	else
 		printf("Error exchanging MTU\n");
@@ -676,6 +685,8 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
 
 static void cmd_mtu(int argcp, char **argvp)
 {
+	gattlib_context_t* conn_context = g_connection->context;
+
 	if (conn_state != STATE_CONNECTED) {
 		printf("Command failed: not connected.\n");
 		return;
@@ -706,7 +717,7 @@ static void cmd_mtu(int argcp, char **argvp)
 		return;
 	}
 
-	gatt_exchange_mtu(g_connection->attrib, opt_mtu, exchange_mtu_cb, NULL);
+	gatt_exchange_mtu(conn_context->attrib, opt_mtu, exchange_mtu_cb, NULL);
 }
 
 static struct {

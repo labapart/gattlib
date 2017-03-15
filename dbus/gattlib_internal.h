@@ -37,4 +37,9 @@
 #define BLUEZ_VERSIONS(major, minor)	(((major) << 8) | (minor))
 #define BLUEZ_VERSION					BLUEZ_VERSIONS(BLUEZ_VERSION_MAJOR, BLUEZ_VERSION_MINOR)
 
+typedef struct {
+	char* device_object_path;
+	OrgBluezDevice1* device;
+} gattlib_context_t;
+
 #endif

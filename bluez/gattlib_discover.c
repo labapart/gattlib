@@ -77,7 +77,8 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	bzero(&user_data, sizeof(user_data));
 	user_data.discovered     = FALSE;
 
-	ret = gatt_discover_primary(connection->attrib, NULL, primary_all_cb, &user_data);
+	gattlib_context_t* conn_context = connection->context;
+	ret = gatt_discover_primary(conn_context->attrib, NULL, primary_all_cb, &user_data);
 	if (ret == 0) {
 		fprintf(stderr, "Fail to discover primary services.\n");
 		return 1;
@@ -140,7 +141,8 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 	bzero(&user_data, sizeof(user_data));
 	user_data.discovered     = FALSE;
 
-	ret = gatt_discover_char(connection->attrib, start, end, NULL, characteristic_cb, &user_data);
+	gattlib_context_t* conn_context = connection->context;
+	ret = gatt_discover_char(conn_context->attrib, start, end, NULL, characteristic_cb, &user_data);
 	if (ret == 0) {
 		fprintf(stderr, "Fail to discover characteristics.\n");
 		return 1;
@@ -245,6 +247,7 @@ done:
 #endif
 
 int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count) {
+	gattlib_context_t* conn_context = connection->context;
 	struct descriptor_cb_t descriptor_data;
 	guint ret;
 
@@ -253,7 +256,7 @@ int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int en
 #if BLUEZ_VERSION_MAJOR == 4
 	ret = gatt_find_info(connection->attrib, start, end, char_desc_cb, &descriptor_data);
 #else
-	ret = gatt_discover_desc(connection->attrib, start, end, NULL, char_desc_cb, &descriptor_data);
+	ret = gatt_discover_desc(conn_context->attrib, start, end, NULL, char_desc_cb, &descriptor_data);
 #endif
 	if (ret == 0) {
 		fprintf(stderr, "Fail to discover descriptors.\n");
