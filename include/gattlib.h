@@ -65,7 +65,7 @@ typedef enum {
 
 typedef struct _GAttrib GAttrib;
 
-typedef void (*gattlib_event_handler_t)(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data);
+typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data);
 
 typedef struct _gatt_connection_t {
 	void* context;

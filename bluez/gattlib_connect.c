@@ -52,6 +52,7 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 	gatt_connection_t *conn = user_data;
 	uint8_t opdu[ATT_MAX_MTU];
 	uint16_t handle, olen = 0;
+	uuid_t uuid;
 
 #if BLUEZ_VERSION_MAJOR == 4
 	handle = att_get_u16(&pdu[1]);
@@ -59,15 +60,20 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 	handle = get_le16(&pdu[1]);
 #endif
 
+	int ret = get_uuid_from_handle(conn, handle, &uuid);
+	if (ret) {
+		return;
+	}
+
 	switch (pdu[0]) {
 	case ATT_OP_HANDLE_NOTIFY:
 		if (conn->notification_handler) {
-			conn->notification_handler(handle, &pdu[3], len - 3, conn->notification_user_data);
+			conn->notification_handler(&uuid, &pdu[3], len - 3, conn->notification_user_data);
 		}
 		break;
 	case ATT_OP_HANDLE_IND:
 		if (conn->indication_handler) {
-			conn->indication_handler(handle, &pdu[3], len - 3, conn->indication_user_data);
+			conn->indication_handler(&uuid, &pdu[3], len - 3, conn->indication_user_data);
 		}
 		break;
 	default:
@@ -139,6 +145,11 @@ static void io_connect_cb(GIOChannel *io, GError *err, gpointer user_data) {
 		guint id = g_source_attach(source, g_gattlib_thread.loop_context);
 		g_source_unref (source);
 		assert(id != 0);
+
+		//
+		// Save list of characteristics to do the correspondence handle/UUID
+		//
+		gattlib_discover_char(io_connect_arg->conn, &conn_context->characteristics, &conn_context->characteristic_count);
 
 		//
 		// Call callback if defined
@@ -428,12 +439,34 @@ GSource* gattlib_timeout_add_seconds(guint interval, GSourceFunc function, gpoin
 	return source;
 }
 
-void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
-	connection->notification_handler = notification_handler;
-	connection->notification_user_data = user_data;
+int get_uuid_from_handle(gatt_connection_t* connection, uint16_t handle, uuid_t* uuid) {
+	gattlib_context_t* conn_context = connection->context;
+	int i;
+
+	for (i = 0; i < conn_context->characteristic_count; i++) {
+		if (conn_context->characteristics[i].value_handle == handle) {
+			memcpy(uuid, &conn_context->characteristics[i].uuid, sizeof(uuid_t));
+			return 0;
+		}
+
+
+		if (gattlib_uuid_cmp(&conn_context->characteristics[i].uuid, uuid) == 0) {
+			handle = conn_context->characteristics[i].value_handle;
+			return 0;
+		}
+	}
+	return -1;
 }
 
-void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
-	connection->indication_handler = indication_handler;
-	connection->indication_user_data = user_data;
+int get_handle_from_uuid(gatt_connection_t* connection, const uuid_t* uuid, uint16_t* handle) {
+	gattlib_context_t* conn_context = connection->context;
+	int i;
+
+	for (i = 0; i < conn_context->characteristic_count; i++) {
+		if (gattlib_uuid_cmp(&conn_context->characteristics[i].uuid, uuid) == 0) {
+			*handle = conn_context->characteristics[i].value_handle;
+			return 0;
+		}
+	}
+	return -1;
 }

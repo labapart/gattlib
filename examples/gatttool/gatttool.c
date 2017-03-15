@@ -76,10 +76,12 @@ struct characteristic_data {
 	uint16_t end;
 };
 
-void notification_handler(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data) {
+void notification_handler(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data) {
+	char uuid_str[MAX_LEN_UUID_STR + 1];
 	int i;
 
-	g_print("Notification handle = 0x%04x value: ", handle);
+	gattlib_uuid_to_string(uuid, uuid_str, MAX_LEN_UUID_STR + 1);
+	g_print("Notification uuid = %s value: ", uuid_str);
 
 	for (i = 0; i < data_length; i++)
 		g_print("%02x ", data[i]);
@@ -88,10 +90,12 @@ void notification_handler(uint16_t handle, const uint8_t* data, size_t data_leng
 	rl_forced_update_display();
 }
 
-void indication_handler(uint16_t handle, const uint8_t* data, size_t data_length, void* user_data) {
+void indication_handler(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data) {
+	char uuid_str[MAX_LEN_UUID_STR + 1];
 	int i;
 
-	g_print("Indication   handle = 0x%04x value: ", handle);
+	gattlib_uuid_to_string(uuid, uuid_str, MAX_LEN_UUID_STR + 1);
+	g_print("Indication   uuid = %s value: ", uuid_str);
 
 	for (i = 0; i < data_length; i++)
 		g_print("%02x ", data[i]);

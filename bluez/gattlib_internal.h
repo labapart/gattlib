@@ -66,4 +66,7 @@ GSource* gattlib_timeout_add_seconds(guint interval, GSourceFunc function, gpoin
 void uuid_to_bt_uuid(uuid_t* uuid, bt_uuid_t* bt_uuid);
 void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid);
 
+int get_uuid_from_handle(gatt_connection_t* connection, uint16_t handle, uuid_t* uuid);
+int get_handle_from_uuid(gatt_connection_t* connection, const uuid_t* uuid, uint16_t* handle);
+
 #endif
