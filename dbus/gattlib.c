@@ -848,8 +848,77 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 	return -1;
 }
 
-void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
+gboolean on_handle_characteristic_property_change(
+	    OrgBluezGattCharacteristic1 *object,
+	    GVariant *arg_changed_properties,
+	    const gchar *const *arg_invalidated_properties,
+	    gpointer user_data)
+{
+	gatt_connection_t* connection = user_data;
+
+	if (connection->notification_handler) {
+		// Retrieve 'Value' from 'arg_changed_properties'
+		if (g_variant_n_children (arg_changed_properties) > 0) {
+			GVariantIter *iter;
+			const gchar *key;
+			GVariant *value;
+
+			g_variant_get (arg_changed_properties, "a{sv}", &iter);
+			while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
+				if (strcmp(key, "Value") == 0) {
+					uuid_t uuid;
+					size_t data_length;
+					const uint8_t* data = g_variant_get_fixed_array(value, &data_length, sizeof(guchar));
+
+					gattlib_string_to_uuid(
+							org_bluez_gatt_characteristic1_get_uuid(object),
+							MAX_LEN_UUID_STR + 1,
+							&uuid);
+
+					connection->notification_handler(&uuid, data, data_length, user_data);
+					break;
+				}
+			}
+		}
+	}
+	return TRUE;
 }
 
-void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
+int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
+	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(uuid);
+	if (characteristic == NULL) {
+		return -1;
+	}
+
+	// Register a handle for notification
+	g_signal_connect(characteristic,
+		"g-properties-changed",
+		G_CALLBACK (on_handle_characteristic_property_change),
+		connection);
+
+	GError *error = NULL;
+	org_bluez_gatt_characteristic1_call_start_notify_sync(characteristic, NULL, &error);
+
+	if (error) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(uuid);
+	if (characteristic == NULL) {
+		return -1;
+	}
+
+	GError *error = NULL;
+	org_bluez_gatt_characteristic1_call_stop_notify_sync(
+		characteristic, NULL, &error);
+
+	if (error) {
+		return 1;
+	} else {
+		return 0;
+	}
 }

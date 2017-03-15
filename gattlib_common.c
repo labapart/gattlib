@@ -1,5 +1,15 @@
 #include "gattlib_internal.h"
 
+void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
+	connection->notification_handler = notification_handler;
+	connection->notification_user_data = user_data;
+}
+
+void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
+	connection->indication_handler = indication_handler;
+	connection->indication_user_data = user_data;
+}
+
 void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid) {
 	memcpy(&uuid->value, &bt_uuid->value, sizeof(uuid->value));
 	if (bt_uuid->type == BT_UUID16) {

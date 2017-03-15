@@ -197,3 +197,29 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void
 
 	return gattlib_write_char_by_handle(connection, handle, buffer, sizeof(buffer));
 }
+
+int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
+	uint16_t handle;
+	uint16_t enable_notification = 0x0001;
+
+	int ret = get_handle_from_uuid(connection, uuid, &handle);
+	if (ret) {
+		return -1;
+	}
+
+	// Enable Status Notification
+	return gattlib_write_char_by_handle(connection, handle + 1, &enable_notification, sizeof(enable_notification));
+}
+
+int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+	uint16_t handle;
+	uint16_t enable_notification = 0x0000;
+
+	int ret = get_handle_from_uuid(connection, uuid, &handle);
+	if (ret) {
+		return -1;
+	}
+
+	// Enable Status Notification
+	return gattlib_write_char_by_handle(connection, handle + 1, &enable_notification, sizeof(enable_notification));
+}
