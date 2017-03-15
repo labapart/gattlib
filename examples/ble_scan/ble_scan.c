@@ -39,7 +39,6 @@ static void *ble_connect_device(void *arg) {
 		gatt_connection = gattlib_connect(NULL, addr, BDADDR_LE_RANDOM, BT_SEC_LOW, 0, 0);
 		if (gatt_connection == NULL) {
 			fprintf(stderr, "Fail to connect to the bluetooth device.\n");
-			//gattlib_disconnect(connection);
 			goto connection_exit;
 		} else {
 			puts("Succeeded to connect to the bluetooth device with random address.");
@@ -51,7 +50,7 @@ static void *ble_connect_device(void *arg) {
 	ret = gattlib_discover_primary(gatt_connection, &services, &services_count);
 	if (ret != 0) {
 		fprintf(stderr, "Fail to discover primary services.\n");
-		return NULL;
+		goto disconnect_exit;
 	}
 
 	for (i = 0; i < services_count; i++) {
@@ -66,7 +65,7 @@ static void *ble_connect_device(void *arg) {
 	ret = gattlib_discover_char(gatt_connection, &characteristics, &characteristics_count);
 	if (ret != 0) {
 		fprintf(stderr, "Fail to discover characteristics.\n");
-		return NULL;
+		goto disconnect_exit;
 	}
 	for (i = 0; i < characteristics_count; i++) {
 		gattlib_uuid_to_string(&characteristics[i].uuid, uuid_str, sizeof(uuid_str));
@@ -77,6 +76,7 @@ static void *ble_connect_device(void *arg) {
 	}
 	free(characteristics);
 
+disconnect_exit:
 	gattlib_disconnect(gatt_connection);
 
 connection_exit:
