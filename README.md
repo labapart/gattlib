@@ -69,7 +69,11 @@ Examples
 
 * [Demonstrate BLE scanning and connection](/examples/ble_scan/ble_scan.c):
 
-        sudo ./examples/ble_scan/ble_scan
+        ./examples/ble_scan/ble_scan
+
+* [Demonstrate GATT notification using GATT Battery service](/examples/notification/notification.c):
+
+        ./examples/notification/notification
 
 **Note:** `examples/gatttool` has been partially ported to gattlib. There are two reasons: the laziness
  (some of the GATT functions could be replaced by their gattlib equivalent) and the completeness (there

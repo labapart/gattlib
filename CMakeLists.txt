@@ -54,6 +54,7 @@ set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
 add_subdirectory(examples/ble_scan)
 add_subdirectory(examples/discover)
 add_subdirectory(examples/read_write)
+add_subdirectory(examples/notification)
 add_subdirectory(examples/nordic_uart)
 
 # Some examples require Bluez code and other DBus support
