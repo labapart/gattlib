@@ -249,12 +249,13 @@ static gboolean characteristics_read(gpointer user_data)
 	if (opt_uuid != NULL) {
 		uint8_t buffer[0x100];
 		uuid_t uuid;
-		int len, i;
+		size_t len = sizeof(buffer);
+		int i, ret;
 
 		bt_uuid_to_uuid(opt_uuid, &uuid);
 
-		len = gattlib_read_char_by_uuid(connection, &uuid, buffer, sizeof(buffer));
-		if (len == 0) {
+		ret = gattlib_read_char_by_uuid(connection, &uuid, buffer, &len);
+		if (ret) {
 			return FALSE;
 		} else {
 			g_print("value: ");

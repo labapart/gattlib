@@ -39,7 +39,8 @@ static void usage(char *argv[]) {
 
 int main(int argc, char *argv[]) {
 	uint8_t buffer[100];
-	int i, len, ret;
+	int i, ret;
+	size_t len;
 	gatt_connection_t* connection;
 
 	if ((argc != 4) && (argc != 5)) {
@@ -75,7 +76,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (g_operation == READ) {
-		len = gattlib_read_char_by_uuid(connection, &g_uuid, buffer, sizeof(buffer));
+		len = sizeof(buffer);
+		ret = gattlib_read_char_by_uuid(connection, &g_uuid, buffer, &len);
+		assert(ret == 0);
 
 		printf("Read UUID completed: ");
 		for (i = 0; i < len; i++)
