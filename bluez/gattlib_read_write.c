@@ -166,7 +166,7 @@ void gattlib_write_result_cb(guint8 status, const guint8 *pdu, guint16 len, gpoi
 	*write_completed = TRUE;
 }
 
-int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, void* buffer, size_t buffer_len) {
+int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len) {
 	gattlib_context_t* conn_context = connection->context;
 	int write_completed = FALSE;
 
@@ -184,7 +184,7 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 	return 0;
 }
 
-int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t buffer_len) {
+int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
 	uint16_t handle = 0;
 	int ret;
 

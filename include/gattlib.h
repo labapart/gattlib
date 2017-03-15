@@ -139,8 +139,8 @@ int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** 
 int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t* buffer_len);
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb);
 
-int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t buffer_len);
-int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, void* buffer, size_t buffer_len);
+int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
+int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
 
 /*
  * @param uuid     UUID of the characteristic that will trigger the notification

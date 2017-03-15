@@ -828,7 +828,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	return 0;
 }
 
-int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t buffer_len) {
+int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
 	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(uuid);
 	if (characteristic == NULL) {
 		return -1;
@@ -846,7 +846,7 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void
 	return 0;
 }
 
-int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, void* buffer, size_t buffer_len) {
+int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len) {
 	return -1;
 }
 
