@@ -74,6 +74,13 @@ typedef enum {
 } BtIOOption;
 
 typedef enum {
+	BT_IO_SEC_SDP = 0,
+	BT_IO_SEC_LOW,
+	BT_IO_SEC_MEDIUM,
+	BT_IO_SEC_HIGH,
+} BtIOSecLevel;
+
+typedef enum {
 	BT_IO_MODE_BASIC = 0,
 	BT_IO_MODE_RETRANS,
 	BT_IO_MODE_FLOWCTL,

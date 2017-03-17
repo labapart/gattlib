@@ -170,7 +170,7 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 	gattlib_context_t* conn_context = connection->context;
 	int write_completed = FALSE;
 
-	guint ret = gatt_write_char(conn_context->attrib, handle, buffer, buffer_len,
+	guint ret = gatt_write_char(conn_context->attrib, handle, (void*)buffer, buffer_len,
 								gattlib_write_result_cb, &write_completed);
 	if (ret == 0) {
 		return 1;

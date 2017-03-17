@@ -191,7 +191,6 @@ static void char_desc_cb(guint8 status, const guint8 *pdu, guint16 plen, gpointe
 	data->descriptors = malloc(data->descriptors_count * sizeof(gattlib_descriptor_t));
 
 	for (i = 0; i < list->num; i++) {
-		uint16_t handle;
 		uint8_t *value;
 		bt_uuid_t uuid;
 
@@ -205,7 +204,7 @@ static void char_desc_cb(guint8 status, const guint8 *pdu, guint16 plen, gpointe
 			uuid = att_get_uuid128(&value[2]);
 		}
 
-		bt_uuid_to_string(&uuid, data->descriptors[i].uuid, MAX_LEN_UUID_STR);
+		bt_uuid_to_uuid(&uuid, &data->descriptors[i].uuid);
 
 		assert(i < data->descriptors_count);
 	}
@@ -254,7 +253,7 @@ int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int en
 	bzero(&descriptor_data, sizeof(descriptor_data));
 
 #if BLUEZ_VERSION_MAJOR == 4
-	ret = gatt_find_info(connection->attrib, start, end, char_desc_cb, &descriptor_data);
+	ret = gatt_find_info(conn_context->attrib, start, end, char_desc_cb, &descriptor_data);
 #else
 	ret = gatt_discover_desc(conn_context->attrib, start, end, NULL, char_desc_cb, &descriptor_data);
 #endif

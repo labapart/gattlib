@@ -1,6 +1,7 @@
 #include "gattlib_internal.h"
 
 #include <poll.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include <bluetooth/bluetooth.h>
