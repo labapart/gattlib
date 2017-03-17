@@ -32,6 +32,8 @@ pkg_search_module(GIO_UNIX REQUIRED gio-unix-2.0)
 # Needed by 'bluez5/lib/uuid.c'
 pkg_search_module(BLUEZ REQUIRED bluez)
 
+message("Build DBus gattlib for Bluez v${BLUEZ_VERSION_MAJOR}.${BLUEZ_VERSION_MINOR}")
+
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
                    COMMAND gdbus-codegen --interface-prefix org.bluez.Adapter1. --generate-c-code ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1 ${CMAKE_CURRENT_SOURCE_DIR}/interfaces/org.bluez.Adapter1.xml
                    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/interfaces/org.bluez.Adapter1.xml
@@ -61,13 +63,6 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattdescriptor1.
                    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/interfaces/org.bluez.GattDescriptor1.xml
                    COMMENT "Generate D-Bus 'org.bluez.GattDescriptor1.xml'"
                    )
-
-# Extract Bluez version
-string(REPLACE "." ";" BLUEZ_VERSIONS "${BLUEZ_VERSION}")
-list(GET BLUEZ_VERSIONS 0 BLUEZ_VERSION_MAJOR)
-list(GET BLUEZ_VERSIONS 1 BLUEZ_VERSION_MINOR)
-add_definitions(-DBLUEZ_VERSION_MAJOR=${BLUEZ_VERSION_MAJOR} -DBLUEZ_VERSION_MINOR=${BLUEZ_VERSION_MINOR})
-message("Build gattlib for Bluez v${BLUEZ_VERSION_MAJOR}.${BLUEZ_VERSION_MINOR}")
 
 include_directories(. ${CMAKE_CURRENT_BINARY_DIR} ${GIO_UNIX_INCLUDE_DIRS} ${BLUEZ_INCLUDE_DIRS})
 

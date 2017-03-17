@@ -27,14 +27,35 @@ include(CrossCompilation.cmake)
 
 project(gattlib)
 
-set(GATTLIB_DBUS TRUE CACHE BOOLEAN "Build gattlib with D-Bus support")
-
 find_package(PkgConfig REQUIRED)
 
 # Show all the warnings
 set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 # Expose 'gattlib.h' to all sub-directories
 include_directories(include)
+
+# Check version of Bluez to know which backend we use (ie: Bluez code or DBus)
+pkg_search_module(BLUEZ REQUIRED bluez)
+
+# Extract Bluez version
+string(REPLACE "." ";" BLUEZ_VERSIONS "${BLUEZ_VERSION}")
+list(GET BLUEZ_VERSIONS 0 BLUEZ_VERSION_MAJOR)
+list(GET BLUEZ_VERSIONS 1 BLUEZ_VERSION_MINOR)
+add_definitions(-DBLUEZ_VERSION_MAJOR=${BLUEZ_VERSION_MAJOR} -DBLUEZ_VERSION_MINOR=${BLUEZ_VERSION_MINOR})
+
+set(GATTLIB_FORCE_DBUS FALSE CACHE BOOLEAN "Build gattlib with D-Bus support on Bluez version < v5.42")
+
+if (BLUEZ_VERSION_MAJOR LESS 5)
+  set(GATTLIB_DBUS FALSE)
+elseif (BLUEZ_VERSION_MINOR LESS 42)
+  if (GATTLIB_FORCE_DBUS)
+    set(GATTLIB_DBUS TRUE)
+  else()
+    set(GATTLIB_DBUS FALSE)
+  endif()
+else()
+  set(GATTLIB_DBUS TRUE)
+endif()
 
 if (GATTLIB_DBUS)
   # Build dbus-based gattlib

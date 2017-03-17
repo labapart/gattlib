@@ -1,8 +1,14 @@
 GattLib is a library used to access Generic Attribute Profile (GATT) protocol of BLE (Bluetooth Low Energy) devices.
-
-It is based on Bluez 4.101 and Bluez 5.43 GATT code. Some changes has been made to support additional features and former versions of Bluez.
-
 It has been introduced to allow to build applications that could easily communicate with BLE devices.
+
+It supports Bluez v4 and v5. On Bluez versions prior to v5.42, gattlib used Bluez source code while it uses D-Bus API 
+from v5.42. D-Bus API can be used on version prior to Bluez v5.42 by using the CMake flag `-DGATTLIB_FORCE_DBUS=TRUE`:
+
+```
+mkdir build && cd build
+cmake -DGATTLIB_FORCE_DBUS=TRUE ..
+make
+```
 
 Latest GattLib Release packages
 ===============================
