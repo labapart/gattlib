@@ -41,10 +41,10 @@ list(GET BLUEZ_VERSIONS 1 BLUEZ_VERSION_MINOR)
 add_definitions(-DBLUEZ_VERSION_MAJOR=${BLUEZ_VERSION_MAJOR} -DBLUEZ_VERSION_MINOR=${BLUEZ_VERSION_MINOR})
 
 if(BLUEZ_VERSION_MAJOR STREQUAL "4")
-  set(bluez4_DIR ${CMAKE_SOURCE_DIR}/bluez/bluez4)
+  set(bluez4_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../bluez/bluez4)
   include_directories(${bluez4_DIR}/attrib ${bluez4_DIR}/btio ${bluez4_DIR}/src ${bluez4_DIR}/lib)
 else()
-  set(bluez5_DIR ${CMAKE_SOURCE_DIR}/bluez/bluez5)
+  set(bluez5_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../bluez/bluez5)
   include_directories(${bluez5_DIR} ${bluez5_DIR}/attrib ${bluez5_DIR}/btio ${bluez5_DIR}/lib)
 endif()
 
