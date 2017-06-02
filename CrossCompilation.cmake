@@ -83,6 +83,7 @@ include_directories($ENV{SYSROOT}/usr/include $ENV{SYSROOT}/usr/include/${TOOLCH
 # Workaround as some library are installed in $ENV{SYSROOT}/lib/${TOOLCHAIN_MACHINE}
 # such as libpcre.so (required by glib-2.0)
 link_directories($ENV{SYSROOT}/lib/${TOOLCHAIN_MACHINE})
+link_directories($ENV{SYSROOT}/usr/lib/${TOOLCHAIN_MACHINE})
 
 # search for programs in the build host directories
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
