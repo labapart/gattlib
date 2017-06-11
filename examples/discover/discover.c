@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
     ret = gattlib_discover_desc(connection, &descriptors, &descriptor_count);
     for (i = 0; i < descriptor_count; i++) {
         gattlib_uuid_to_string(&descriptors[i].uuid, uuid_str, sizeof(uuid_str));
-        printf("characteristic[%d] value_handle:%04x uuid:%s\n", i,
+        printf("descriptor[%d] value_handle:%04x uuid:%s\n", i,
                descriptors[i].handle, uuid_str);
     }
     free(descriptors);
