@@ -81,12 +81,11 @@ set(gattlib_SRCS gattlib_adapter.c
 # Added Glib support
 pkg_search_module(GLIB REQUIRED glib-2.0)
 include_directories(${GLIB_INCLUDE_DIRS})
-list(APPEND gattlib_LIBS ${GLIB_LIBRARIES})
+list(APPEND gattlib_LIBS ${GLIB_LDFLAGS})
 
 # Added Bluetooth support
 include_directories(${BLUEZ_INCLUDE_DIRS})
-link_directories(${BLUEZ_LIBRARY_DIRS})
-list(APPEND gattlib_LIBS ${BLUEZ_LIBRARIES})
+list(APPEND gattlib_LIBS ${BLUEZ_LDFLAGS})
 
 include_directories(.)
 if(BLUEZ_VERSION_MAJOR STREQUAL "4")

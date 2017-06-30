@@ -28,4 +28,4 @@ pkg_search_module(GATTLIB REQUIRED gattlib)
 set(ble_scan_SRCS ble_scan.c)
 
 add_executable(ble_scan ${ble_scan_SRCS})
-target_link_libraries(ble_scan ${GATTLIB_LIBRARIES} pthread)
+target_link_libraries(ble_scan ${GATTLIB_LDFLAGS} pthread)

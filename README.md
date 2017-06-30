@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/labapart/gattlib.svg?branch=master)](https://travis-ci.org/labapart/gattlib)
+
 GattLib is a library used to access Generic Attribute Profile (GATT) protocol of BLE (Bluetooth Low Energy) devices.
 It has been introduced to allow to build applications that could easily communicate with BLE devices.
 

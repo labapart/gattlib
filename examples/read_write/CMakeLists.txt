@@ -29,4 +29,4 @@ pkg_search_module(GATTLIB REQUIRED gattlib)
 set(read_write_SRCS read_write.c)
 
 add_executable(read_write ${read_write_SRCS})
-target_link_libraries(read_write ${GATTLIB_LIBRARIES})
+target_link_libraries(read_write ${GATTLIB_LDFLAGS})

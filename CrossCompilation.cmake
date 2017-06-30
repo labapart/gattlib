@@ -49,6 +49,7 @@ set(CMAKE_CXX_COMPILER $ENV{CROSS_COMPILE}g++)
 
 # Specify the target environment 
 set(CMAKE_FIND_ROOT_PATH $ENV{SYSROOT})
+set(CMAKE_SYSROOT $ENV{SYSROOT})
 
 # Retrieve the machine supported by the toolchain
 execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpmachine OUTPUT_VARIABLE TOOLCHAIN_MACHINE OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -57,7 +58,7 @@ execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpmachine OUTPUT_VARIABLE TOOLCHA
 set(ENV{CFLAGS} "--sysroot=$ENV{SYSROOT} $ENV{CFLAGS}")
 
 # Add '-rpath' to the linker flags
-set(ENV{LDFLAGS} "-Wl,-rpath,$ENV{SYSROOT}/lib/${TOOLCHAIN_MACHINE} $ENV{LDFLAGS}")
+set(ENV{LDFLAGS} "--sysroot=$ENV{SYSROOT} -Wl,-rpath,$ENV{SYSROOT}/lib/${TOOLCHAIN_MACHINE} $ENV{LDFLAGS}")
 
 #
 # Configure pkg-config for cross-compilation

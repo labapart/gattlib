@@ -1,0 +1,139 @@
+language: c
+compiler:
+  - gcc
+  #Disable Clang for now until we support ARM cross-toolchain - clang
+
+dist: trusty
+
+addons:
+  apt:
+    packages:
+    - gcc-4.8-arm-linux-gnueabihf
+    - g++-arm-linux-gnueabihf
+    - gcc-4.8-aarch64-linux-gnu
+    - g++-aarch64-linux-gnu
+    - libbluetooth-dev
+    - rpm
+
+script:
+  # Build default Gattlib - Debug
+  - mkdir build-debug && pushd build-debug
+  - cmake -DCMAKE_BUILD_TYPE=Debug .. && make
+  - popd
+
+  # Build and Package default Gattlib - Release
+  - mkdir build-release && pushd build-release
+  - cmake -DCMAKE_BUILD_TYPE=Release .. && make && cpack ..
+  - popd
+
+  # Build Gattlib with DBus support - Debug
+  - mkdir build-dbus-debug && pushd build-dbus-debug
+  - cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Debug .. && make
+  - popd
+
+  # Build and Package Gattlib with DBus support - Release
+  - mkdir build-dbus-release && pushd build-dbus-release
+  - cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release .. && make && cpack ..
+  - popd
+
+  # Download tools
+  - wget https://raw.githubusercontent.com/labapart/labapart-tools/master/fixup-symlink.sh
+  - chmod +x fixup-symlink.sh
+
+  #
+  # Setup build for ARM 32-bit
+  #
+
+  # Download Debian packages
+  - mkdir debian-stretch-arm && pushd debian-stretch-arm
+  - wget http://ftp.de.debian.org/debian/pool/main/b/bluez/libbluetooth3_5.43-2_armhf.deb && dpkg -x libbluetooth3_5.43-2_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/b/bluez/libbluetooth-dev_5.43-2_armhf.deb && dpkg -x libbluetooth-dev_5.43-2_armhf.deb .
+  - wget http://security.debian.org/debian-security/pool/updates/main/g/glibc/libc6_2.24-11+deb9u1_armhf.deb && dpkg -x libc6_2.24-11+deb9u1_armhf.deb .
+  - wget http://security.debian.org/debian-security/pool/updates/main/g/glibc/libc6-dev_2.24-11+deb9u1_armhf.deb && dpkg -x libc6-dev_2.24-11+deb9u1_armhf.deb .
+  - wget http://security.debian.org/debian-security/pool/updates/main/l/linux/linux-libc-dev_4.9.30-2+deb9u2_armhf.deb && dpkg -x linux-libc-dev_4.9.30-2+deb9u2_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-0_2.50.3-2_armhf.deb && dpkg -x libglib2.0-0_2.50.3-2_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-dev_2.50.3-2_armhf.deb && dpkg -x libglib2.0-dev_2.50.3-2_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/gcc-6/libstdc++6_6.3.0-18_armhf.deb && dpkg -x libstdc++6_6.3.0-18_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/gcc-6/libstdc++-6-dev_6.3.0-18_armhf.deb && dpkg -x libstdc++-6-dev_6.3.0-18_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/p/pcre3/libpcre3_8.39-3_armhf.deb && dpkg -x libpcre3_8.39-3_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/libf/libffi/libffi6_3.2.1-6_armhf.deb && dpkg -x libffi6_3.2.1-6_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-0_2.50.3-2_armhf.deb && dpkg -x libglib2.0-0_2.50.3-2_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/z/zlib/zlib1g_1.2.8.dfsg-5_armhf.deb && dpkg -x zlib1g_1.2.8.dfsg-5_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/libs/libselinux/libselinux1_2.6-3+b1_armhf.deb && dpkg -x libselinux1_2.6-3+b1_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/u/util-linux/libmount1_2.29.2-1_armhf.deb && dpkg -x libmount1_2.29.2-1_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/u/util-linux/libblkid1_2.29.2-1_armhf.deb && dpkg -x libblkid1_2.29.2-1_armhf.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/u/util-linux/libuuid1_2.29.2-1_armhf.deb && dpkg -x libuuid1_2.29.2-1_armhf.deb .
+  # Fixup broken links
+  - TARGETDIR=. ../fixup-symlink.sh
+  - popd
+
+  # Set environment variables
+  - export SYSROOT=$PWD/debian-stretch-arm
+  - export CROSS_COMPILE=arm-linux-gnueabihf-
+
+  # Build and Package Gattlib with DBus support - Release - ARM32
+  - mkdir build-dbus-release-arm32 && pushd build-dbus-release-arm32
+  - cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release .. && make VERBOSE=1 && cpack ..
+  - popd
+
+  - echo "Broken links:"
+  - find . -type l ! -exec test -e {} \; -print
+
+  #
+  # Setup build for ARM 64-bit
+  #
+
+  # Download Debian packages
+  - mkdir debian-stretch-arm64 && pushd debian-stretch-arm64
+  - wget http://ftp.de.debian.org/debian/pool/main/b/bluez/libbluetooth3_5.43-2_arm64.deb && dpkg -x libbluetooth3_5.43-2_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/b/bluez/libbluetooth-dev_5.43-2_arm64.deb && dpkg -x libbluetooth-dev_5.43-2_arm64.deb .
+  - wget http://security.debian.org/debian-security/pool/updates/main/g/glibc/libc6_2.24-11+deb9u1_arm64.deb && dpkg -x libc6_2.24-11+deb9u1_arm64.deb .
+  - wget http://security.debian.org/debian-security/pool/updates/main/g/glibc/libc6-dev_2.24-11+deb9u1_arm64.deb && dpkg -x libc6-dev_2.24-11+deb9u1_arm64.deb .
+  - wget http://security.debian.org/debian-security/pool/updates/main/l/linux/linux-libc-dev_4.9.30-2+deb9u2_arm64.deb && dpkg -x linux-libc-dev_4.9.30-2+deb9u2_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-0_2.50.3-2_arm64.deb && dpkg -x libglib2.0-0_2.50.3-2_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-dev_2.50.3-2_arm64.deb && dpkg -x libglib2.0-dev_2.50.3-2_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/gcc-6/libstdc++6_6.3.0-18_arm64.deb && dpkg -x libstdc++6_6.3.0-18_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/gcc-6/libstdc++-6-dev_6.3.0-18_arm64.deb && dpkg -x libstdc++-6-dev_6.3.0-18_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/p/pcre3/libpcre3_8.39-3_arm64.deb && dpkg -x libpcre3_8.39-3_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/libf/libffi/libffi6_3.2.1-6_arm64.deb && dpkg -x libffi6_3.2.1-6_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-0_2.50.3-2_arm64.deb && dpkg -x libglib2.0-0_2.50.3-2_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/z/zlib/zlib1g_1.2.8.dfsg-5_arm64.deb && dpkg -x zlib1g_1.2.8.dfsg-5_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/libs/libselinux/libselinux1_2.6-3+b1_arm64.deb && dpkg -x libselinux1_2.6-3+b1_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/u/util-linux/libmount1_2.29.2-1_arm64.deb && dpkg -x libmount1_2.29.2-1_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/u/util-linux/libblkid1_2.29.2-1_arm64.deb && dpkg -x libblkid1_2.29.2-1_arm64.deb .
+  - wget http://ftp.de.debian.org/debian/pool/main/u/util-linux/libuuid1_2.29.2-1_arm64.deb && dpkg -x libuuid1_2.29.2-1_arm64.deb .
+  # Fixup broken links
+  - TARGETDIR=. ../fixup-symlink.sh
+  - popd
+
+  # Set environment variables
+  - export SYSROOT=$PWD/debian-stretch-arm64
+  - export CROSS_COMPILE=aarch64-linux-gnu-
+
+  # Build and Package Gattlib with DBus support - Release - ARM64
+  - mkdir build-dbus-release-arm64 && pushd build-dbus-release-arm64
+  - cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release .. && make VERBOSE=1 && cpack ..
+  - popd
+
+before_deploy:
+  # Create directory to store the artifacts we want to deploy
+  - mkdir artifacts
+
+  # Copy packages to artifacts
+  - cp build-release/gattlib_${TRAVIS_TAG}_x86_64.deb ../artifacts/
+  - cp build-release/gattlib_${TRAVIS_TAG}_x86_64.rpm ../artifacts/
+  - cp build-release/gattlib_${TRAVIS_TAG}_x86_64.zip ../artifacts/
+  # Copy DBUS packages to artifacts
+  - cp build-dbus-debug/gattlib_${TRAVIS_TAG}_x86_64.deb ../artifacts/gattlib_dbus_${TRAVIS_TAG}_x86_64.deb
+  - cp build-dbus-debug/gattlib_${TRAVIS_TAG}_x86_64.rpm ../artifacts/gattlib_dbus_${TRAVIS_TAG}_x86_64.rpm
+  - cp build-dbus-debug/gattlib_${TRAVIS_TAG}_x86_64.zip ../artifacts/gattlib_dbus_${TRAVIS_TAG}_x86_64.zip
+
+deploy:
+  provider: releases
+  api-key: ${GITHUB_OAUTH_TOKEN}
+  file_glob: true
+  file: artifacts/*
+  skip_cleanup: true
+  on:
+    tags: true
+

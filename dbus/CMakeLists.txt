@@ -75,7 +75,7 @@ set(gattlib_SRCS gattlib.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattdescriptor1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattservice1.c)
 
-set(gattlib_LIBS ${GLIB_LIBRARIES} ${GIO_UNIX_LIBRARIES})
+set(gattlib_LIBS ${GLIB_LDFLAGS} ${GIO_UNIX_LDFLAGS})
 
 # Gattlib
 add_library(gattlib SHARED ${gattlib_SRCS})

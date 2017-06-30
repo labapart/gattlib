@@ -60,9 +60,15 @@ endif()
 if (GATTLIB_DBUS)
   # Build dbus-based gattlib
   add_subdirectory(dbus)
+
+  # Add the Gattlib build directory for the examples
+  link_directories(${PROJECT_BINARY_DIR}/dbus)
 else()
   # Build bluez-based gattlib
   add_subdirectory(bluez)
+
+  # Add the Gattlib build directory for the examples
+  link_directories(${PROJECT_BINARY_DIR}/bluez)
 endif()
 
 # Generate pkg-config file before building the examples
@@ -87,15 +93,24 @@ endif()
 # Packaging
 #
 set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (default: /usr).")
-set(CPACK_PACKAGE_VERSION 0.2)
+if (ENV{TRAVIS_TAG})
+  set(CPACK_PACKAGE_VERSION $ENV{TRAVIS_TAG})
+else()
+  set(CPACK_PACKAGE_VERSION dev)
+endif()
 set(CPACK_PACKAGE_CONTACT "Olivier Martin <olivier@labapart.com>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to access GATT information from Bluetooth Low Energy (BLE) devices")
 set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_PACKAGE_ARCHITECTURE}")
 
 #
-# Debian package
+# Debian, RPM and ZIP packages
 #
-set(CPACK_GENERATOR "DEB;RPM;ZIP")
+if (CMAKE_SYSROOT)
+  # CPack does like RPM package in a cross-toolchain context
+  set(CPACK_GENERATOR "DEB;ZIP")
+else()
+  set(CPACK_GENERATOR "DEB;RPM;ZIP")
+endif()
 
 # Detect platform architecture to use it for the Debian package
 execute_process(COMMAND dpkg --print-architecture OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE OUTPUT_QUIET)
