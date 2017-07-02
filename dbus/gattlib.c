@@ -784,8 +784,14 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
 	GVariant *out_value;
 	GError *error = NULL;
 
+#if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 	org_bluez_gatt_characteristic1_call_read_value_sync(
 		characteristic, &out_value, NULL, &error);
+#else
+	GVariant *options = g_variant_new ("{}");
+	org_bluez_gatt_characteristic1_call_read_value_sync(
+		characteristic, options, &out_value, NULL, &error);
+#endif
 	if (error != NULL) {
 		return -1;
 	}
@@ -800,6 +806,10 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
 	*buffer_len = n_elements;
 
 	g_object_unref(characteristic);
+
+#if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
+	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
+#endif
 	return 0;
 }
 
@@ -812,8 +822,14 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	GVariant *out_value;
 	GError *error = NULL;
 
+#if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 	org_bluez_gatt_characteristic1_call_read_value_sync(
 		characteristic, &out_value, NULL, &error);
+#else
+	GVariant *options = g_variant_new ("{}");
+	org_bluez_gatt_characteristic1_call_read_value_sync(
+		characteristic, options, &out_value, NULL, &error);
+#endif
 	if (error != NULL) {
 		return -1;
 	}
@@ -825,6 +841,10 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	}
 
 	g_object_unref(characteristic);
+
+#if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
+	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
+#endif
 	return 0;
 }
 
@@ -837,12 +857,20 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 	GVariant *value = g_variant_new_from_data(G_VARIANT_TYPE ("ay"), buffer, buffer_len, TRUE, NULL, NULL);
 	GError *error = NULL;
 
+#if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 	org_bluez_gatt_characteristic1_call_write_value_sync(characteristic, value, NULL, &error);
+#else
+	GVariant *options = g_variant_new ("{}");
+	org_bluez_gatt_characteristic1_call_write_value_sync(characteristic, options, value, NULL, &error);
+#endif
 	if (error != NULL) {
 		return -1;
 	}
 
 	g_object_unref(characteristic);
+#if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
+	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
+#endif
 	return 0;
 }
 
