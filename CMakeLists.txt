@@ -117,6 +117,11 @@ execute_process(COMMAND dpkg --print-architecture OUTPUT_VARIABLE CPACK_DEBIAN_P
 
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libglib2.0-0")
 
+# Bluez DBus API changed from v5.40
+if (GATTLIB_DBUS AND (BLUEZ_VERSION_MAJOR EQUAL 5) AND (BLUEZ_VERSION_MINOR GREATER 39))
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}, bluez (>= 5.40)")
+endif()
+
 #
 # List of file to install
 #
