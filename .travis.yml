@@ -76,9 +76,6 @@ script:
   - cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release .. && make VERBOSE=1 && cpack ..
   - popd
 
-  - echo "Broken links:"
-  - find . -type l ! -exec test -e {} \; -print
-
   #
   # Setup build for ARM 64-bit
   #
@@ -120,13 +117,19 @@ before_deploy:
   - mkdir artifacts
 
   # Copy packages to artifacts
-  - cp build-release/gattlib_${TRAVIS_TAG}_x86_64.deb ../artifacts/
-  - cp build-release/gattlib_${TRAVIS_TAG}_x86_64.rpm ../artifacts/
-  - cp build-release/gattlib_${TRAVIS_TAG}_x86_64.zip ../artifacts/
+  - cp build-release/gattlib_${TRAVIS_TAG}_x86_64.deb artifacts/
+  - cp build-release/gattlib_${TRAVIS_TAG}_x86_64.rpm artifacts/
+  - cp build-release/gattlib_${TRAVIS_TAG}_x86_64.zip artifacts/
   # Copy DBUS packages to artifacts
-  - cp build-dbus-debug/gattlib_${TRAVIS_TAG}_x86_64.deb ../artifacts/gattlib_dbus_${TRAVIS_TAG}_x86_64.deb
-  - cp build-dbus-debug/gattlib_${TRAVIS_TAG}_x86_64.rpm ../artifacts/gattlib_dbus_${TRAVIS_TAG}_x86_64.rpm
-  - cp build-dbus-debug/gattlib_${TRAVIS_TAG}_x86_64.zip ../artifacts/gattlib_dbus_${TRAVIS_TAG}_x86_64.zip
+  - cp build-dbus-release/gattlib_${TRAVIS_TAG}_x86_64.deb artifacts/gattlib_dbus_${TRAVIS_TAG}_x86_64.deb
+  - cp build-dbus-release/gattlib_${TRAVIS_TAG}_x86_64.rpm artifacts/gattlib_dbus_${TRAVIS_TAG}_x86_64.rpm
+  - cp build-dbus-release/gattlib_${TRAVIS_TAG}_x86_64.zip artifacts/gattlib_dbus_${TRAVIS_TAG}_x86_64.zip
+  # Copy DBUS ARM packages to artifacts
+  - cp build-dbus-release-arm32/gattlib_${TRAVIS_TAG}_armhf.deb artifacts/
+  - cp build-dbus-release-arm32/gattlib_${TRAVIS_TAG}_armhf.zip artifacts/
+  # Copy DBUS ARM64 packages to artifacts
+  - cp build-dbus-release-arm64/gattlib_${TRAVIS_TAG}_arm64.deb artifacts/
+  - cp build-dbus-release-arm64/gattlib_${TRAVIS_TAG}_arm64.zip artifacts/
 
 deploy:
   provider: releases
