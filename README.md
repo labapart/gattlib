@@ -15,9 +15,27 @@ make
 Latest GattLib Release packages
 ===============================
 
-- ZIP: <https://github.com/labapart/gattlib/releases/download/v0.2/gattlib_0.2_x86_64.zip>
-- DEB: <https://github.com/labapart/gattlib/releases/download/v0.2/gattlib_0.2_x86_64.deb>
-- RPM: <https://github.com/labapart/gattlib/releases/download/v0.2/gattlib_0.2_x86_64.rpm>
+* For x86_64, with Bluez DBUS Support (Recommended):
+
+    - ZIP: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dbus_dev_x86_64.zip>
+    - DEB: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dbus_dev_x86_64.deb>
+    - RPM: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dbus_dev_x86_64.rpm>
+
+* For x86_64, with Bluez Legacy Support:
+
+    - ZIP: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dev_x86_64.zip>
+    - DEB: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dev_x86_64.deb>
+    - RPM: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dev_x86_64.rpm>
+
+* For ARM 32-bit (for Bluez v5.40+ with DBus support):
+
+    - ZIP: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dev_armhf.zip>
+    - DEB: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dev_armhf.deb>
+
+* For ARM 64-bit (for Bluez v5.40+ with DBus support):
+
+    - ZIP: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dev_arm64.zip>
+    - DEB: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dev_arm64.deb>
 
 Build GattLib
 =============
