@@ -52,7 +52,7 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 	gatt_connection_t *conn = user_data;
 	uint8_t opdu[ATT_MAX_MTU];
 	uint16_t handle, olen = 0;
-	uuid_t uuid;
+	uuid_t uuid = {};
 
 #if BLUEZ_VERSION_MAJOR == 4
 	handle = att_get_u16(&pdu[1]);
@@ -446,12 +446,6 @@ int get_uuid_from_handle(gatt_connection_t* connection, uint16_t handle, uuid_t*
 	for (i = 0; i < conn_context->characteristic_count; i++) {
 		if (conn_context->characteristics[i].value_handle == handle) {
 			memcpy(uuid, &conn_context->characteristics[i].uuid, sizeof(uuid_t));
-			return 0;
-		}
-
-
-		if (gattlib_uuid_cmp(&conn_context->characteristics[i].uuid, uuid) == 0) {
-			handle = conn_context->characteristics[i].value_handle;
 			return 0;
 		}
 	}
