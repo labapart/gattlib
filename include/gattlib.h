@@ -110,7 +110,7 @@ gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				gatt_connect_cb_t connect_cb);
 
 gatt_connection_t *gattlib_connect_timeout(const char *src, const char *dst,
-				int8_t dest_type, gattlib_bt_sec_level_t sec_level,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level,
 				int psm, int mtu, int timeout_sec);
 gatt_connection_t *gattlib_connect_async_timeout(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,

@@ -384,7 +384,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
  * @param timeout_sec	connection timeout in seconds
  */
 gatt_connection_t *gattlib_connect_timeout(const char *src, const char *dst,
-				int8_t dest_type, gattlib_bt_sec_level_t sec_level,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level,
 				int psm, int mtu, int timeout_sec)
 {
 	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);
