@@ -44,6 +44,8 @@
   #include "src/shared/util.h"
 #endif
 
+#define DEFAULT_TIMEOUT_SEC  5  // default timeout for operations
+
 struct gattlib_thread_t {
 	int           ref;
 	pthread_t     thread;

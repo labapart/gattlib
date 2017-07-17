@@ -207,6 +207,20 @@ gboolean on_handle_device_property_change(
 gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu)
 {
+	return gattlib_connect_timeout(src, dst, dest_type, sec_level, psm, mtu, CONNECT_TIMEOUT);
+}
+
+/**
+ * @param src		Local Adaptater interface
+ * @param dst		Remote Bluetooth address
+ * @param dst_type	Set LE address type (either BDADDR_LE_PUBLIC or BDADDR_LE_RANDOM)
+ * @param sec_level	Set security level (either BT_IO_SEC_LOW, BT_IO_SEC_MEDIUM, BT_IO_SEC_HIGH)
+ * @param psm       Specify the PSM for GATT/ATT over BR/EDR
+ * @param mtu       Specify the MTU size
+ */
+gatt_connection_t *gattlib_connect(const char *src, const char *dst,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu, int timeout_sec)
+{
 	GError *error = NULL;
 	const char* adapter_name;
 	char device_address_str[20];
@@ -273,7 +287,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 		G_CALLBACK (on_handle_device_property_change),
 		loop);
 
-	g_timeout_add_seconds (CONNECT_TIMEOUT, stop_scan_func, loop);
+	g_timeout_add_seconds (timeout_sec, stop_scan_func, loop);
 	g_main_loop_run(loop);
 	g_main_loop_unref(loop);
 
@@ -291,6 +305,13 @@ FREE_CONNECTION:
 gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 				gatt_connect_cb_t connect_cb)
+{
+	return NULL;
+}
+
+gatt_connection_t *gattlib_connect_async_timeout(const char *src, const char *dst,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
+				gatt_connect_cb_t connect_cb, int timeout_sec)
 {
 	return NULL;
 }
