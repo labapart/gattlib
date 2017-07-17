@@ -22,6 +22,8 @@
  */
 
 #include <stdlib.h>
+#include <semaphore.h>
+#include <errno.h>
 
 #include "gattlib_internal.h"
 
@@ -120,7 +122,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 
 	// Wait for completion of the event
 	while(gattlib_result->completed == FALSE) {
-		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+		gattlib_iteration();
 	}
 
 	*buffer_len = gattlib_result->buffer_len;
@@ -178,7 +180,7 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 
 	// Wait for completion of the event
 	while(write_completed == FALSE) {
-		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+		gattlib_iteration();
 	}
 
 	return 0;

@@ -86,7 +86,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 
 	// Wait for completion
 	while(user_data.discovered == FALSE) {
-		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+		gattlib_iteration();
 	}
 
 	*services       = user_data.services;
@@ -150,8 +150,9 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 
 	// Wait for completion
 	while(user_data.discovered == FALSE) {
-		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+		gattlib_iteration();
 	}
+
 
 	*characteristics       = user_data.characteristics;
 	*characteristics_count = user_data.characteristics_count;
@@ -264,7 +265,7 @@ int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int en
 
 	// Wait for completion
 	while(descriptor_data.discovered == FALSE) {
-		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+		gattlib_iteration();
 	}
 
 	*descriptors      = descriptor_data.descriptors;
