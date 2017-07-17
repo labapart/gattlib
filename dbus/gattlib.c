@@ -218,7 +218,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
  * @param psm       Specify the PSM for GATT/ATT over BR/EDR
  * @param mtu       Specify the MTU size
  */
-gatt_connection_t *gattlib_connect(const char *src, const char *dst,
+gatt_connection_t *gattlib_connect_timeout(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu, int timeout_sec)
 {
 	GError *error = NULL;
