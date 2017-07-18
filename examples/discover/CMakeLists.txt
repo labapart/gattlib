@@ -24,8 +24,9 @@ cmake_minimum_required(VERSION 2.6)
 find_package(PkgConfig REQUIRED)
 
 pkg_search_module(GATTLIB REQUIRED gattlib)
+pkg_search_module(PCRE REQUIRED libpcre)
 
 set(discover_SRCS discover.c)
 
 add_executable(discover ${discover_SRCS})
-target_link_libraries(discover ${GATTLIB_LDFLAGS})
+target_link_libraries(discover ${GATTLIB_LDFLAGS} ${PCRE_LIBRARIES} pthread)
