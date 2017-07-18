@@ -25,8 +25,9 @@ cmake_minimum_required(VERSION 2.6)
 find_package(PkgConfig REQUIRED)
 
 pkg_search_module(GATTLIB REQUIRED gattlib)
+pkg_search_module(PCRE REQUIRED libpcre)
 
 set(nordic_uart_SRCS nordic_uart.c)
 
 add_executable(nordic_uart ${nordic_uart_SRCS})
-target_link_libraries(nordic_uart ${GATTLIB_LDFLAGS} pthread)
+target_link_libraries(nordic_uart ${GATTLIB_LDFLAGS} ${PCRE_LIBRARIES} pthread)
