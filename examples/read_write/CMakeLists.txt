@@ -30,4 +30,4 @@ pkg_search_module(PCRE REQUIRED libpcre)
 set(read_write_SRCS read_write.c)
 
 add_executable(read_write ${read_write_SRCS})
-target_link_libraries(read_write ${GATTLIB_LDFLAGS} ${PCRE_LIBRARIES} pthread)
+target_link_libraries(read_write ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${PCRE_LIBRARIES} pthread)
