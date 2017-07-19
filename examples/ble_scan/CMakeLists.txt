@@ -29,4 +29,4 @@ pkg_search_module(PCRE REQUIRED libpcre)
 set(ble_scan_SRCS ble_scan.c)
 
 add_executable(ble_scan ${ble_scan_SRCS})
-target_link_libraries(ble_scan ${GATTLIB_LDFLAGS} ${PCRE_LIBRARIES} pthread)
+target_link_libraries(ble_scan ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${PCRE_LIBRARIES} pthread)
