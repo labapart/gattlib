@@ -112,8 +112,10 @@ else()
   set(CPACK_GENERATOR "DEB;RPM;ZIP")
 endif()
 
+if (NOT CMAKE_SYSROOT)
 # Detect platform architecture to use it for the Debian package
-execute_process(COMMAND dpkg --print-architecture OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE OUTPUT_QUIET)
+  execute_process(COMMAND dpkg --print-architecture OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE OUTPUT_QUIET)
+endif()
 
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libglib2.0-0")
 
