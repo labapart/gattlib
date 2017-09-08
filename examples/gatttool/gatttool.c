@@ -549,7 +549,7 @@ int main(int argc, char *argv[])
 	dest_type = get_dest_type_from_str(opt_dst_type);
 	sec_level = get_sec_level_from_str(opt_sec_level);
 	connection = gattlib_connect_async(opt_src, opt_dst, dest_type, sec_level,
-					opt_psm, opt_mtu, connect_cb);
+                    opt_psm, opt_mtu, connect_cb, NULL);
 	if (connection == NULL) {
 		got_error = TRUE;
 		goto done;

@@ -46,6 +46,7 @@ typedef struct {
 	int                connected;
 	int                timeout;
 	GError*            error;
+    void*              user_data;
 } io_connect_arg_t;
 
 static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data) {
@@ -121,10 +122,10 @@ static void io_connect_cb(GIOChannel *io, GError *err, gpointer user_data) {
 		io_connect_arg->error = err;
 
 		// Call callback if defined
-		if (io_connect_arg->connect_cb) {
-			io_connect_arg->connect_cb(NULL);
+        if (io_connect_arg->connect_cb) {
+            io_connect_arg->connect_cb(NULL, io_connect_arg->user_data);
 		}
-	} else {
+    } else {
 		gattlib_context_t* conn_context = io_connect_arg->conn->context;
 
 #if BLUEZ_VERSION_MAJOR == 4
@@ -135,7 +136,7 @@ static void io_connect_cb(GIOChannel *io, GError *err, gpointer user_data) {
 
 		//
 		// Register the listener callback
-		//
+        //
 		GSource *source = g_idle_source_new ();
 		assert(source != NULL);
 
@@ -148,14 +149,14 @@ static void io_connect_cb(GIOChannel *io, GError *err, gpointer user_data) {
 
 		//
 		// Save list of characteristics to do the correspondence handle/UUID
-		//
+        //
 		gattlib_discover_char(io_connect_arg->conn, &conn_context->characteristics, &conn_context->characteristic_count);
 
 		//
 		// Call callback if defined
 		//
-		if (io_connect_arg->connect_cb) {
-			io_connect_arg->connect_cb(io_connect_arg->conn);
+        if (io_connect_arg->connect_cb) {
+            io_connect_arg->connect_cb(io_connect_arg->conn, io_connect_arg->user_data);
 		}
 
 		io_connect_arg->connected = TRUE;
@@ -241,7 +242,7 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 
 	conn->context = conn_context;
 
-	/* Intialize bt_io_connect argument */
+    /* Intialize bt_io_connect argument */
 	io_connect_arg->conn       = conn;
 	io_connect_arg->connect_cb = connect_cb;
 	io_connect_arg->connected  = FALSE;
@@ -310,9 +311,10 @@ static BtIOSecLevel get_bt_io_sec_level(gattlib_bt_sec_level_t sec_level) {
 
 gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
-				gatt_connect_cb_t connect_cb)
+                gatt_connect_cb_t connect_cb, void* data)
 {
 	io_connect_arg_t* io_connect_arg = malloc(sizeof(io_connect_arg_t));
+    io_connect_arg->user_data = data;
 	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);
 
 	return initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
@@ -340,8 +342,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 {
 	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);
 	io_connect_arg_t io_connect_arg;
-	GSource* timeout;
-
+    GSource* timeout;
 	gatt_connection_t *conn = initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
 			psm, mtu, NULL, &io_connect_arg);
 	if (conn == NULL) {
@@ -359,8 +360,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 	// Wait for the connection to be done
 	while ((io_connect_arg.connected == FALSE) && (io_connect_arg.timeout == FALSE)) {
 		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
-	}
-
+    }
 	// Disconnect the timeout source
 	g_source_destroy(timeout);
 
@@ -411,13 +411,13 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 GSource* gattlib_watch_connection_full(GIOChannel* io, GIOCondition condition,
 								 GIOFunc func, gpointer user_data, GDestroyNotify notify)
 {
-	// Create a main loop source
+    // Create a main loop source
 	GSource *source = g_io_create_watch (io, condition);
 	assert(source != NULL);
 
 	g_source_set_callback (source, (GSourceFunc)func, user_data, notify);
 
-	// Attaches it to the main loop context
+    // Attaches it to the main loop context
 	guint id = g_source_attach(source, g_gattlib_thread.loop_context);
 	g_source_unref (source);
 	assert(id != 0);

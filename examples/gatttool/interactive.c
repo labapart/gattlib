@@ -110,7 +110,7 @@ static void set_state(enum state st)
 	rl_redisplay();
 }
 
-static void connect_cb(gatt_connection_t* connection)
+static void connect_cb(gatt_connection_t* connection, void* user_data)
 {
 	if (connection == NULL) {
 		set_state(STATE_DISCONNECTED);
@@ -304,7 +304,7 @@ static void cmd_connect(int argcp, char **argvp)
 	dst_type = get_dest_type_from_str(opt_dst_type);
 	sec_level = get_sec_level_from_str(opt_sec_level);
 	connection = gattlib_connect_async(opt_src, opt_dst, dst_type, sec_level,
-					opt_psm, opt_mtu, connect_cb);
+                    opt_psm, opt_mtu, connect_cb, NULL);
 	if (connection == NULL) {
 		set_state(STATE_DISCONNECTED);
 	} else {
