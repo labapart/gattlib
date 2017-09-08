@@ -290,7 +290,7 @@ FREE_CONNECTION:
 
 gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
-				gatt_connect_cb_t connect_cb)
+				gatt_connect_cb_t connect_cb, void* data)
 {
 	return NULL;
 }
