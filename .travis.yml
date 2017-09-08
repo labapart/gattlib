@@ -50,7 +50,7 @@ script:
   - wget http://ftp.de.debian.org/debian/pool/main/b/bluez/libbluetooth-dev_5.43-2_armhf.deb && dpkg -x libbluetooth-dev_5.43-2_armhf.deb .
   - wget http://security.debian.org/debian-security/pool/updates/main/g/glibc/libc6_2.24-11+deb9u1_armhf.deb && dpkg -x libc6_2.24-11+deb9u1_armhf.deb .
   - wget http://security.debian.org/debian-security/pool/updates/main/g/glibc/libc6-dev_2.24-11+deb9u1_armhf.deb && dpkg -x libc6-dev_2.24-11+deb9u1_armhf.deb .
-  - wget http://security.debian.org/debian-security/pool/updates/main/l/linux/linux-libc-dev_4.9.30-2+deb9u2_armhf.deb && dpkg -x linux-libc-dev_4.9.30-2+deb9u2_armhf.deb .
+  - wget http://security.debian.org/debian-security/pool/updates/main/l/linux/linux-libc-dev_4.9.30-2+deb9u3_armhf.deb && dpkg -x linux-libc-dev_4.9.30-2+deb9u3_armhf.deb .
   - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-0_2.50.3-2_armhf.deb && dpkg -x libglib2.0-0_2.50.3-2_armhf.deb .
   - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-dev_2.50.3-2_armhf.deb && dpkg -x libglib2.0-dev_2.50.3-2_armhf.deb .
   - wget http://ftp.de.debian.org/debian/pool/main/g/gcc-6/libstdc++6_6.3.0-18_armhf.deb && dpkg -x libstdc++6_6.3.0-18_armhf.deb .
@@ -86,7 +86,7 @@ script:
   - wget http://ftp.de.debian.org/debian/pool/main/b/bluez/libbluetooth-dev_5.43-2_arm64.deb && dpkg -x libbluetooth-dev_5.43-2_arm64.deb .
   - wget http://security.debian.org/debian-security/pool/updates/main/g/glibc/libc6_2.24-11+deb9u1_arm64.deb && dpkg -x libc6_2.24-11+deb9u1_arm64.deb .
   - wget http://security.debian.org/debian-security/pool/updates/main/g/glibc/libc6-dev_2.24-11+deb9u1_arm64.deb && dpkg -x libc6-dev_2.24-11+deb9u1_arm64.deb .
-  - wget http://security.debian.org/debian-security/pool/updates/main/l/linux/linux-libc-dev_4.9.30-2+deb9u2_arm64.deb && dpkg -x linux-libc-dev_4.9.30-2+deb9u2_arm64.deb .
+  - wget http://security.debian.org/debian-security/pool/updates/main/l/linux/linux-libc-dev_4.9.30-2+deb9u3_arm64.deb && dpkg -x linux-libc-dev_4.9.30-2+deb9u3_arm64.deb .
   - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-0_2.50.3-2_arm64.deb && dpkg -x libglib2.0-0_2.50.3-2_arm64.deb .
   - wget http://ftp.de.debian.org/debian/pool/main/g/glib2.0/libglib2.0-dev_2.50.3-2_arm64.deb && dpkg -x libglib2.0-dev_2.50.3-2_arm64.deb .
   - wget http://ftp.de.debian.org/debian/pool/main/g/gcc-6/libstdc++6_6.3.0-18_arm64.deb && dpkg -x libstdc++6_6.3.0-18_arm64.deb .
