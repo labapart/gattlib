@@ -863,7 +863,7 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 	org_bluez_gatt_characteristic1_call_write_value_sync(characteristic, value, NULL, &error);
 #else
 	GVariantBuilder *options =  g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-	org_bluez_gatt_characteristic1_call_write_value_sync(characteristic, g_variant_builder_end(options), value, NULL, &error);
+	org_bluez_gatt_characteristic1_call_write_value_sync(characteristic, value, g_variant_builder_end(options), NULL, &error);
 	g_variant_builder_unref(options);
 #endif
 	if (error != NULL) {
