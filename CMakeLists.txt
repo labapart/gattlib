@@ -27,6 +27,9 @@ include(CrossCompilation.cmake)
 
 project(gattlib)
 
+option(GATTLIB_BUILD_EXAMPLES "Build GattLib examples" YES)
+option(GATTLIB_SHARED_LIB "Build GattLib as a shared library" YES)
+
 find_package(PkgConfig REQUIRED)
 
 # Show all the warnings
@@ -77,16 +80,18 @@ configure_file(dbus/gattlib.pc.in ${PROJECT_BINARY_DIR}/gattlib.pc @ONLY)
 # Add the build directory to PKG_CONFIG_PATH
 set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
 
-# Examples
-add_subdirectory(examples/ble_scan)
-add_subdirectory(examples/discover)
-add_subdirectory(examples/read_write)
-add_subdirectory(examples/notification)
-add_subdirectory(examples/nordic_uart)
+if(GATTLIB_BUILD_EXAMPLES)
+  # Examples
+  add_subdirectory(examples/ble_scan)
+  add_subdirectory(examples/discover)
+  add_subdirectory(examples/read_write)
+  add_subdirectory(examples/notification)
+  add_subdirectory(examples/nordic_uart)
 
-# Some examples require Bluez code and other DBus support
-if (NOT GATTLIB_DBUS)
-  add_subdirectory(examples/gatttool)
+  # Some examples require Bluez code and other DBus support
+  if (NOT GATTLIB_DBUS)
+    add_subdirectory(examples/gatttool)
+  endif()
 endif()
 
 #
