@@ -51,4 +51,4 @@ endif()
 set(gatttool_SRCS gatttool.c interactive.c utils.c)
 
 add_executable(gatttool ${gatttool_SRCS})
-target_link_libraries(gatttool ${GATTLIB_LDFLAGS} ${GLIB_LDFLAGS} readline)
+target_link_libraries(gatttool ${GATTLIB_LDFLAGS} ${GLIB_LDFLAGS} readline pthread)

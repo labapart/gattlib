@@ -31,4 +31,4 @@ include_directories(${GLIB_INCLUDE_DIRS})
 set(notification_SRCS notification.c)
 
 add_executable(notification ${notification_SRCS})
-target_link_libraries(notification ${GATTLIB_LDFLAGS} ${GLIB_LDFLAGS})
+target_link_libraries(notification ${GATTLIB_LDFLAGS} ${GLIB_LDFLAGS} pthread)

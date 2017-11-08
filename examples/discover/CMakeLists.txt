@@ -28,4 +28,4 @@ pkg_search_module(GATTLIB REQUIRED gattlib)
 set(discover_SRCS discover.c)
 
 add_executable(discover ${discover_SRCS})
-target_link_libraries(discover ${GATTLIB_LDFLAGS})
+target_link_libraries(discover ${GATTLIB_LDFLAGS} pthread)
