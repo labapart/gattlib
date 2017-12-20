@@ -193,7 +193,7 @@ void connectAndDiscoverNext() {
 
 	fprintf(stderr, "\nDoing async conn to next... @ %s\n" , addr);
 	/* call async connect with connectionEstablishedCb callback */
-	gattlib_connect_async(NULL, addr, BDADDR_LE_PUBLIC,
+	gattlib_async_connect(NULL, addr, BDADDR_LE_PUBLIC,
 			BT_SEC_LOW, 0, 0, connectionEstablishedCb);
 
 

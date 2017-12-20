@@ -550,7 +550,7 @@ void gattlib_async_connect_ready_cb(GObject *source_object, GAsyncResult *res,
 
 }
 
-int gattlib_connect_async(const char *src, const char *dst, uint8_t dest_type,
+int gattlib_async_connect(const char *src, const char *dst, uint8_t dest_type,
 		gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 		gatt_connect_cb_t connect_cb) {
 

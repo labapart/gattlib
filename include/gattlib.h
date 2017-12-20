@@ -103,7 +103,7 @@ typedef void* (*gatt_read_cb_t)(const void* buffer, size_t buffer_len);
  *
  *  	- gattlib_adapter_scan_enable_async
  *  	- gattlib_adapter_scan_disable_async
- *  	- gattlib_connect_async
+ *  	- gattlib_async_connect (yes, I know the naming is weird, see below)
  *  	- gattlib_disconnect_async
  *  	- gattlib_read_char_by_uuid_async
  *  	- gattlib_write_char_by_uuid_async
@@ -189,7 +189,17 @@ int gattlib_adapter_close(void* adapter);
 gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu);
 
-int gattlib_connect_async(const char *src, const char *dst,
+/* original version of this function name, used under older bluez implementation,
+ * not sure how it works or how it's async...
+ *
+ */
+gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
+				gatt_connect_cb_t connect_cb);
+/*
+ * oddly named async with callback connect(), see above
+ */
+int gattlib_async_connect(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 				gatt_connect_cb_t connect_cb);
 
