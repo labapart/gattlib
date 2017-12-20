@@ -79,6 +79,7 @@ set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
 
 # Examples
 add_subdirectory(examples/ble_scan)
+add_subdirectory(examples/ble_scan_async)
 add_subdirectory(examples/discover)
 add_subdirectory(examples/read_write)
 add_subdirectory(examples/notification)

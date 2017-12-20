@@ -23,7 +23,7 @@
 
 #ifndef __GATTLIB_INTERNAL_H__
 #define __GATTLIB_INTERNAL_H__
-
+#include <stdio.h>
 #include "gattlib.h"
 
 #include "org-bluez-adaptater1.h"
@@ -41,5 +41,21 @@ typedef struct {
 	char* device_object_path;
 	OrgBluezDevice1* device;
 } gattlib_context_t;
+
+
+
+
+
+/* define GATTLIB_DEBUG_OUTPUT_ENABLE */
+
+#ifdef GATTLIB_DEBUG_OUTPUT_ENABLE
+#define DEBUG_GATTLIB(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DEBUG_GATTLIB(...)
+#endif
+
+#define ERROR_GATTLIB(...) 		fprintf(stderr, __VA_ARGS__)
+
+OrgBluezGattCharacteristic1 *get_characteristic_from_uuid(const uuid_t* uuid);
 
 #endif
