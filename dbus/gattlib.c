@@ -328,11 +328,10 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 
 
 
-
-
 	DEBUG_GATTLIB("gattlib_connect starting loop (timeout %i s.)\n", CONNECT_TIMEOUT);
 
-	GMainLoop *loop = g_main_loop_new(NULL, 0);
+	GMainContext * loopyContext = g_main_context_new();
+	GMainLoop *loop = g_main_loop_new(loopyContext, 0);
 	// Register a handle for notification
 	g_signal_connect(device,
 		"g-properties-changed",
@@ -341,6 +340,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 
 	g_timeout_add_seconds (CONNECT_TIMEOUT, loop_timeout_func, loop);
 	g_main_loop_run(loop);
+	g_main_context_unref(loopyContext);
 	g_main_loop_unref(loop);
 
 	return connection;
