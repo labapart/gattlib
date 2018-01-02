@@ -28,7 +28,7 @@
 
 #include "gattlib_internal.h"
 
-#define CONNECT_TIMEOUT  4
+#define CONNECT_TIMEOUT  20 
 
 int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	char object_path[20];
@@ -330,6 +330,8 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 
 	DEBUG_GATTLIB("gattlib_connect starting loop (timeout %i s.)\n", CONNECT_TIMEOUT);
 
+	// run this in its own context to avoid freezing 
+	// any glib-loop-based app
 	GMainContext * loopyContext = g_main_context_new();
 	GMainLoop *loop = g_main_loop_new(loopyContext, 0);
 	// Register a handle for notification
@@ -339,7 +341,15 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 		loop);
 
 	g_timeout_add_seconds (CONNECT_TIMEOUT, loop_timeout_func, loop);
-	g_main_loop_run(loop);
+	/* have to do the loop manually, as the signal will arrive 
+	 * on the main/NULL loop
+	 */
+	while (g_main_loop_is_running(loop))
+	{
+		g_main_context_iteration(loopyContext, FALSE);
+		g_main_context_iteration(NULL, FALSE);
+	}
+		
 	g_main_context_unref(loopyContext);
 	g_main_loop_unref(loop);
 

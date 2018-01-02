@@ -99,7 +99,7 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (defaul
 if (ENV{TRAVIS_TAG})
   set(CPACK_PACKAGE_VERSION $ENV{TRAVIS_TAG})
 else()
-  set(CPACK_PACKAGE_VERSION 0.3.1)
+  set(CPACK_PACKAGE_VERSION 0.3.2)
 endif()
 set(CPACK_PACKAGE_CONTACT "Pat Deegan <contact-form@psychogenic.com>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to access GATT information from Bluetooth Low Energy (BLE) devices")
