@@ -380,7 +380,7 @@ int gattlib_adapter_scan_disable_async(void* adapter, gattlib_async_completed_cb
 
 	DEBUG_GATTLIB("scan disable prep done, calling stop discovery.\n");
 	gattlib_async_global_state.done_callback = done_cb;
-	gattlib_async_setup_currentloop(20, GATTLIB_ASYNC_LOOP_CREATECONTEXT);
+	gattlib_async_setup_currentloop(25, GATTLIB_ASYNC_LOOP_CREATECONTEXT);
 	org_bluez_adapter1_call_stop_discovery((OrgBluezAdapter1*)adapter, NULL,
 			gattlib_async_scandisable_ready_cb, NULL);
 	return 0;
@@ -558,7 +558,7 @@ int gattlib_async_connect(const char *src, const char *dst, uint8_t dest_type,
 	gattlib_async_global_state.connection_done_cb = connect_cb;
 	gattlib_async_global_state.done_callback = gattlib_async_connect_timeouttrigger_conn_cb;
 
-	gattlib_async_setup_currentloop(8, GATTLIB_ASYNC_LOOP_CREATECONTEXT);
+	gattlib_async_setup_currentloop(25, GATTLIB_ASYNC_LOOP_CREATECONTEXT);
 	gattlib_connect_async_glib(src, dst, dest_type, sec_level, psm, mtu, NULL,
 			gattlib_async_connect_ready_cb, NULL);
 	return 0;
@@ -595,7 +595,7 @@ int gattlib_disconnect_async(gatt_connection_t* connection,
 	gattlib_async_global_state.done_callback = done_cb;
 	gattlib_context_t* conn_context = connection->context;
 
-	if (gattlib_async_setup_currentloop(20, GATTLIB_ASYNC_LOOP_CREATECONTEXT)) {
+	if (gattlib_async_setup_currentloop(25, GATTLIB_ASYNC_LOOP_CREATECONTEXT)) {
 		DEBUG_GATTLIB("boo, can't setup mainloop!\n");
 		return 1;
 	}
@@ -709,7 +709,7 @@ int gattlib_write_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid
 	gattlib_async_global_state.error_callback = error_cb;
 	gattlib_async_global_state.done_callback = done_cb;
 	gattlib_async_global_state.async_proc_data = characteristic;
-	gattlib_async_setup_currentloop(10, GATTLIB_ASYNC_LOOP_CREATECONTEXT);
+	gattlib_async_setup_currentloop(12, GATTLIB_ASYNC_LOOP_CREATECONTEXT);
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 	org_bluez_gatt_characteristic1_call_write_value(characteristic, value, NULL, NULL, gattlib_async_write_ready_cb, NULL);
 #else
