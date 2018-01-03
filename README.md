@@ -18,9 +18,9 @@ Latest GattLib (Async support) Release packages
 * For x86_64, with Bluez DBUS Support (Recommended, and required for Gattlib++ and Coraline):
 
 
-    - ZIP: <https://github.com/psychogenic/gattlib/releases/download/v0.3.3/gattlib_0.3.3_x86_64.zip>
-    - DEB: <https://github.com/psychogenic/gattlib/releases/download/v0.3.3/gattlib_0.3.3_x86_64.deb>
-    - RPM: <https://github.com/psychogenic/gattlib/releases/download/v0.3.3/gattlib_0.3.3_x86_64.rpm>
+    - ZIP: <https://github.com/psychogenic/gattlib/releases/download/v0.3.4/gattlib_0.3.4_x86_64.zip>
+    - DEB: <https://github.com/psychogenic/gattlib/releases/download/v0.3.4/gattlib_0.3.4_x86_64.deb>
+    - RPM: <https://github.com/psychogenic/gattlib/releases/download/v0.3.4/gattlib_0.3.4_x86_64.rpm>
 
 Latest GattLib (original) packages (no async, as of yet)
 ========================================================
