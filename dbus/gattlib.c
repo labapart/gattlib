@@ -28,7 +28,11 @@
 
 #include "gattlib_internal.h"
 
-#define CONNECT_TIMEOUT  20 
+#define CONNECT_TIMEOUT  4
+
+#ifdef GATTLIB_DEBUG_OUTPUT_ENABLE
+int debug_num_loops = 0 ;
+#endif
 
 int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	char object_path[20];
@@ -73,6 +77,8 @@ int gattlib_adapter_powered(void* adapter) {
 
 static gboolean loop_timeout_func(gpointer data) {
 	DEBUG_GATTLIB("\nloop_timeout_func()!\n");
+	DEBUG_GATTLIB("g_main_loop_quit\n");
+	DEBUG_DEC_NUMLOOPS();
 	g_main_loop_quit(data);
 	return FALSE;
 }
@@ -196,6 +202,8 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 	}
 
 	// Run Glib loop for 'timeout' seconds
+	DEBUG_GATTLIB("g_main_loop_new (def context)\n");
+	DEBUG_INC_NUMLOOPS();
 	GMainLoop *loop = g_main_loop_new(NULL, 0);
 	g_timeout_add_seconds (timeout, stop_scan_func, loop);
 	g_main_loop_run(loop);
@@ -231,6 +239,7 @@ gboolean on_handle_device_property_change(
 {
 	GMainLoop *loop = user_data;
 
+	DEBUG_GATTLIB("\non_handle_device_property_change\n");
 	// Retrieve 'Value' from 'arg_changed_properties'
 	if (g_variant_n_children (arg_changed_properties) > 0) {
 		GVariantIter *iter;
@@ -239,9 +248,13 @@ gboolean on_handle_device_property_change(
 
 		g_variant_get (arg_changed_properties, "a{sv}", &iter);
 		while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
+			DEBUG_GATTLIB("  key: %s \n", key);
 			if (strcmp(key, "UUIDs") == 0) {
+			//if (1) {
+				DEBUG_GATTLIB(" Quitting loop because of prop change\n");
+				DEBUG_DEC_NUMLOOPS();
 				g_main_loop_quit(loop);
-				break;
+				return FALSE;
 			}
 		}
 	}
@@ -299,6 +312,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 		connection->context = conn_context;
 	}
 
+	DEBUG_GATTLIB("getting bluez dev proxy...");
 	OrgBluezDevice1* device = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
 			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
@@ -315,6 +329,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 	}
 
 
+	DEBUG_GATTLIB("got it, calling dev connect_sync\n");
 	error = NULL;
 	org_bluez_device1_call_connect_sync(device, NULL, &error);
 	if (error) {
@@ -328,10 +343,31 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 
 
 
-	DEBUG_GATTLIB("gattlib_connect starting loop (timeout %i s.)\n", CONNECT_TIMEOUT);
+	DEBUG_GATTLIB("gattlib_connect starting loop (timeout %i s.)", CONNECT_TIMEOUT);
 
+#define CONNECT_USES_OWN_CONTEXT
+#ifdef CONNECT_USES_OWN_CONTEXT
 	// run this in its own context to avoid freezing 
 	// any glib-loop-based app
+
+
+
+	DEBUG_GATTLIB("g_main_loop_new (own context)\n");
+	DEBUG_INC_NUMLOOPS();
+	GMainContext * loopyContext = g_main_context_new();
+	GMainLoop *loop = g_main_loop_new(loopyContext, 0);
+	// Register a handle for notification
+	g_signal_connect(device,
+		"g-properties-changed",
+		G_CALLBACK (on_handle_device_property_change),
+		loop);
+
+	g_timeout_add_seconds (CONNECT_TIMEOUT, loop_timeout_func, loop);
+	g_main_loop_run(loop);
+	g_main_context_unref(loopyContext);
+
+
+#if 0 
 	GMainContext * loopyContext = g_main_context_new();
 	GMainLoop *loop = g_main_loop_new(loopyContext, TRUE);
 	// Register a handle for notification
@@ -340,17 +376,34 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 		G_CALLBACK (on_handle_device_property_change),
 		loop);
 
-	g_timeout_add_seconds (CONNECT_TIMEOUT, loop_timeout_func, loop);
+	guint tout = g_timeout_add_seconds (6, loop_timeout_func, loop);
+	// guint tout = g_timeout_add_seconds (CONNECT_TIMEOUT, loop_timeout_func, loop);
 	/* have to do the loop manually, as the signal will arrive 
 	 * on the main/NULL loop
 	 */
 	while (g_main_loop_is_running(loop))
 	{
+		// DEBUG_GATTLIB(".");
 		g_main_context_iteration(loopyContext, FALSE);
 		g_main_context_iteration(NULL, FALSE);
 	}
-		
+	g_source_remove(tout);
 	g_main_context_unref(loopyContext);
+#endif 
+
+#else
+	DEBUG_GATTLIB("g_main_loop_new (def context)\n");
+	DEBUG_INC_NUMLOOPS();
+	GMainLoop *loop = g_main_loop_new(NULL, TRUE);
+	// Register a handle for notification
+	g_signal_connect(device,
+		"g-properties-changed",
+		G_CALLBACK (on_handle_device_property_change),
+		loop);
+
+	guint tout = g_timeout_add_seconds (6, loop_timeout_func, loop);
+	g_main_loop_run(loop);
+#endif
 	g_main_loop_unref(loop);
 
 	return connection;

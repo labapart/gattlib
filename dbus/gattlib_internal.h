@@ -49,9 +49,17 @@ typedef struct {
 /* define GATTLIB_DEBUG_OUTPUT_ENABLE */
 
 #ifdef GATTLIB_DEBUG_OUTPUT_ENABLE
+extern int debug_num_loops;
+#endif
+
+#ifdef GATTLIB_DEBUG_OUTPUT_ENABLE
 #define DEBUG_GATTLIB(...) fprintf(stderr, __VA_ARGS__)
+#define DEBUG_INC_NUMLOOPS()	debug_num_loops++; DEBUG_GATTLIB("\n++ num loops now: %i\n", debug_num_loops)
+#define DEBUG_DEC_NUMLOOPS()	debug_num_loops--; DEBUG_GATTLIB("\n-- num loops now: %i\n", debug_num_loops)
 #else
 #define DEBUG_GATTLIB(...)
+#define DEBUG_INC_NUMLOOPS()
+#define DEBUG_DEC_NUMLOOPS() 
 #endif
 
 #define ERROR_GATTLIB(...) 		fprintf(stderr, __VA_ARGS__)

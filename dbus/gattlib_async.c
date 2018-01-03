@@ -109,7 +109,18 @@ static volatile gattlib_async_state_t gattlib_async_global_state = { 0 };
 static void gattlib_async_quit_currentloop() {
 	DEBUG_GATTLIB("async_quit_currentloop()\n");
 	if (gattlib_async_global_state.current_loop) {
-		g_main_loop_quit(gattlib_async_global_state.current_loop);
+		if (g_main_loop_is_running(gattlib_async_global_state.current_loop)) {
+			DEBUG_GATTLIB("g_main_loop_quit\n");
+			DEBUG_DEC_NUMLOOPS();
+			g_main_loop_quit(gattlib_async_global_state.current_loop);
+
+			g_main_context_iteration(
+				g_main_loop_get_context(gattlib_async_global_state.current_loop),
+				FALSE);
+			g_main_context_iteration(NULL, FALSE);
+
+
+		}
 	} else {
 		DEBUG_GATTLIB("booo, no loop?\n");
 	}
@@ -127,6 +138,8 @@ static gboolean gattlib_timeout_async_loop(gpointer data) {
 		// if (gattlib_async_global_state.current_loop) {
 		DEBUG_GATTLIB("sending timeout quit to loop\n");
 		// g_main_loop_quit(gattlib_async_global_state.current_loop);
+		DEBUG_GATTLIB("g_main_loop_quit\n");
+		DEBUG_DEC_NUMLOOPS();
 		g_main_loop_quit(data);
 	}
 
@@ -142,18 +155,23 @@ static gboolean gattlib_timeout_async_loop(gpointer data) {
  */
 int gattlib_async_setup_currentloop(int timeout, gboolean useOwnContext) {
 	DEBUG_GATTLIB("setting up async loop...");
+
 	if (gattlib_async_global_state.current_loop) {
 		DEBUG_GATTLIB("boo, already done\n");
-		return 1;
+	//	return 1;
 	}
 	if (useOwnContext == TRUE) {
 
 		DEBUG_GATTLIB("with own context.\n");
 		gattlib_async_global_state.current_context = g_main_context_new();
+		DEBUG_GATTLIB("g_main_loop_new (own context)\n");
+		DEBUG_INC_NUMLOOPS();
 		gattlib_async_global_state.current_loop = g_main_loop_new(
 				gattlib_async_global_state.current_context, TRUE);
 	} else {
 		DEBUG_GATTLIB("with global context.\n");
+		DEBUG_GATTLIB("g_main_loop_new (def context)\n");
+		DEBUG_INC_NUMLOOPS();
 		gattlib_async_global_state.current_loop = g_main_loop_new(NULL, TRUE);
 	}
 
@@ -212,6 +230,8 @@ static void gattlib_async_teardown_currentloop() {
 		return;
 	}
 
+	DEBUG_GATTLIB("g_main_loop_quit\n");
+	DEBUG_DEC_NUMLOOPS();
 	g_main_loop_quit(gattlib_async_global_state.current_loop); // TEST
 
 	if (gattlib_async_global_state.timeout_source) {
@@ -369,6 +389,7 @@ int gattlib_adapter_scan_disable_async(void* adapter, gattlib_async_completed_cb
 	// likely we're scanning now
 	DEBUG_GATTLIB("\nscan disable async called...");
 
+	/*
 	if (gattlib_async_global_state.current_loop && gattlib_async_global_state.am_scanning) {
 		DEBUG_GATTLIB("while scanning... quitting current loop\n");
 		gattlib_async_global_state.done_callback = NULL; // cancel that
@@ -376,6 +397,7 @@ int gattlib_adapter_scan_disable_async(void* adapter, gattlib_async_completed_cb
 		gattlib_async_process(); // do one run to clean it out.
 
 	}
+	*/
 
 
 	DEBUG_GATTLIB("scan disable prep done, calling stop discovery.\n");
@@ -421,7 +443,10 @@ static void gattlib_async_connect_trigger_conn_cb(gatt_connection_t * connptr) {
 		gattlib_async_teardown_currentloop();
 		gattlib_async_global_state.connection_done_cb = NULL;
 		thecb(connptr);
+	} else {
+		gattlib_async_teardown_currentloop();
 	}
+
 
 }
 
@@ -466,7 +491,7 @@ static void gattlib_connect_thread_cb(GTask *task, gpointer source_object,
 
 	if (!retval) {
 		DEBUG_GATTLIB("async conn returned nuffin' !!!\n");
-		// gattlib_async_connect_trigger_conn_cb(NULL);
+		gattlib_async_connect_trigger_conn_cb(NULL);
 
 	}
 	g_task_return_pointer(task, retval,
@@ -543,10 +568,8 @@ void gattlib_async_connect_ready_cb(GObject *source_object, GAsyncResult *res,
 	GError *error = NULL;
 	gatt_connection_t * connptr;
 	DEBUG_GATTLIB("gattlib_async_connect_ready_cb\n");
-	if (gattlib_async_global_state.connection_done_cb) {
-		connptr = g_task_propagate_pointer(G_TASK(res), &error);
-		gattlib_async_connect_trigger_conn_cb(connptr);
-	}
+	connptr = g_task_propagate_pointer(G_TASK(res), &error);
+	gattlib_async_connect_trigger_conn_cb(connptr);
 
 }
 
