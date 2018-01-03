@@ -333,7 +333,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 	// run this in its own context to avoid freezing 
 	// any glib-loop-based app
 	GMainContext * loopyContext = g_main_context_new();
-	GMainLoop *loop = g_main_loop_new(loopyContext, 0);
+	GMainLoop *loop = g_main_loop_new(loopyContext, TRUE);
 	// Register a handle for notification
 	g_signal_connect(device,
 		"g-properties-changed",
