@@ -788,9 +788,10 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
 	org_bluez_gatt_characteristic1_call_read_value_sync(
 		characteristic, &out_value, NULL, &error);
 #else
-	GVariant *options = g_variant_new ("{}");
+	GVariantBuilder *options =  g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	org_bluez_gatt_characteristic1_call_read_value_sync(
-		characteristic, options, &out_value, NULL, &error);
+		characteristic, g_variant_builder_end(options), &out_value, NULL, &error);
+	g_variant_builder_unref(options);
 #endif
 	if (error != NULL) {
 		return -1;
@@ -826,9 +827,10 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	org_bluez_gatt_characteristic1_call_read_value_sync(
 		characteristic, &out_value, NULL, &error);
 #else
-	GVariant *options = g_variant_new ("{}");
+	GVariantBuilder *options =  g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	org_bluez_gatt_characteristic1_call_read_value_sync(
-		characteristic, options, &out_value, NULL, &error);
+		characteristic, g_variant_builder_end(options), &out_value, NULL, &error);
+	g_variant_builder_unref(options);
 #endif
 	if (error != NULL) {
 		return -1;
@@ -860,8 +862,9 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 	org_bluez_gatt_characteristic1_call_write_value_sync(characteristic, value, NULL, &error);
 #else
-	GVariant *options = g_variant_new ("{}");
-	org_bluez_gatt_characteristic1_call_write_value_sync(characteristic, options, value, NULL, &error);
+	GVariantBuilder *options =  g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+	org_bluez_gatt_characteristic1_call_write_value_sync(characteristic, value, g_variant_builder_end(options), NULL, &error);
+	g_variant_builder_unref(options);
 #endif
 	if (error != NULL) {
 		return -1;

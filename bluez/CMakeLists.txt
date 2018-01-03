@@ -98,7 +98,13 @@ else()
 endif()
 
 # gattlib
-add_library(gattlib SHARED ${gattlib_SRCS})
-target_link_libraries(gattlib ${gattlib_LIBS})
-
-install(TARGETS gattlib LIBRARY DESTINATION lib)
+if(GATTLIB_SHARED_LIB)
+  add_library(gattlib SHARED ${gattlib_SRCS})
+  target_link_libraries(gattlib ${gattlib_LIBS})
+  
+  install(TARGETS gattlib LIBRARY DESTINATION lib)
+else()
+  add_library(gattlib ${gattlib_SRCS})
+  target_include_directories(gattlib INTERFACE ../include)
+  target_link_libraries(gattlib ${gattlib_LIBS})
+endif()

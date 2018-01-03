@@ -27,6 +27,9 @@ include(CrossCompilation.cmake)
 
 project(gattlib)
 
+option(GATTLIB_BUILD_EXAMPLES "Build GattLib examples" YES)
+option(GATTLIB_SHARED_LIB "Build GattLib as a shared library" YES)
+
 find_package(PkgConfig REQUIRED)
 
 # Show all the warnings
@@ -77,26 +80,30 @@ configure_file(dbus/gattlib.pc.in ${PROJECT_BINARY_DIR}/gattlib.pc @ONLY)
 # Add the build directory to PKG_CONFIG_PATH
 set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
 
-# Examples
-add_subdirectory(examples/ble_scan)
-add_subdirectory(examples/discover)
-add_subdirectory(examples/read_write)
-add_subdirectory(examples/notification)
-add_subdirectory(examples/nordic_uart)
+if(GATTLIB_BUILD_EXAMPLES)
+  # Examples
+  add_subdirectory(examples/ble_scan)
+  add_subdirectory(examples/discover)
+  add_subdirectory(examples/read_write)
+  add_subdirectory(examples/notification)
+  add_subdirectory(examples/nordic_uart)
 
-# Some examples require Bluez code and other DBus support
-if (NOT GATTLIB_DBUS)
-  add_subdirectory(examples/gatttool)
+  # Some examples require Bluez code and other DBus support
+  if (NOT GATTLIB_DBUS)
+    add_subdirectory(examples/gatttool)
+  endif()
 endif()
 
 #
 # Packaging
 #
 set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (default: /usr).")
-if (ENV{TRAVIS_TAG})
+if (ENV{TRAVIS_TAG} AND (NOT "ENV{TRAVIS_TAG}" STREQUAL "dev"))
+  message("Package Gattlib for tagged version $ENV{TRAVIS_TAG}")
   set(CPACK_PACKAGE_VERSION $ENV{TRAVIS_TAG})
 else()
-  set(CPACK_PACKAGE_VERSION dev)
+  set(CPACK_PACKAGE_VERSION 0.2-dev)
+  message("Package Gattlib for development version $ENV{CPACK_PACKAGE_VERSION}")
 endif()
 set(CPACK_PACKAGE_CONTACT "Olivier Martin <olivier@labapart.com>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to access GATT information from Bluetooth Low Energy (BLE) devices")
@@ -112,8 +119,10 @@ else()
   set(CPACK_GENERATOR "DEB;RPM;ZIP")
 endif()
 
+if (NOT CMAKE_SYSROOT)
 # Detect platform architecture to use it for the Debian package
-execute_process(COMMAND dpkg --print-architecture OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE OUTPUT_QUIET)
+  execute_process(COMMAND dpkg --print-architecture OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE OUTPUT_QUIET)
+endif()
 
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libglib2.0-0")
 
