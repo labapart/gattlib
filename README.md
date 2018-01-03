@@ -12,14 +12,18 @@ cmake -DGATTLIB_FORCE_DBUS=TRUE ..
 make
 ```
 
-Latest GattLib Release packages
-===============================
+Latest GattLib (Async support) Release packages
+===============================================
 
-* For x86_64, with Bluez DBUS Support (Recommended):
+* For x86_64, with Bluez DBUS Support (Recommended, and required for Gattlib++ and Coraline):
 
-    - ZIP: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dbus_dev_x86_64.zip>
-    - DEB: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dbus_dev_x86_64.deb>
-    - RPM: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dbus_dev_x86_64.rpm>
+
+    - ZIP: <https://github.com/psychogenic/gattlib/releases/download/v0.3.2/gattlib_0.3.2_x86_64.zip>
+    - DEB: <https://github.com/psychogenic/gattlib/releases/download/v0.3.2/gattlib_0.3.2_x86_64.deb>
+    - RPM: <https://github.com/psychogenic/gattlib/releases/download/v0.3.2/gattlib_0.3.2_x86_64.rpm>
+
+Latest GattLib (original) packages (no async, as of yet)
+========================================================
 
 * For x86_64, with Bluez Legacy Support:
 
