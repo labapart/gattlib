@@ -71,30 +71,16 @@ else()
   link_directories(${PROJECT_BINARY_DIR}/bluez)
 endif()
 
-# Generate pkg-config file before building the examples
-configure_file(dbus/gattlib.pc.in ${PROJECT_BINARY_DIR}/gattlib.pc @ONLY)
-
-# Add the build directory to PKG_CONFIG_PATH
-set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
-
-# Examples
-add_subdirectory(examples/ble_scan)
-if (GATTLIB_DBUS)
-add_subdirectory(examples/ble_scan_async)
-endif()
-add_subdirectory(examples/discover)
-add_subdirectory(examples/read_write)
-add_subdirectory(examples/notification)
-add_subdirectory(examples/nordic_uart)
-
-# Some examples require Bluez code and other DBus support
-if (NOT GATTLIB_DBUS)
-  add_subdirectory(examples/gatttool)
-endif()
 
 #
-# Packaging
+# Packaging (this needs to be before the pc file setup to take effect)
 #
+
+set(CPACK_SET_DESTDIR true)
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "/usr" CACHE STRING "Install directory (default: /usr).")
+set(CPACK_INSTALL_PREFIX ${CPACK_PACKAGE_INSTALL_DIRECTORY} CACHE STRING "Install directory (default: /usr).")
+set(CPACK_PACKAGING_PREFIX ${CPACK_PACKAGE_INSTALL_DIRECTORY} CACHE STRING "Install directory (default: /usr).")
+
 set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (default: /usr).")
 if (ENV{TRAVIS_TAG})
   set(CPACK_PACKAGE_VERSION $ENV{TRAVIS_TAG})
@@ -126,6 +112,34 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "libglib2.0-0")
 if (GATTLIB_DBUS AND (BLUEZ_VERSION_MAJOR EQUAL 5) AND (BLUEZ_VERSION_MINOR GREATER 39))
   set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}, bluez (>= 5.40)")
 endif()
+
+
+
+
+
+
+# Generate pkg-config file before building the examples
+configure_file(dbus/gattlib.pc.in ${PROJECT_BINARY_DIR}/gattlib.pc @ONLY)
+
+# Add the build directory to PKG_CONFIG_PATH
+set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
+
+# Examples
+add_subdirectory(examples/ble_scan)
+if (GATTLIB_DBUS)
+add_subdirectory(examples/ble_scan_async)
+endif()
+add_subdirectory(examples/discover)
+add_subdirectory(examples/read_write)
+add_subdirectory(examples/notification)
+add_subdirectory(examples/nordic_uart)
+
+# Some examples require Bluez code and other DBus support
+if (NOT GATTLIB_DBUS)
+  add_subdirectory(examples/gatttool)
+endif()
+
+
 
 #
 # List of file to install
