@@ -93,7 +93,7 @@ endif()
 # Packaging
 #
 set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (default: /usr).")
-if (ENV{TRAVIS_TAG})
+if (ENV{TRAVIS_TAG} AND (NOT "ENV{TRAVIS_TAG}" STREQUAL "dev"))
   message("Package Gattlib for tagged version $ENV{TRAVIS_TAG}")
   set(CPACK_PACKAGE_VERSION $ENV{TRAVIS_TAG})
 else()
