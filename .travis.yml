@@ -121,7 +121,7 @@ before_deploy:
   - cp build-release/gattlib_*_x86_64.rpm artifacts/
   - cp build-release/gattlib_*_x86_64.zip artifacts/
   # Copy DBUS packages to artifacts
-  - for f in build-dbus-release/gattlib_*; do echo "/tmp/`echo $f | sed 's/build-dbus-release\/gattlib_/artifacts\/gattlib_dbus_/'`"; done
+  - for f in build-dbus-release/gattlib_*; do cp "$f" "`echo $f | sed 's/build-dbus-release\/gattlib_/artifacts\/gattlib_dbus_/'`"; done
   # Copy DBUS ARM packages to artifacts
   - cp build-dbus-release-arm32/gattlib_*_armhf.deb artifacts/
   - cp build-dbus-release-arm32/gattlib_*_armhf.zip artifacts/
@@ -135,6 +135,7 @@ deploy:
   file_glob: true
   file: artifacts/*
   skip_cleanup: true
+  overwrite: true
   on:
     tags: true
 
