@@ -36,7 +36,8 @@
 #include "hci.h"
 #include "hci_lib.h"
 
-#define CONNECTION_TIMEOUT    2
+#define BT_IO_TIMEOUT 2
+#define CONNECTION_TIMEOUT    (BT_IO_OPT_TIMEOUT + 4)
 
 struct gattlib_thread_t g_gattlib_thread = { 0 };
 
@@ -165,6 +166,7 @@ static void io_connect_cb(GIOChannel *io, GError *err, gpointer user_data) {
 	}
 }
 
+#ifdef USE_THREAD
 static void *connection_thread(void* arg) {
 	struct gattlib_thread_t* loop_thread = arg;
 
@@ -175,17 +177,19 @@ static void *connection_thread(void* arg) {
 	g_main_loop_unref(loop_thread->loop);
 	assert(0);
 }
+#endif
 
 static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const gchar *dst,
 		uint8_t dest_type, BtIOSecLevel sec_level, int psm, int mtu,
 		gatt_connect_cb_t connect_cb,
-		io_connect_arg_t* io_connect_arg)
+		io_connect_arg_t* io_connect_arg, int timeout_sec)
 {
 	bdaddr_t sba, dba;
 	GError *err = NULL;
 
 	/* Check if the GattLib thread has been started */
 	if (g_gattlib_thread.ref == 0) {
+#ifdef USE_THREAD
 		/* Start it */
 
 		/* Create a thread that will handle Bluetooth events */
@@ -199,10 +203,14 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 		while (!g_gattlib_thread.loop || !g_main_loop_is_running (g_gattlib_thread.loop)) {
 			usleep(1000);
 		}
-	} else {
-		/* Increase the reference to know how many GATT connection use the loop */
-		g_gattlib_thread.ref++;
+#else
+            g_gattlib_thread.loop_context = g_main_context_new();
+	    g_gattlib_thread.loop = g_main_loop_new(g_gattlib_thread.loop_context, TRUE);
+#endif
 	}
+
+	/* Increase the reference to know how many GATT connection use the loop */
+	g_gattlib_thread.ref++;
 
 	/* Remote device */
 	if (dst == NULL) {
@@ -262,7 +270,7 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 				BT_IO_OPT_DEST_TYPE, dest_type,
 				BT_IO_OPT_CID, ATT_CID,
 				BT_IO_OPT_SEC_LEVEL, sec_level,
-				BT_IO_OPT_TIMEOUT, CONNECTION_TIMEOUT,
+				BT_IO_OPT_TIMEOUT, BT_IO_OPT_TIMEOUT,
 				BT_IO_OPT_INVALID);
 	} else {
 		conn_context->io = bt_io_connect(
@@ -278,7 +286,7 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 				BT_IO_OPT_PSM, psm,
 				BT_IO_OPT_IMTU, mtu,
 				BT_IO_OPT_SEC_LEVEL, sec_level,
-				BT_IO_OPT_TIMEOUT, CONNECTION_TIMEOUT,
+				BT_IO_OPT_TIMEOUT, BT_IO_TIMEOUT,
 				BT_IO_OPT_INVALID);
 	}
 
@@ -308,15 +316,39 @@ static BtIOSecLevel get_bt_io_sec_level(gattlib_bt_sec_level_t sec_level) {
 	}
 }
 
+
+
+void gattlib_iteration(void){
+#ifdef USE_THREAD
+	if( pthread_self() == g_gattlib_thread.thread) {
+		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+	}
+	else {
+		pthread_yield();
+	}
+#else
+	g_main_context_iteration(g_gattlib_thread.loop_context, TRUE);
+#endif
+}
+
+
 gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 				gatt_connect_cb_t connect_cb)
+{
+	return gattlib_connect_async_timeout(src, dst, dest_type, sec_level,
+					psm, mtu, connect_cb, CONNECTION_TIMEOUT);
+}
+
+gatt_connection_t *gattlib_connect_async_timeout(const char *src, const char *dst,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
+				gatt_connect_cb_t connect_cb, int timeout_sec)
 {
 	io_connect_arg_t* io_connect_arg = malloc(sizeof(io_connect_arg_t));
 	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);
 
 	return initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
-			psm, mtu, connect_cb, io_connect_arg);
+			psm, mtu, connect_cb, io_connect_arg, timeout_sec);
 }
 
 static gboolean connection_timeout(gpointer user_data) {
@@ -335,15 +367,32 @@ static gboolean connection_timeout(gpointer user_data) {
  * @param psm       Specify the PSM for GATT/ATT over BR/EDR
  * @param mtu       Specify the MTU size
  */
+
 gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu)
 {
+	return gattlib_connect_timeout(src, dst, dest_type, sec_level, psm, mtu, CONNECTION_TIMEOUT);
+}
+
+/**
+ * @param src		Local Adaptater interface
+ * @param dst		Remote Bluetooth address
+ * @param dst_type	Set LE address type (either BDADDR_LE_PUBLIC or BDADDR_LE_RANDOM)
+ * @param sec_level	Set security level (either BT_IO_SEC_LOW, BT_IO_SEC_MEDIUM, BT_IO_SEC_HIGH)
+ * @param psm		Specify the PSM for GATT/ATT over BR/EDR
+ * @param mtu		Specify the MTU size
+ * @param timeout_sec	connection timeout in seconds
+ */
+gatt_connection_t *gattlib_connect_timeout(const char *src, const char *dst,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level,
+				int psm, int mtu, int timeout_sec)
+{
 	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);
-	io_connect_arg_t io_connect_arg;
+	io_connect_arg_t io_connect_arg = {};
 	GSource* timeout;
 
 	gatt_connection_t *conn = initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
-			psm, mtu, NULL, &io_connect_arg);
+			psm, mtu, NULL, &io_connect_arg, timeout_sec);
 	if (conn == NULL) {
 		if (io_connect_arg.error) {
 			fprintf(stderr, "Error: gattlib_connect - initialization error:%s\n", io_connect_arg.error->message);
@@ -353,18 +402,19 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 		return NULL;
 	}
 
-	// Timeout of 'CONNECTION_TIMEOUT+4' seconds
-	timeout = gattlib_timeout_add_seconds(CONNECTION_TIMEOUT + 4, connection_timeout, &io_connect_arg);
+	// Timeout of 'timeout_sec+4' seconds
+	timeout = gattlib_timeout_add_seconds(timeout_sec, connection_timeout, &io_connect_arg);
 
 	// Wait for the connection to be done
-	while ((io_connect_arg.connected == FALSE) && (io_connect_arg.timeout == FALSE)) {
-		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+	while ((io_connect_arg.connected == FALSE) && (io_connect_arg.timeout == FALSE) && (0 == io_connect_arg.error )) {
+		gattlib_iteration();
 	}
 
 	// Disconnect the timeout source
 	g_source_destroy(timeout);
 
 	if (io_connect_arg.timeout) {
+		fprintf(stderr, "gattlib_connect - connection timeout\n");
 		return NULL;
 	}
 
@@ -379,6 +429,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 int gattlib_disconnect(gatt_connection_t* connection) {
 	gattlib_context_t* conn_context = connection->context;
 
+
 #if BLUEZ_VERSION_MAJOR == 4
 	// Stop the I/O Channel
 	GIOStatus status = g_io_channel_shutdown(conn_context->io, FALSE, NULL);
@@ -387,15 +438,16 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 #endif
 
 	g_attrib_unref(conn_context->attrib);
-
 	free(conn_context->characteristics);
 	free(connection->context);
 	free(connection);
-
+#if 0 // todo fix, but for now just leave thread running
 	//TODO: Add a mutex around this code to avoid a race condition
 	/* Decrease the reference counter of the loop */
 	g_gattlib_thread.ref--;
 	/* Check if we are the last one */
+
+
 	if (g_gattlib_thread.ref == 0) {
 		g_main_loop_quit(g_gattlib_thread.loop);
 		g_main_loop_unref(g_gattlib_thread.loop);
@@ -404,6 +456,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 		// Detach the thread
 		pthread_detach(g_gattlib_thread.thread);
 	}
+#endif
 
 	return 0;
 }

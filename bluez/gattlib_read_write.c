@@ -22,6 +22,9 @@
  */
 
 #include <stdlib.h>
+#include <semaphore.h>
+#include <pthread.h>
+#include <errno.h>
 
 #include "gattlib_internal.h"
 
@@ -120,7 +123,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 
 	// Wait for completion of the event
 	while(gattlib_result->completed == FALSE) {
-		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+		gattlib_iteration();
 	}
 
 	*buffer_len = gattlib_result->buffer_len;
@@ -178,11 +181,36 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 
 	// Wait for completion of the event
 	while(write_completed == FALSE) {
-		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
+		gattlib_iteration();
 	}
 
 	return 0;
 }
+
+void  gattlib_write_cmd_cb (gpointer data)
+{
+    int* write_completed = data;
+    *write_completed = TRUE;
+}
+
+int gattlib_write_cmd_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len) {
+	gattlib_context_t* conn_context = connection->context;
+	int write_completed = FALSE;
+
+	guint ret = gatt_write_cmd(conn_context->attrib, handle, (void*)buffer, buffer_len,
+								gattlib_write_cmd_cb, &write_completed);
+	if (ret == 0) {
+		return 1;
+	}
+
+	// Wait for completion of the event
+	while(write_completed == FALSE) {
+		gattlib_iteration();
+	}
+
+	return 0;
+}
+
 
 int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
 	uint16_t handle = 0;
@@ -194,7 +222,7 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 		return ret;
 	}
 
-	return gattlib_write_char_by_handle(connection, handle, buffer, sizeof(buffer));
+	return gattlib_write_char_by_handle(connection, handle, buffer, buffer_len);
 }
 
 int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {

@@ -324,8 +324,10 @@ guint g_attrib_send(GAttrib *attrib, guint id, const guint8 *pdu, guint16 len,
 		cb->destroy_func = notify;
 		cb->parent = attrib;
 		queue_push_head(attrib->callbacks, cb);
-		response_cb = attrib_callback_result;
-		destroy_cb = attrib_callbacks_remove;
+		if ( func )
+			response_cb = attrib_callback_result;
+		if ( notify )
+			destroy_cb = attrib_callbacks_remove;
 
 	}
 
