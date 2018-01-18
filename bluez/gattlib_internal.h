@@ -24,6 +24,12 @@
 #ifndef __GATTLIB_INTERNAL_H__
 #define __GATTLIB_INTERNAL_H__
 
+
+// uncomment the the following line to have an glib main event (g_main_loop_run)
+// loop created in its own thread for gattlib,  otherwise operations will
+// do gattlib_iterate when required.
+//#define USE_THREAD
+
 #include <glib.h>
 
 #define BLUEZ_VERSIONS(major, minor)	(((major) << 8) | (minor))
@@ -62,6 +68,7 @@ extern struct gattlib_thread_t g_gattlib_thread;
 GSource* gattlib_watch_connection_full(GIOChannel* io, GIOCondition condition,
 								 GIOFunc func, gpointer user_data, GDestroyNotify notify);
 GSource* gattlib_timeout_add_seconds(guint interval, GSourceFunc function, gpointer data);
+void gattlib_iteration(void);
 
 void uuid_to_bt_uuid(uuid_t* uuid, bt_uuid_t* bt_uuid);
 void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid);
