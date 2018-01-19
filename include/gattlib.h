@@ -109,6 +109,13 @@ gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 				gatt_connect_cb_t connect_cb);
 
+gatt_connection_t *gattlib_connect_timeout(const char *src, const char *dst,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level,
+				int psm, int mtu, int timeout_sec);
+gatt_connection_t *gattlib_connect_async_timeout(const char *src, const char *dst,
+				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
+				gatt_connect_cb_t connect_cb, int timeout_sec);
+
 int gattlib_disconnect(gatt_connection_t* connection);
 
 typedef struct {
@@ -141,6 +148,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 
 int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
 int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
+int gattlib_write_cmd_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
 
 /*
  * @param uuid     UUID of the characteristic that will trigger the notification
