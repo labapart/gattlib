@@ -24,7 +24,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 #include "gattlib.h"
 
 typedef enum { READ, WRITE} operation_t;
@@ -53,7 +52,7 @@ int main(int argc, char *argv[]) {
 	} else if ((strcmp(argv[2], "write") == 0) && (argc == 5)) {
 		g_operation = WRITE;
 
-		if ((strlen(argv[4]) >= 2) && (argv[4][0] == '0') && (argv[4][0] == 'x')) {
+		if ((strlen(argv[4]) >= 2) && (argv[4][0] == '0') && ((argv[4][1] == 'x') || (argv[4][1] == 'X'))) {
 			value_data = strtol(argv[4], NULL, 0);
 		} else {
 			value_data = strtol(argv[4], NULL, 16);
@@ -69,7 +68,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	connection = gattlib_connect(NULL, argv[1], BDADDR_LE_PUBLIC, BT_SEC_LOW, 0, 0);
+	connection = gattlib_connect(NULL, argv[1], BDADDR_LE_RANDOM, BT_SEC_LOW, 0, 0);
 	if (connection == NULL) {
 		fprintf(stderr, "Fail to connect to the bluetooth device.\n");
 		return 1;
@@ -85,8 +84,11 @@ int main(int argc, char *argv[]) {
 			printf("%02x ", buffer[i]);
 		printf("\n");
 	} else {
-		ret = gattlib_write_char_by_uuid(connection, &g_uuid, buffer, sizeof(buffer));
+      buffer[0] = (uint8_t) value_data;
+      buffer[1] = '\0';
+		ret = gattlib_write_char_by_uuid(connection, &g_uuid,buffer,1);
 		assert(ret == 0);
+      printf("Write UUID completed: ");
 	}
 
 	gattlib_disconnect(connection);
