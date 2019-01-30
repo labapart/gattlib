@@ -711,7 +711,8 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 }
 #endif
 
-static OrgBluezGattCharacteristic1 *get_characteristic_from_uuid(const uuid_t* uuid) {
+static OrgBluezGattCharacteristic1 *get_characteristic_from_uuid(gatt_connection_t* connection, const uuid_t* uuid) {
+	gattlib_context_t* conn_context = connection->context;
 	OrgBluezGattCharacteristic1 *characteristic = NULL;
 	GError *error = NULL;
 
@@ -752,7 +753,26 @@ static OrgBluezGattCharacteristic1 *get_characteristic_from_uuid(const uuid_t* u
 
 			gattlib_string_to_uuid(characteristic_uuid_str, strlen(characteristic_uuid_str) + 1, &characteristic_uuid);
 			if (gattlib_uuid_cmp(uuid, &characteristic_uuid) == 0) {
-				break;
+				// We found the right characteristic, now we check if it's the right device.
+
+				error = NULL;
+				OrgBluezGattService1* service = org_bluez_gatt_service1_proxy_new_for_bus_sync (
+					G_BUS_TYPE_SYSTEM,
+					G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+					"org.bluez",
+					org_bluez_gatt_characteristic1_get_service(characteristic),
+					NULL,
+					&error);
+
+				if (service) {
+					const bool found = !strcmp(conn_context->device_object_path, org_bluez_gatt_service1_get_device(service));
+
+					g_object_unref(service);
+
+					if (found) {
+						break;
+					}
+				}
 			}
 
 			g_object_unref(characteristic);
@@ -776,7 +796,7 @@ int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** 
 }
 
 int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t* buffer_len) {
-	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(uuid);
+	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (characteristic == NULL) {
 		return -1;
 	}
@@ -815,7 +835,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
 }
 
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb) {
-	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(uuid);
+	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (characteristic == NULL) {
 		return -1;
 	}
@@ -851,7 +871,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 }
 
 int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
-	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(uuid);
+	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (characteristic == NULL) {
 		return -1;
 	}
@@ -918,7 +938,7 @@ gboolean on_handle_characteristic_property_change(
 }
 
 int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
-	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(uuid);
+	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (characteristic == NULL) {
 		return -1;
 	}
@@ -940,7 +960,7 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
 }
 
 int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid) {
-	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(uuid);
+	OrgBluezGattCharacteristic1 *characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (characteristic == NULL) {
 		return -1;
 	}
