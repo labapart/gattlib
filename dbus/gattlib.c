@@ -928,7 +928,7 @@ gboolean on_handle_characteristic_property_change(
 							MAX_LEN_UUID_STR + 1,
 							&uuid);
 
-					connection->notification_handler(&uuid, data, data_length, user_data);
+					connection->notification_handler(&uuid, data, data_length, connection->notification_user_data);
 					break;
 				}
 			}
