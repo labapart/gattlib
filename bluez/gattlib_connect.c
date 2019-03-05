@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2017 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -184,6 +184,9 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 {
 	bdaddr_t sba, dba;
 	GError *err = NULL;
+	int ret;
+
+	io_connect_arg->error = NULL;
 
 	/* Check if the GattLib thread has been started */
 	if (g_gattlib_thread.ref == 0) {
@@ -210,16 +213,27 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 		fprintf(stderr, "Remote Bluetooth address required\n");
 		return NULL;
 	}
-	str2ba(dst, &dba);
+
+	ret = str2ba(dst, &dba);
+	if (ret != 0) {
+		fprintf(stderr, "Destination address '%s' is not valid.\n", dst);
+		return NULL;
+	}
 
 	/* Local adapter */
 	if (src != NULL) {
-		if (!strncmp(src, "hci", 3))
+		if (!strncmp(src, "hci", 3)) {
 			hci_devba(atoi(src + 3), &sba);
-		else
-			str2ba(src, &sba);
-	} else
+		} else {
+			ret = str2ba(src, &sba);
+			if (ret != 0) {
+				fprintf(stderr, "Source address '%s' is not valid.\n", src);
+				return NULL;
+			}
+		}
+	} else {
 		bacpy(&sba, BDADDR_ANY);
+	}
 
 	/* Not used for BR/EDR */
 	if ((dest_type != BDADDR_LE_PUBLIC) && (dest_type != BDADDR_LE_RANDOM)) {
