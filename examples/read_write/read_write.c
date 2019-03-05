@@ -53,10 +53,10 @@ int main(int argc, char *argv[]) {
 	} else if ((strcmp(argv[2], "write") == 0) && (argc == 5)) {
 		g_operation = WRITE;
 
-		if ((strlen(argv[4]) >= 2) && (argv[4][0] == '0') && (argv[4][0] == 'x')) {
-			value_data = strtol(argv[4], NULL, 0);
-		} else {
+		if ((strlen(argv[4]) >= 2) && (argv[4][0] == '0') && ((argv[4][1] == 'x') || (argv[4][1] == 'X'))) {
 			value_data = strtol(argv[4], NULL, 16);
+		} else {
+			value_data = strtol(argv[4], NULL, 0);
 		}
 		printf("Value to write: 0x%lx\n", value_data);
 	} else {
