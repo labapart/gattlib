@@ -27,6 +27,7 @@
 #include "gattlib.h"
 
 #include "org-bluez-adaptater1.h"
+#include "org-bluez-battery1.h"
 #include "org-bluez-device1.h"
 #include "org-bluez-gattcharacteristic1.h"
 #include "org-bluez-gattdescriptor1.h"
