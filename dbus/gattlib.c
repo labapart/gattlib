@@ -46,7 +46,7 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 			object_path,
 			NULL, &error);
 	if (adapter_proxy == NULL) {
-		printf("Failed to get adapter %s\n", object_path);
+		fprintf(stderr, "Failed to get adapter %s\n", object_path);
 		return 1;
 	}
 
@@ -349,7 +349,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 				NULL,
 				&error);
 		if (service_proxy == NULL) {
-			printf("Failed to open service '%s'.\n", *service_str);
+			fprintf(stderr, "Failed to open service '%s'.\n", *service_str);
 			continue;
 		}
 
@@ -429,7 +429,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 				NULL,
 				&error);
 		if (service_proxy == NULL) {
-			printf("Failed to open service '%s'.\n", object_path);
+			fprintf(stderr, "Failed to open service '%s'.\n", object_path);
 			continue;
 		}
 
@@ -491,7 +491,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 				NULL,
 				&error);
 		if (service_proxy == NULL) {
-			printf("Failed to open services '%s'.\n", *service_str);
+			fprintf(stderr, "Failed to open services '%s'.\n", *service_str);
 			continue;
 		}
 
@@ -522,7 +522,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 				NULL,
 				&error);
 		if (service_proxy == NULL) {
-			printf("Failed to open service '%s'.\n", *service_str);
+			fprintf(stderr, "Failed to open service '%s'.\n", *service_str);
 			continue;
 		}
 
@@ -540,7 +540,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 					NULL,
 					&error);
 			if (characteristic_proxy == NULL) {
-				printf("Failed to open characteristic '%s'.\n", *characteristic_str);
+				fprintf(stderr, "Failed to open characteristic '%s'.\n", *characteristic_str);
 				continue;
 			} else {
 				characteristic_list[count].handle       = 0;
@@ -600,7 +600,7 @@ static void add_characteristics_from_service(GDBusObjectManager *device_manager,
 				NULL,
 				&error);
 		if (characteristic == NULL) {
-			printf("Failed to open characteristic '%s'.\n", object_path);
+			fprintf(stderr, "Failed to open characteristic '%s'.\n", object_path);
 			continue;
 		}
 
@@ -691,7 +691,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 				NULL,
 				&error);
 		if (service_proxy == NULL) {
-			printf("Failed to open service '%s'.\n", object_path);
+			fprintf(stderr, "Failed to open service '%s'.\n", object_path);
 			continue;
 		}
 
