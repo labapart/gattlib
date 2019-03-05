@@ -66,14 +66,18 @@ int main(int argc, char *argv[]) {
 	ret = gattlib_notification_start(connection, &g_battery_level_uuid);
 	if (ret) {
 		fprintf(stderr, "Fail to start notification\n.");
-		return 1;
+		goto DISCONNECT;
 	}
 
 	GMainLoop *loop = g_main_loop_new(NULL, 0);
 	g_main_loop_run(loop);
 
+	// In case we quit the main loop, clean the connection
+	gattlib_notification_stop(connection, &g_battery_level_uuid);
 	g_main_loop_unref(loop);
+
+DISCONNECT:
 	gattlib_disconnect(connection);
 	puts("Done");
-	return 0;
+	return ret;
 }
