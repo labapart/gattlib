@@ -872,27 +872,17 @@ int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** 
 	return -1;
 }
 
-int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t* buffer_len) {
-	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
-	if (dbus_characteristic.type == TYPE_NONE) {
-		return -1;
-	} else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
-		assert(0); // Not supported yet
-		return -1;
-	} else {
-		assert(dbus_characteristic.type == TYPE_GATT);
-	}
-
+static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteristic, void* buffer, size_t* buffer_len) {
 	GVariant *out_value;
 	GError *error = NULL;
 
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 	org_bluez_gatt_characteristic1_call_read_value_sync(
-		dbus_characteristic.gatt, &out_value, NULL, &error);
+		dbus_characteristic->gatt, &out_value, NULL, &error);
 #else
 	GVariantBuilder *options =  g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	org_bluez_gatt_characteristic1_call_read_value_sync(
-			dbus_characteristic.gatt, g_variant_builder_end(options), &out_value, NULL, &error);
+			dbus_characteristic->gatt, g_variant_builder_end(options), &out_value, NULL, &error);
 	g_variant_builder_unref(options);
 #endif
 	if (error != NULL) {
@@ -908,7 +898,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
 
 	*buffer_len = n_elements;
 
-	g_object_unref(dbus_characteristic.gatt);
+	g_object_unref(dbus_characteristic->gatt);
 
 #if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
 	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
@@ -916,13 +906,42 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
 	return 0;
 }
 
+
+static int read_battery_level(struct dbus_characteristic *dbus_characteristic, void* buffer, size_t* buffer_len) {
+	guchar percentage = org_bluez_battery1_get_percentage(dbus_characteristic->battery);
+
+	memcpy(buffer, &percentage, sizeof(uint8_t));
+	*buffer_len = sizeof(uint8_t);
+
+	return 0;
+}
+
+int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t* buffer_len) {
+	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
+	if (dbus_characteristic.type == TYPE_NONE) {
+		return -1;
+	} else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
+		return read_battery_level(&dbus_characteristic, buffer, buffer_len);
+	} else {
+		assert(dbus_characteristic.type == TYPE_GATT);
+
+		return read_gatt_characteristic(&dbus_characteristic, buffer, buffer_len);
+	}
+}
+
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb) {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return -1;
 	} else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
-		assert(0); // Not supported yet
-		return -1;
+		//TODO: Having 'percentage' as a 'static' is a limitation when we would support multiple connections
+		static uint8_t percentage;
+
+		percentage = org_bluez_battery1_get_percentage(dbus_characteristic.battery);
+
+		gatt_read_cb((const void*)&percentage, sizeof(percentage));
+
+		return 0;
 	} else {
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
