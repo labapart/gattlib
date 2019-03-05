@@ -192,8 +192,7 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 		fprintf(stderr, "Fail to find handle for UUID.\n");
 		return ret;
 	}
-
-	return gattlib_write_char_by_handle(connection, handle, buffer, sizeof(buffer));
+	return gattlib_write_char_by_handle(connection, handle, buffer, buffer_len);
 }
 
 int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
