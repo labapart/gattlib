@@ -992,7 +992,7 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 	return -1;
 }
 
-gboolean on_handle_battery_property_change(
+gboolean on_handle_battery_level_property_change(
 		OrgBluezBattery1 *object,
 	    GVariant *arg_changed_properties,
 	    const gchar *const *arg_invalidated_properties,
@@ -1070,7 +1070,7 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
 		// Register a handle for notification
 		g_signal_connect(dbus_characteristic.battery,
 			"g-properties-changed",
-			G_CALLBACK (on_handle_battery_property_change),
+			G_CALLBACK (on_handle_battery_level_property_change),
 			connection);
 
 		return 0;
@@ -1099,11 +1099,19 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return -1;
 	} else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
-		assert(0); // Not supported yet
-		return -1;
+		g_signal_handlers_disconnect_by_func(
+				dbus_characteristic.battery,
+				G_CALLBACK (on_handle_battery_level_property_change),
+				connection);
+		return 0;
 	} else {
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
+
+	g_signal_handlers_disconnect_by_func(
+			dbus_characteristic.gatt,
+			G_CALLBACK (on_handle_characteristic_property_change),
+			connection);
 
 	GError *error = NULL;
 	org_bluez_gatt_characteristic1_call_stop_notify_sync(
