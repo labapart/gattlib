@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2017 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -209,7 +209,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 {
 	GError *error = NULL;
 	const char* adapter_name;
-	char device_address_str[20];
+	char device_address_str[20 + 1];
 	char object_path[100];
 	int i;
 
@@ -226,6 +226,9 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 			device_address_str[i] = '_';
 		}
 	}
+
+	// Force a null-terminated character
+	device_address_str[20] = '\0';
 
 	// Generate object path like: /org/bluez/hci0/dev_DA_94_40_95_E0_87
 	snprintf(object_path, sizeof(object_path), "/org/bluez/%s/dev_%s", adapter_name, device_address_str);
