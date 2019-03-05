@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2017  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2017-2019  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -70,12 +70,19 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattdescriptor1.
                    COMMENT "Generate D-Bus 'org.bluez.GattDescriptor1.xml'"
                    )
 
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-battery1.c
+                   COMMAND gdbus-codegen --interface-prefix org.bluez.Battery1. --generate-c-code ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-battery1 ${CMAKE_CURRENT_SOURCE_DIR}/${DBUS_BLUEZ_API}/org.bluez.Battery1.xml
+                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${DBUS_BLUEZ_API}/org.bluez.Battery1.xml
+                   COMMENT "Generate D-Bus 'org.bluez.Battery1.xml'"
+                   )
+
 include_directories(. ${CMAKE_CURRENT_BINARY_DIR} ${GIO_UNIX_INCLUDE_DIRS} ${BLUEZ_INCLUDE_DIRS})
 
 set(gattlib_SRCS gattlib.c
                  bluez5/lib/uuid.c
                  ../gattlib_common.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
+                 ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-battery1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-device1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattcharacteristic1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattdescriptor1.c
