@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2016-2017  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2016-2019  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -38,7 +38,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 include_directories(include)
 
 # Check version of Bluez to know which backend we use (ie: Bluez code or DBus)
-pkg_search_module(BLUEZ REQUIRED bluez)
+pkg_search_module(BLUEZ bluez)
+if (NOT BLUEZ_FOUND)
+  message(FATAL_ERROR "Please install 'libbluetooth-dev'")
+endif()
 
 # Extract Bluez version
 string(REPLACE "." ";" BLUEZ_VERSIONS "${BLUEZ_VERSION}")
