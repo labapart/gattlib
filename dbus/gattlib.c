@@ -31,6 +31,7 @@
 #define CONNECT_TIMEOUT  4
 
 static const uuid_t m_battery_level_uuid = CREATE_UUID16(0x2A19);
+static const uuid_t m_ccc_uuid = CREATE_UUID16(0x2902);
 
 struct dbus_characteristic {
 	union {
@@ -277,7 +278,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 	error = NULL;
 	org_bluez_device1_call_connect_sync(device, NULL, &error);
 	if (error) {
-		printf("Device connected error: %s\n", error->message);
+		fprintf(stderr, "Device connected error: %s\n", error->message);
 		goto FREE_DEVICE;
 	}
 
@@ -748,12 +749,6 @@ static bool handle_dbus_gattcharacteristic_from_uuid(gattlib_context_t* conn_con
 
 		gattlib_string_to_uuid(characteristic_uuid_str, strlen(characteristic_uuid_str) + 1, &characteristic_uuid);
 
-		char uuid_str1[MAX_LEN_UUID_STR + 1];
-		char uuid_str2[MAX_LEN_UUID_STR + 1];
-
-		gattlib_uuid_to_string(uuid, uuid_str1, sizeof(uuid_str1));
-		gattlib_uuid_to_string(&characteristic_uuid, uuid_str2, sizeof(uuid_str2));
-
 		if (gattlib_uuid_cmp(uuid, &characteristic_uuid) == 0) {
 			// We found the right characteristic, now we check if it's the right device.
 
@@ -818,6 +813,9 @@ static struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t
 	// Some GATT Characteristics are handled by D-BUS
 	if (gattlib_uuid_cmp(uuid, &m_battery_level_uuid) == 0) {
 		is_battery_level_uuid = true;
+	} else if (gattlib_uuid_cmp(uuid, &m_ccc_uuid) == 0) {
+		fprintf(stderr, "Error: Bluez v5.42+ does not expose Client Characteristic Configuration Descriptor through DBUS interface\n");
+		return dbus_characteristic;
 	}
 
 	GDBusObjectManager *device_manager = g_dbus_object_manager_client_new_for_bus_sync (
