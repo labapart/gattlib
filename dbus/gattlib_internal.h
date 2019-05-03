@@ -41,6 +41,10 @@
 typedef struct {
 	char* device_object_path;
 	OrgBluezDevice1* device;
+
+	// This attribute is only used during the connection stage. By placing the attribute here, we can pass
+	// `gatt_connection_t` to
+	GMainLoop *connection_loop;
 } gattlib_context_t;
 
 #endif

@@ -69,6 +69,14 @@ typedef struct _GAttrib GAttrib;
 
 typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data);
 
+/**
+ * @brief Handler called on disconnection
+ *
+ * @param connection Connection that is disconnecting
+ * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
+ */
+typedef void (*gattlib_disconnection_handler_t)(void* user_data);
+
 typedef struct _gatt_connection_t {
 	void* context;
 
@@ -77,17 +85,19 @@ typedef struct _gatt_connection_t {
 
 	gattlib_event_handler_t indication_handler;
 	void* indication_user_data;
+
+	gattlib_disconnection_handler_t disconnection_handler;
+	void* disconnection_user_data;
 } gatt_connection_t;
 
 typedef void (*gattlib_discovered_device_t)(const char* addr, const char* name);
 typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection, void* user_data);
 typedef void* (*gatt_read_cb_t)(const void* buffer, size_t buffer_len);
 
-
 /**
- * Open Bluetooth adapter
+ * @brief Open Bluetooth adapter
  *
- * @adapter_name    With value NULL, the default adapter will be selected.
+ * @param adapter_name    With value NULL, the default adapter will be selected.
  */
 int gattlib_adapter_open(const char* adapter_name, void** adapter);
 int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout);
@@ -110,6 +120,8 @@ gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
                                 gatt_connect_cb_t connect_cb, void* data);
 
 int gattlib_disconnect(gatt_connection_t* connection);
+
+void gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data);
 
 typedef struct {
 	uint16_t  attr_handle_start;

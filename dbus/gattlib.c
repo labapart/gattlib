@@ -220,7 +220,8 @@ gboolean on_handle_device_property_change(
 	    const gchar *const *arg_invalidated_properties,
 	    gpointer user_data)
 {
-	GMainLoop *loop = user_data;
+	gatt_connection_t* connection = user_data;
+	gattlib_context_t* conn_context = connection->context;
 
 	// Retrieve 'Value' from 'arg_changed_properties'
 	if (g_variant_n_children (arg_changed_properties) > 0) {
@@ -231,8 +232,16 @@ gboolean on_handle_device_property_change(
 		g_variant_get (arg_changed_properties, "a{sv}", &iter);
 		while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
 			if (strcmp(key, "UUIDs") == 0) {
-				g_main_loop_quit(loop);
+				// When UUIDs properties appear, we are connected to the device
+				g_main_loop_quit(conn_context->connection_loop);
 				break;
+			} else if (strcmp(key, "Connected") == 0) {
+				if (!g_variant_get_boolean(value)) {
+					// Disconnection case
+					if (connection->disconnection_handler) {
+						connection->disconnection_handler(connection->disconnection_user_data);
+					}
+				}
 			}
 		}
 	}
@@ -316,17 +325,19 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 
 	// Wait for the property 'UUIDs' to be changed. We assume 'org.bluez.GattService1
 	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
-	GMainLoop *loop = g_main_loop_new(NULL, 0);
+	conn_context->connection_loop = g_main_loop_new(NULL, 0);
 
 	// Register a handle for notification
 	g_signal_connect(device,
 		"g-properties-changed",
 		G_CALLBACK (on_handle_device_property_change),
-		loop);
+		connection);
 
-	g_timeout_add_seconds (CONNECT_TIMEOUT, stop_scan_func, loop);
-	g_main_loop_run(loop);
-	g_main_loop_unref(loop);
+	g_timeout_add_seconds (CONNECT_TIMEOUT, stop_scan_func, conn_context->connection_loop);
+	g_main_loop_run(conn_context->connection_loop);
+	g_main_loop_unref(conn_context->connection_loop);
+	// Set the attribute to NULL even if not required
+	conn_context->connection_loop = NULL;
 
 	return connection;
 
@@ -362,6 +373,11 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	free(connection->context);
 	free(connection);
 	return 0;
+}
+
+void gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
+	connection->disconnection_handler = handler;
+	connection->disconnection_user_data = user_data;
 }
 
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
