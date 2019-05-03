@@ -23,6 +23,7 @@
 
 #include <assert.h>
 #include <glib.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -30,6 +31,8 @@
 
 // Battery Level UUID
 const uuid_t g_battery_level_uuid = CREATE_UUID16(0x2A19);
+
+static GMainLoop *m_main_loop;
 
 void notification_handler(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data) {
 	int i;
@@ -40,6 +43,10 @@ void notification_handler(const uuid_t* uuid, const uint8_t* data, size_t data_l
 		printf("%02x ", data[i]);
 	}
 	printf("\n");
+}
+
+static void on_user_abort(int arg) {
+	g_main_loop_quit(m_main_loop);
 }
 
 static void usage(char *argv[]) {
@@ -69,12 +76,15 @@ int main(int argc, char *argv[]) {
 		goto DISCONNECT;
 	}
 
-	GMainLoop *loop = g_main_loop_new(NULL, 0);
-	g_main_loop_run(loop);
+	// Catch CTRL-C
+	signal(SIGINT, on_user_abort);
+
+	m_main_loop = g_main_loop_new(NULL, 0);
+	g_main_loop_run(m_main_loop);
 
 	// In case we quit the main loop, clean the connection
 	gattlib_notification_stop(connection, &g_battery_level_uuid);
-	g_main_loop_unref(loop);
+	g_main_loop_unref(m_main_loop);
 
 DISCONNECT:
 	gattlib_disconnect(connection);
