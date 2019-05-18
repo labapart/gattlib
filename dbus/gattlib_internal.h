@@ -27,7 +27,6 @@
 #include "gattlib.h"
 
 #include "org-bluez-adaptater1.h"
-#include "org-bluez-battery1.h"
 #include "org-bluez-device1.h"
 #include "org-bluez-gattcharacteristic1.h"
 #include "org-bluez-gattdescriptor1.h"
@@ -37,6 +36,10 @@
 
 #define BLUEZ_VERSIONS(major, minor)	(((major) << 8) | (minor))
 #define BLUEZ_VERSION					BLUEZ_VERSIONS(BLUEZ_VERSION_MAJOR, BLUEZ_VERSION_MINOR)
+
+#if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
+	#include "org-bluez-battery1.h"
+#endif
 
 typedef struct {
 	char* device_object_path;
