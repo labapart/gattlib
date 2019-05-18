@@ -26,6 +26,10 @@
 int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	int dev_id;
 
+	if (adapter == NULL) {
+		return -1;
+	}
+
 	if (adapter_name) {
 		dev_id = hci_devid(adapter_name);
 	} else {

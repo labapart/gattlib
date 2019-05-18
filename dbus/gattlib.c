@@ -52,6 +52,10 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	OrgBluezAdapter1 *adapter_proxy;
 	GError *error = NULL;
 
+	if (adapter == NULL) {
+		return -1;
+	}
+
 	if (adapter_name) {
 		snprintf(object_path, sizeof(object_path), "/org/bluez/%s", adapter_name);
 	} else {
