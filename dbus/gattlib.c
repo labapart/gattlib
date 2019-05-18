@@ -360,7 +360,14 @@ gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
 				gatt_connect_cb_t connect_cb, void* data)
 {
-	return NULL;
+	gatt_connection_t *connection;
+
+	connection = gattlib_connect(src, dst, dest_type, sec_level, psm, mtu);
+	if ((connection != NULL) && (connect_cb != NULL)) {
+		connect_cb(connection, data);
+	}
+
+	return connection;
 }
 
 int gattlib_disconnect(gatt_connection_t* connection) {
