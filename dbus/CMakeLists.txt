@@ -82,11 +82,14 @@ set(gattlib_SRCS gattlib.c
                  bluez5/lib/uuid.c
                  ../gattlib_common.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
-                 ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-battery1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-device1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattcharacteristic1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattdescriptor1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattservice1.c)
+
+if (BLUEZ_VERSION_MINOR GREATER 40)
+	list(APPEND gattlib_SRCS ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-battery1.c)
+endif()
 
 set(gattlib_LIBS ${GLIB_LDFLAGS} ${GIO_UNIX_LDFLAGS})
 
