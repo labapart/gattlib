@@ -1,2 +1,3 @@
 libbluetooth3
 libbluetooth-dev
+libglib2.0-dev
