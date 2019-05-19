@@ -280,11 +280,9 @@ gboolean on_handle_device_property_change(
 		while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
 			if (strcmp(key, "Connected") == 0) {
 				if (!g_variant_get_boolean(value)) {
-					printf("on_handle_device_property_change: Connected FALSE\n");
 					// Disconnection case
-					if (connection->disconnection_handler) {
-						printf("[C] Call disconnection handler:%p\n", connection->disconnection_handler);
-						connection->disconnection_handler(connection->disconnection_user_data);
+					if (gattlib_has_valid_handler(&connection->disconnection)) {
+						gattlib_call_disconnection_handler(&connection->disconnection);
 					}
 				}
 			} else if (strcmp(key, "ServicesResolved") == 0) {
@@ -445,11 +443,6 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	free(connection->context);
 	free(connection);
 	return GATTLIB_SUCCESS;
-}
-
-void gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
-	connection->disconnection_handler = handler;
-	connection->disconnection_user_data = user_data;
 }
 
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
@@ -1417,7 +1410,7 @@ gboolean on_handle_battery_level_property_change(
 	static guint8 percentage;
 	gatt_connection_t* connection = user_data;
 
-	if (connection->notification_handler) {
+	if (gattlib_has_valid_handler(&connection->notification)) {
 		// Retrieve 'Value' from 'arg_changed_properties'
 		if (g_variant_n_children (arg_changed_properties) > 0) {
 			GVariantIter *iter;
@@ -1431,9 +1424,9 @@ gboolean on_handle_battery_level_property_change(
 					//      GATT connection notifiying to Battery level
 					percentage = g_variant_get_byte(value);
 
-					connection->notification_handler(&m_battery_level_uuid,
-							(const uint8_t*)&percentage, sizeof(percentage),
-							connection->notification_user_data);
+					gattlib_call_notification_handler(&connection->notification,
+							&m_battery_level_uuid,
+							(const uint8_t*)&percentage, sizeof(percentage));
 					break;
 				}
 			}
@@ -1451,7 +1444,7 @@ static gboolean on_handle_characteristic_property_change(
 {
 	gatt_connection_t* connection = user_data;
 
-	if (connection->notification_handler) {
+	if (gattlib_has_valid_handler(&connection->notification)) {
 		// Retrieve 'Value' from 'arg_changed_properties'
 		if (g_variant_n_children (arg_changed_properties) > 0) {
 			GVariantIter *iter;
@@ -1470,7 +1463,8 @@ static gboolean on_handle_characteristic_property_change(
 							MAX_LEN_UUID_STR + 1,
 							&uuid);
 
-					connection->notification_handler(&uuid, data, data_length, connection->notification_user_data);
+					gattlib_call_notification_handler(&connection->notification,
+							&uuid, data, data_length);
 					break;
 				}
 			}

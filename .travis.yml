@@ -44,6 +44,8 @@ script:
   #
   # Setup build for ARM 32-bit
   #
+  # Ensure folder is empty
+  - rm -Rf $PWD/debian-stable-arm/*
   - cross-sysroot --distribution debian --distribution-version stable --architecture armhf --build-root $PWD/debian-stable-arm requirements.dep
 
   # Set environment variables
@@ -58,6 +60,8 @@ script:
   #
   # Setup build for ARM 64-bit
   #
+  # Ensure folder is empty
+  - rm -Rf $PWD/debian-stable-arm64/*
   - cross-sysroot --distribution debian --distribution-version stable --architecture arm64 --build-root $PWD/debian-stable-arm64 requirements.dep
 
   # Set environment variables
