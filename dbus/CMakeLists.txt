@@ -93,6 +93,21 @@ endif()
 
 set(gattlib_LIBS ${GLIB_LDFLAGS} ${GIO_UNIX_LDFLAGS})
 
+#
+# Add Python Support
+#
+pkg_search_module(PYTHON python3)
+if (NOT PYTHON_FOUND)
+	pkg_search_module(PYTHON python)
+endif()
+
+if (PYTHON_FOUND)
+	include_directories(${PYTHON_INCLUDE_DIRS})
+	list(APPEND gattlib_LIBS ${PYTHON_LDFLAGS})
+	
+	add_definitions(-DWITH_PYTHON)
+endif()
+
 # Gattlib
 add_library(gattlib SHARED ${gattlib_SRCS})
 target_link_libraries(gattlib ${gattlib_LIBS})
