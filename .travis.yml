@@ -69,6 +69,9 @@ script:
   - cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release .. && make VERBOSE=1 && cpack ..
   - popd
 
+after_success:
+  - if [ "$TRAVIS_BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ]; then ./update-dev-tag.sh; fi
+
 before_deploy:
   # Create directory to store the artifacts we want to deploy
   - mkdir artifacts
