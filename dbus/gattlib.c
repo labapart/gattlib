@@ -288,6 +288,12 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned lo
 		conn_context->device_object_path = strdup(object_path);
 	}
 
+	// Register a handle for notification
+	g_signal_connect(device,
+		"g-properties-changed",
+		G_CALLBACK (on_handle_device_property_change),
+		connection);
+
 	error = NULL;
 	org_bluez_device1_call_connect_sync(device, NULL, &error);
 	if (error) {
@@ -299,12 +305,6 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned lo
 	// Wait for the property 'UUIDs' to be changed. We assume 'org.bluez.GattService1
 	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
 	conn_context->connection_loop = g_main_loop_new(NULL, 0);
-
-	// Register a handle for notification
-	g_signal_connect(device,
-		"g-properties-changed",
-		G_CALLBACK (on_handle_device_property_change),
-		connection);
 
 	conn_context->connection_timeout = g_timeout_add_seconds(CONNECT_TIMEOUT, stop_scan_func,
 								 conn_context->connection_loop);
