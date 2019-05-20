@@ -308,31 +308,56 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 	}
 }
 
-static BtIOSecLevel get_bt_io_sec_level(gattlib_bt_sec_level_t sec_level) {
-	switch(sec_level) {
-	case BT_SEC_SDP:
-		return BT_IO_SEC_SDP;
-	case BT_SEC_LOW:
-		return BT_IO_SEC_LOW;
-	case BT_SEC_MEDIUM:
-		return BT_IO_SEC_MEDIUM;
-	case BT_SEC_HIGH:
-		return BT_IO_SEC_HIGH;
-	default:
-		return BT_IO_SEC_SDP;
+static void get_connection_options(unsigned long options, BtIOSecLevel *bt_io_sec_level, int *psm, int *mtu) {
+	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_LOW) {
+		*bt_io_sec_level = BT_IO_SEC_LOW;
+	} else if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_MEDIUM) {
+		*bt_io_sec_level = BT_IO_SEC_MEDIUM;
+	} else if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_HIGH) {
+		*bt_io_sec_level = BT_IO_SEC_HIGH;
+	} else {
+		*bt_io_sec_level = BT_IO_SEC_SDP;
 	}
+
+	*psm = GATTLIB_CONNECTION_OPTIONS_LEGACY_GET_PSM(options);
+	*mtu = GATTLIB_CONNECTION_OPTIONS_LEGACY_GET_MTU(options);
 }
 
 gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
-				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
+				unsigned long options,
 				gatt_connect_cb_t connect_cb, void* data)
 {
+	gatt_connection_t *conn;
+	BtIOSecLevel bt_io_sec_level;
+	int psm, mtu;
+
+	// Check parameters
+	if ((options & (GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC | GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM)) == 0) {
+		// Please, set GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC or
+		// GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDMON
+		fprintf(stderr, "gattlib_connect_async() expects address type.\n");
+		return NULL;
+	}
+
+	get_connection_options(options, &bt_io_sec_level, &psm, &mtu);
+
 	io_connect_arg_t* io_connect_arg = malloc(sizeof(io_connect_arg_t));
 	io_connect_arg->user_data = data;
-	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);
 
-	return initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
-			psm, mtu, connect_cb, io_connect_arg);
+	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC) {
+		conn = initialize_gattlib_connection(src, dst, BDADDR_LE_PUBLIC, bt_io_sec_level,
+						     psm, mtu, connect_cb, io_connect_arg);
+		if (conn != NULL) {
+			return conn;
+		}
+	}
+
+	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM) {
+		conn = initialize_gattlib_connection(src, dst, BDADDR_LE_RANDOM, bt_io_sec_level,
+						     psm, mtu, connect_cb, io_connect_arg);
+	}
+
+	return conn;
 }
 
 static gboolean connection_timeout(gpointer user_data) {
@@ -344,20 +369,23 @@ static gboolean connection_timeout(gpointer user_data) {
 }
 
 /**
- * @param src		Local Adaptater interface
- * @param dst		Remote Bluetooth address
- * @param dst_type	Set LE address type (either BDADDR_LE_PUBLIC or BDADDR_LE_RANDOM)
- * @param sec_level	Set security level (either BT_IO_SEC_LOW, BT_IO_SEC_MEDIUM, BT_IO_SEC_HIGH)
- * @param psm       Specify the PSM for GATT/ATT over BR/EDR
- * @param mtu       Specify the MTU size
+ * @brief Function to connect to a BLE device
+ *
+ * @param src          Local Adaptater interface
+ * @param dst          Remote Bluetooth address
+ * @param dst_type     Set LE address type (either BDADDR_LE_PUBLIC or BDADDR_LE_RANDOM)
+ * @param sec_level    Set security level (either BT_IO_SEC_LOW, BT_IO_SEC_MEDIUM, BT_IO_SEC_HIGH)
+ * @param psm          Specify the PSM for GATT/ATT over BR/EDR
+ * @param mtu          Specify the MTU size
  */
-gatt_connection_t *gattlib_connect(const char *src, const char *dst,
-				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu)
+static gatt_connection_t *gattlib_connect_with_options(const char *src, const char *dst,
+						       uint8_t dest_type, BtIOSecLevel bt_io_sec_level, int psm, int mtu)
 {
-	BtIOSecLevel bt_io_sec_level = get_bt_io_sec_level(sec_level);
-	io_connect_arg_t io_connect_arg;
 	GSource* timeout;
-	gatt_connection_t *conn = initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
+	gatt_connection_t *conn;
+	io_connect_arg_t io_connect_arg;
+
+	conn = initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
 			psm, mtu, NULL, &io_connect_arg);
 	if (conn == NULL) {
 		if (io_connect_arg.error) {
@@ -388,6 +416,44 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 	} else {
 		return conn;
 	}
+}
+
+
+/**
+ * @brief Function to connect to a BLE device
+ *
+ * @param src		Local Adaptater interface
+ * @param dst		Remote Bluetooth address
+ * @param options	Options to connect to BLE device. See `GATTLIB_CONNECTION_OPTIONS_*`
+ */
+gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned long options)
+{
+	gatt_connection_t *conn;
+	BtIOSecLevel bt_io_sec_level;
+	int psm, mtu;
+
+	// Check parameters
+	if ((options & (GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC | GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM)) == 0) {
+		// Please, set GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC or
+		// GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDMON
+		fprintf(stderr, "gattlib_connect() expects address type.\n");
+		return NULL;
+	}
+
+	get_connection_options(options, &bt_io_sec_level, &psm, &mtu);
+
+	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC) {
+		conn = gattlib_connect_with_options(src, dst, BDADDR_LE_PUBLIC, bt_io_sec_level, psm, mtu);
+		if (conn != NULL) {
+			return conn;
+		}
+	}
+
+	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM) {
+		conn = gattlib_connect_with_options(src, dst, BDADDR_LE_RANDOM, bt_io_sec_level, psm, mtu);
+	}
+
+	return conn;
 }
 
 int gattlib_disconnect(gatt_connection_t* connection) {

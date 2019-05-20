@@ -484,6 +484,7 @@ int main(int argc, char *argv[])
 	GOptionGroup *gatt_group, *params_group, *char_rw_group;
 	GError *gerr = NULL;
 	gatt_connection_t *connection;
+	unsigned long conn_options = 0;
 	BtIOSecLevel sec_level;
 	uint8_t dest_type;
 
@@ -547,9 +548,25 @@ int main(int argc, char *argv[])
 	}
 
 	dest_type = get_dest_type_from_str(opt_dst_type);
+	if (dest_type == BDADDR_LE_PUBLIC) {
+		conn_options |= GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC;
+	} else if (dest_type == BDADDR_LE_RANDOM) {
+		conn_options |= GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM;
+	}
+
 	sec_level = get_sec_level_from_str(opt_sec_level);
-	connection = gattlib_connect_async(opt_src, opt_dst, dest_type, sec_level,
-                    opt_psm, opt_mtu, connect_cb, NULL);
+	if (sec_level == BT_IO_SEC_LOW) {
+		conn_options |= GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_LOW;
+	} else if (sec_level == BT_IO_SEC_MEDIUM) {
+		conn_options |= GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_MEDIUM;
+	} else if (sec_level == BT_IO_SEC_HIGH) {
+		conn_options |= GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_HIGH;
+	}
+
+	conn_options |= GATTLIB_CONNECTION_OPTIONS_LEGACY_PSM(opt_psm);
+	conn_options |= GATTLIB_CONNECTION_OPTIONS_LEGACY_PSM(opt_mtu);
+
+	connection = gattlib_connect_async(opt_src, opt_dst, conn_options, connect_cb, NULL);
 	if (connection == NULL) {
 		got_error = TRUE;
 		goto done;
