@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2017 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -48,6 +48,8 @@ typedef struct {
 	// This attribute is only used during the connection stage. By placing the attribute here, we can pass
 	// `gatt_connection_t` to
 	GMainLoop *connection_loop;
+	// ID of the timeout to know if we managed to connect to the device
+	guint connection_timeout;
 } gattlib_context_t;
 
 #endif
