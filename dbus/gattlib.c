@@ -155,40 +155,6 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 		return 1;
 	}
 
-	GList *objects = g_dbus_object_manager_get_objects(device_manager);
-	GList *l;
-	for (l = objects; l != NULL; l = l->next)  {
-		GDBusObject *object = l->data;
-		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
-
-		GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.Device1");
-		if (!interface) {
-			continue;
-		}
-
-		error = NULL;
-		OrgBluezDevice1* device1 = org_bluez_device1_proxy_new_for_bus_sync(
-				G_BUS_TYPE_SYSTEM,
-				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
-				"org.bluez",
-				object_path,
-				NULL,
-				&error);
-		if (error) {
-			fprintf(stderr, "Failed to get DBus Bluez device: %s\n", error->message);
-			g_error_free(error);
-		}
-
-		if (device1) {
-			discovered_device_cb(
-				org_bluez_device1_get_address(device1),
-				org_bluez_device1_get_name(device1));
-			g_object_unref(device1);
-		}
-	}
-
-	g_list_free_full(objects, g_object_unref);
-
 	g_signal_connect (G_DBUS_OBJECT_MANAGER(device_manager),
 	                    "object-added",
 	                    G_CALLBACK (on_dbus_object_added),
