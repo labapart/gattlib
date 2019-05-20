@@ -203,12 +203,14 @@ gboolean on_handle_device_property_change(
 
 		g_variant_get (arg_changed_properties, "a{sv}", &iter);
 		while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
-			if (strcmp(key, "UUIDs") == 0) {
-				// When UUIDs properties appear, we are connected to the device
-				g_main_loop_quit(conn_context->connection_loop);
-				break;
-			} else if (strcmp(key, "Connected") == 0) {
-				if (!g_variant_get_boolean(value)) {
+			if (strcmp(key, "Connected") == 0) {
+				if (g_variant_get_boolean(value)) {
+					// Stop the timeout for connection
+					g_source_remove(conn_context->connection_timeout);
+
+					// Tell we are now connected
+					g_main_loop_quit(conn_context->connection_loop);
+				} else {
 					// Disconnection case
 					if (connection->disconnection_handler) {
 						connection->disconnection_handler(connection->disconnection_user_data);
@@ -305,7 +307,8 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst,
 		G_CALLBACK (on_handle_device_property_change),
 		connection);
 
-	g_timeout_add_seconds (CONNECT_TIMEOUT, stop_scan_func, conn_context->connection_loop);
+	conn_context->connection_timeout = g_timeout_add_seconds(CONNECT_TIMEOUT, stop_scan_func,
+								 conn_context->connection_loop);
 	g_main_loop_run(conn_context->connection_loop);
 	g_main_loop_unref(conn_context->connection_loop);
 	// Set the attribute to NULL even if not required
