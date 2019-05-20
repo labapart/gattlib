@@ -262,8 +262,7 @@ gboolean on_handle_device_property_change(
  * @param psm       Specify the PSM for GATT/ATT over BR/EDR
  * @param mtu       Specify the MTU size
  */
-gatt_connection_t *gattlib_connect(const char *src, const char *dst,
-				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu)
+gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned long options)
 {
 	GError *error = NULL;
 	const char* adapter_name;
@@ -357,12 +356,12 @@ FREE_CONNECTION:
 }
 
 gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
-				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
+				unsigned long options,
 				gatt_connect_cb_t connect_cb, void* data)
 {
 	gatt_connection_t *connection;
 
-	connection = gattlib_connect(src, dst, dest_type, sec_level, psm, mtu);
+	connection = gattlib_connect(src, dst, options);
 	if ((connection != NULL) && (connect_cb != NULL)) {
 		connect_cb(connection, data);
 	}

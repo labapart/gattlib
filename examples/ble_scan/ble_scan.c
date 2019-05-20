@@ -34,15 +34,10 @@ static void *ble_connect_device(void *arg) {
 
 	printf("------------START %s ---------------\n", addr);
 
-	gatt_connection = gattlib_connect(NULL, addr, BDADDR_LE_PUBLIC, BT_SEC_LOW, 0, 0);
+	gatt_connection = gattlib_connect(NULL, addr, GATTLIB_CONNECTION_OPTIONS_LEGACY_DEFAULT);
 	if (gatt_connection == NULL) {
-		gatt_connection = gattlib_connect(NULL, addr, BDADDR_LE_RANDOM, BT_SEC_LOW, 0, 0);
-		if (gatt_connection == NULL) {
-			fprintf(stderr, "Fail to connect to the bluetooth device.\n");
-			goto connection_exit;
-		} else {
-			puts("Succeeded to connect to the bluetooth device with random address.");
-		}
+		fprintf(stderr, "Fail to connect to the bluetooth device.\n");
+		goto connection_exit;
 	} else {
 		puts("Succeeded to connect to the bluetooth device.");
 	}

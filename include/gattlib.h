@@ -58,12 +58,27 @@ extern "C" {
 
 #define CREATE_UUID16(value16) { .type=SDP_UUID16, .value.uuid16=(value16) }
 
-typedef enum {
-	BT_SEC_SDP = 0,
-	BT_SEC_LOW,
-	BT_SEC_MEDIUM,
-	BT_SEC_HIGH,
-} gattlib_bt_sec_level_t;
+//
+// @brief Options for gattlib_connect()
+//
+// @note Options with the prefix `GATTLIB_CONNECTION_OPTIONS_LEGACY_`
+//       is for Bluez prior to v5.42 (before Bluez) support
+//
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC  (1 << 0)
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM  (1 << 1)
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_LOW        (1 << 2)
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_MEDIUM     (1 << 3)
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_HIGH       (1 << 4)
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_PSM(value)        (((value) & 0x3FF) << 11) //< We encode PSM on 10 bits (up to 1023)
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_MTU(value)        (((value) & 0x3FF) << 21) //< We encode MTU on 10 bits (up to 1023)
+
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_GET_PSM(options)  (((options) >> 11) && 0x3FF)
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_GET_MTU(options)  (((options) >> 21) && 0x3FF)
+
+#define GATTLIB_CONNECTION_OPTIONS_LEGACY_DEFAULT \
+		GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC | \
+		GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM | \
+		GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_LOW
 
 typedef struct _GAttrib GAttrib;
 
@@ -105,18 +120,25 @@ int gattlib_adapter_scan_disable(void* adapter);
 int gattlib_adapter_close(void* adapter);
 
 /**
+ * @brief Function to connect to a BLE device
+ *
  * @param src		Local Adaptater interface
  * @param dst		Remote Bluetooth address
- * @param dst_type	Set LE address type (either BDADDR_LE_PUBLIC or BDADDR_LE_RANDOM)
- * @param sec_level	Set security level (either BT_IO_SEC_LOW, BT_IO_SEC_MEDIUM, BT_IO_SEC_HIGH)
- * @param psm       Specify the PSM for GATT/ATT over BR/EDR
- * @param mtu       Specify the MTU size
+ * @param options	Options to connect to BLE device. See `GATTLIB_CONNECTION_OPTIONS_*`
  */
-gatt_connection_t *gattlib_connect(const char *src, const char *dst,
-				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu);
+gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned long options);
 
+/**
+ * @brief Function to asynchronously connect to a BLE device
+ *
+ * @note This function is mainly used before Bluez v5.42 (prior to D-BUS support)
+ *
+ * @param src		Local Adaptater interface
+ * @param dst		Remote Bluetooth address
+ * @param options	Options to connect to BLE device. See `GATTLIB_CONNECTION_OPTIONS_*`
+ */
 gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
-				uint8_t dest_type, gattlib_bt_sec_level_t sec_level, int psm, int mtu,
+				unsigned long options,
                                 gatt_connect_cb_t connect_cb, void* data);
 
 int gattlib_disconnect(gatt_connection_t* connection);
