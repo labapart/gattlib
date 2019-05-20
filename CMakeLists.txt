@@ -32,6 +32,11 @@ option(GATTLIB_SHARED_LIB "Build GattLib as a shared library" YES)
 
 find_package(PkgConfig REQUIRED)
 
+# Define 'Debug' as the default build type
+if (NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "Debug")
+endif()
+
 # Show all the warnings
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 # Expose 'gattlib.h' to all sub-directories
