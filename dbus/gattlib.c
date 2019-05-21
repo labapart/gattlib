@@ -529,7 +529,12 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 
 	*services       = primary_services;
 	*services_count = count;
-	return 0;
+
+ON_DEVICE_MANAGER_ERROR:
+	if (ret != GATTLIB_SUCCESS) {
+		free(primary_services);
+	}
+	return ret;
 }
 #endif
 
