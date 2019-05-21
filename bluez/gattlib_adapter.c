@@ -27,7 +27,7 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	int dev_id;
 
 	if (adapter == NULL) {
-		return -1;
+		return GATTLIB_INVALID_PARAMETER;
 	}
 
 	if (adapter_name) {
@@ -38,12 +38,12 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 
 	if (dev_id < 0) {
 		fprintf(stderr, "ERROR: Invalid device.\n");
-		return 1;
+		return GATTLIB_NOT_FOUND;
 	}
 
 	int* device_desc = malloc(sizeof(int));
 	if (device_desc == NULL) {
-		return 2;
+		return GATTLIB_OUT_OF_MEMORY;
 	} else {
 		*adapter = device_desc;
 	}
@@ -51,10 +51,10 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	*device_desc = hci_open_dev(dev_id);
 	if (device_desc < 0) {
 		fprintf(stderr, "ERROR: Could not open device.\n");
-		return 3;
+		return GATTLIB_DEVICE_ERROR;
 	}
 
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 static char* parse_name(uint8_t* data, size_t size) {
@@ -178,7 +178,7 @@ static int ble_scan(int device_desc, gattlib_discovered_device_t discovered_devi
 #endif
 
 	setsockopt(device_desc, SOL_HCI, HCI_FILTER, &old_options, sizeof(old_options));
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout) {
@@ -207,7 +207,7 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 		return 1;
 	}
 
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 int gattlib_adapter_scan_disable(void* adapter) {
@@ -228,5 +228,5 @@ int gattlib_adapter_scan_disable(void* adapter) {
 int gattlib_adapter_close(void* adapter) {
 	hci_close_dev(*(int*)adapter);
 	free(adapter);
-	return 0;
+	return GATTLIB_SUCCESS;
 }

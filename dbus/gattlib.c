@@ -53,7 +53,7 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	GError *error = NULL;
 
 	if (adapter == NULL) {
-		return -1;
+		return GATTLIB_INVALID_PARAMETER;
 	}
 
 	if (adapter_name) {
@@ -74,14 +74,14 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 		} else {
 			fprintf(stderr, "Failed to get adapter %s\n", object_path);
 		}
-		return 1;
+		return GATTLIB_ERROR_DBUS;
 	}
 
 	// Ensure the adapter is powered on
 	org_bluez_adapter1_set_powered(adapter_proxy, TRUE);
 
 	*adapter = adapter_proxy;
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 static gboolean stop_scan_func(gpointer data) {
@@ -126,11 +126,13 @@ void on_dbus_object_added(GDBusObjectManager *device_manager,
 int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout) {
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
+	int ret = GATTLIB_SUCCESS;
 
 	org_bluez_adapter1_call_start_discovery_sync((OrgBluezAdapter1*)adapter, NULL, &error);
 	if (error) {
 		fprintf(stderr, "Failed to start discovery: %s\n", error->message);
 		g_error_free(error);
+		return GATTLIB_ERROR_DBUS;
 	}
 
 	//
@@ -138,7 +140,7 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 	// We should get notified when the connection is lost with the target to allow
 	// us to advertise us again
 	//
-	device_manager = g_dbus_object_manager_client_new_for_bus_sync (
+	device_manager = g_dbus_object_manager_client_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
 			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
 			"org.bluez",
@@ -152,7 +154,8 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 		} else {
 			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
 		}
-		return 1;
+		ret = GATTLIB_ERROR_DBUS;
+		goto DISABLE_SCAN;
 	}
 
 	g_signal_connect (G_DBUS_OBJECT_MANAGER(device_manager),
@@ -167,23 +170,25 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 	g_main_loop_unref(loop);
 
 	g_object_unref(device_manager);
-	return 0;
+
+DISABLE_SCAN:
+	// Stop BLE device discovery
+	gattlib_adapter_scan_disable(adapter);
+	return ret;
 }
 
 int gattlib_adapter_scan_disable(void* adapter) {
 	GError *error = NULL;
 
 	org_bluez_adapter1_call_stop_discovery_sync((OrgBluezAdapter1*)adapter, NULL, &error);
-	if (error) {
-		fprintf(stderr, "Failed to stop discovery: %s\n", error->message);
-		g_error_free(error);
-	}
-	return 0;
+	// Ignore the error
+
+	return GATTLIB_SUCCESS;
 }
 
 int gattlib_adapter_close(void* adapter) {
 	g_object_unref(adapter);
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 gboolean on_handle_device_property_change(
@@ -265,7 +270,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned lo
 
 	gatt_connection_t* connection = calloc(sizeof(gatt_connection_t), 1);
 	if (connection == NULL) {
-		return NULL;
+		goto FREE_CONN_CONTEXT;
 	} else {
 		connection->context = conn_context;
 	}
@@ -321,6 +326,9 @@ FREE_DEVICE:
 
 FREE_CONNECTION:
 	free(connection);
+
+FREE_CONN_CONTEXT:
+	free(conn_context);
 	return NULL;
 }
 
@@ -353,7 +361,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 
 	free(connection->context);
 	free(connection);
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 void gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
@@ -374,7 +382,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	if (service_strs == NULL) {
 		*services       = NULL;
 		*services_count = 0;
-		return 0;
+		return GATTLIB_SUCCESS;
 	}
 
 	// Maximum number of primary services
@@ -385,7 +393,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 
 	gattlib_primary_service_t* primary_services = malloc(count_max * sizeof(gattlib_primary_service_t));
 	if (primary_services == NULL) {
-		return 1;
+		return GATTLIB_OUT_OF_MEMORY;
 	}
 
 	for (service_str = service_strs; *service_str != NULL; service_str++) {
@@ -423,7 +431,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 
 	*services       = primary_services;
 	*services_count = count;
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 #else
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
@@ -431,13 +439,14 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	OrgBluezDevice1* device = conn_context->device;
 	const gchar* const* service_str;
 	GError *error = NULL;
+	int ret = GATTLIB_SUCCESS;
 
 	const gchar* const* service_strs = org_bluez_device1_get_uuids(device);
 
 	if (service_strs == NULL) {
 		*services       = NULL;
 		*services_count = 0;
-		return 0;
+		return GATTLIB_SUCCESS;
 	}
 
 	// Maximum number of primary services
@@ -448,7 +457,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 
 	gattlib_primary_service_t* primary_services = malloc(count_max * sizeof(gattlib_primary_service_t));
 	if (primary_services == NULL) {
-		return 1;
+		return GATTLIB_OUT_OF_MEMORY;
 	}
 
 	GDBusObjectManager *device_manager = g_dbus_object_manager_client_new_for_bus_sync (
@@ -465,7 +474,8 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		} else {
 			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
 		}
-		return 1;
+		ret = GATTLIB_ERROR_DBUS;
+		goto ON_DEVICE_MANAGER_ERROR;
 	}
 
 	GList *objects = g_dbus_object_manager_get_objects(device_manager);
@@ -524,7 +534,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 #endif
 
 int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
-	return -1;
+	return GATTLIB_NOT_SUPPORTED;
 }
 
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
@@ -540,7 +550,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 	const gchar* const* characteristic_str;
 
 	if (service_strs == NULL) {
-		return 2;
+		return GATTLIB_INVALID_PARAMETER;
 	}
 
 	// Maximum number of primary services
@@ -578,7 +588,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 
 	gattlib_characteristic_t* characteristic_list = malloc(count_max * sizeof(gattlib_characteristic_t));
 	if (characteristic_list == NULL) {
-		return 1;
+		return GATTLIB_OUT_OF_MEMORY;
 	}
 
 	for (service_str = service_strs; *service_str != NULL; service_str++) {
@@ -655,7 +665,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 
 	*characteristics      = characteristic_list;
 	*characteristic_count = count;
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 #else
 static void add_characteristics_from_service(GDBusObjectManager *device_manager, const char* service_object_path, gattlib_characteristic_t* characteristic_list, int* count) {
@@ -740,7 +750,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 		} else {
 			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
 		}
-		return 1;
+		return GATTLIB_OUT_OF_MEMORY;
 	}
 	GList *objects = g_dbus_object_manager_get_objects(device_manager);
 
@@ -758,7 +768,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 
 	gattlib_characteristic_t* characteristic_list = malloc(count_max * sizeof(gattlib_characteristic_t));
 	if (characteristic_list == NULL) {
-		return 1;
+		return GATTLIB_OUT_OF_MEMORY;
 	}
 
 	// List all services for this device
@@ -804,7 +814,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 
 	*characteristics      = characteristic_list;
 	*characteristic_count = count;
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 #endif
 
@@ -952,11 +962,11 @@ static struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t
 }
 
 int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count) {
-	return -1;
+	return GATTLIB_NOT_SUPPORTED;
 }
 
 int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count) {
-	return -1;
+	return GATTLIB_NOT_SUPPORTED;
 }
 
 static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteristic, void* buffer, size_t* buffer_len) {
@@ -975,7 +985,7 @@ static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteris
 	if (error != NULL) {
 		fprintf(stderr, "Failed to read DBus GATT characteristic: %s\n", error->message);
 		g_error_free(error);
-		return -1;
+		return GATTLIB_ERROR_DBUS;
 	}
 
 	gsize n_elements = 0;
@@ -992,7 +1002,7 @@ static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteris
 #if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
 	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
 #endif
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
@@ -1002,14 +1012,14 @@ static int read_battery_level(struct dbus_characteristic *dbus_characteristic, v
 	memcpy(buffer, &percentage, sizeof(uint8_t));
 	*buffer_len = sizeof(uint8_t);
 
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 #endif
 
 int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t* buffer_len) {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
-		return -1;
+		return GATTLIB_NOT_FOUND;
 	}
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
 	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
@@ -1026,7 +1036,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb) {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
-		return -1;
+		return GATTLIB_NOT_FOUND;
 	}
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
 	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
@@ -1037,7 +1047,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 
 		gatt_read_cb((const void*)&percentage, sizeof(percentage));
 
-		return 0;
+		return GATTLIB_SUCCESS;
 	} else {
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
@@ -1058,7 +1068,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	if (error != NULL) {
 		fprintf(stderr, "Failed to read DBus GATT characteristic: %s\n", error->message);
 		g_error_free(error);
-		return -1;
+		return GATTLIB_ERROR_DBUS;
 	}
 
 	gsize n_elements;
@@ -1072,15 +1082,15 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 #if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
 	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
 #endif
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
-		return -1;
+		return GATTLIB_NOT_FOUND;
 	} else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
-		return -1; // Battery level does not support write
+		return GATTLIB_NOT_SUPPORTED; // Battery level does not support write
 	} else {
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
@@ -1098,18 +1108,18 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 	if (error != NULL) {
 		fprintf(stderr, "Failed to write DBus GATT characteristic: %s\n", error->message);
 		g_error_free(error);
-		return -1;
+		return GATTLIB_ERROR_DBUS;
 	}
 
 	g_object_unref(dbus_characteristic.gatt);
 #if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
 	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
 #endif
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len) {
-	return -1;
+	return GATTLIB_NOT_SUPPORTED;
 }
 
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
@@ -1187,7 +1197,7 @@ static gboolean on_handle_characteristic_property_change(
 int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
-		return -1;
+		return GATTLIB_NOT_FOUND;
 	}
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
 	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
@@ -1197,7 +1207,7 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
 			G_CALLBACK (on_handle_battery_level_property_change),
 			connection);
 
-		return 0;
+		return GATTLIB_SUCCESS;
 	} else {
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
@@ -1215,16 +1225,16 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
 	if (error) {
 		fprintf(stderr, "Failed to start DBus GATT notification: %s\n", error->message);
 		g_error_free(error);
-		return 1;
+		return GATTLIB_ERROR_DBUS;
 	} else {
-		return 0;
+		return GATTLIB_SUCCESS;
 	}
 }
 
 int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid) {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
-		return -1;
+		return GATTLIB_NOT_FOUND;
 	}
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
 	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
@@ -1232,7 +1242,7 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 				dbus_characteristic.battery,
 				G_CALLBACK (on_handle_battery_level_property_change),
 				connection);
-		return 0;
+		return GATTLIB_SUCCESS;
 	} else {
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
@@ -1250,8 +1260,8 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 	if (error) {
 		fprintf(stderr, "Failed to stop DBus GATT notification: %s\n", error->message);
 		g_error_free(error);
-		return 1;
+		return GATTLIB_ERROR_DBUS;
 	} else {
-		return 0;
+		return GATTLIB_SUCCESS;
 	}
 }
