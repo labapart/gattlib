@@ -342,6 +342,9 @@ gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 	get_connection_options(options, &bt_io_sec_level, &psm, &mtu);
 
 	io_connect_arg_t* io_connect_arg = malloc(sizeof(io_connect_arg_t));
+	if (io_connect_arg == NULL) {
+		return NULL;
+	}
 	io_connect_arg->user_data = data;
 
 	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC) {

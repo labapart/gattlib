@@ -55,6 +55,10 @@ static void primary_all_cb(uint8_t status, GSList *services, void *user_data) {
 	// Allocate array
 	data->services_count = g_slist_length(services);
 	data->services = malloc(data->services_count * sizeof(gattlib_primary_service_t));
+	if (data->services == NULL) {
+		fprintf(stderr, "Discover all primary services failed: OutOfMemory\n");
+		goto done;
+	}
 
 	for (i = 0, l = services; l; l = l->next, i++) {
 		struct gatt_primary *prim = l->data;
@@ -118,6 +122,10 @@ static void characteristic_cb(uint8_t status, GSList *characteristics, void *use
 	// Allocate array
 	data->characteristics_count = g_slist_length(characteristics);
 	data->characteristics = malloc(data->characteristics_count * sizeof(gattlib_characteristic_t));
+	if (data->characteristics == NULL) {
+		fprintf(stderr, "Discover all characteristics failed: OutOfMemory\n");
+		goto done;
+	}
 
 	for (i = 0, l = characteristics; l; l = l->next, i++) {
 		struct gatt_char *chars = l->data;
@@ -188,6 +196,10 @@ static void char_desc_cb(guint8 status, const guint8 *pdu, guint16 plen, gpointe
 	// Allocate array
 	data->descriptors_count = list->num;
 	data->descriptors = malloc(data->descriptors_count * sizeof(gattlib_descriptor_t));
+	if (data->descriptors == NULL) {
+		fprintf(stderr, "Discover all descriptors failed: OutOfMemory\n");
+		goto done;
+	}
 
 	for (i = 0; i < list->num; i++) {
 		uint8_t *value;
@@ -228,6 +240,10 @@ static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
 	// Allocate array
 	data->descriptors_count = g_slist_length(descriptors);
 	data->descriptors = malloc(data->descriptors_count * sizeof(gattlib_descriptor_t));
+	if (data->descriptors == NULL) {
+		fprintf(stderr, "Discover all descriptors failed: OutOfMemory\n");
+		goto done;
+	}
 
 	for (i = 0, l = descriptors; l; l = l->next, i++) {
 		struct gatt_desc *desc = l->data;
