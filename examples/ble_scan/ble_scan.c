@@ -132,7 +132,7 @@ int main(int argc, const char *argv[]) {
 	ret = gattlib_adapter_scan_enable(adapter, ble_discovered_device, BLE_SCAN_TIMEOUT);
 	if (ret) {
 		fprintf(stderr, "ERROR: Failed to scan.\n");
-		return 1;
+		goto EXIT;
 	}
 
 	gattlib_adapter_scan_disable(adapter);
@@ -149,6 +149,7 @@ int main(int argc, const char *argv[]) {
 		free(connection);
 	}
 
+EXIT:
 	gattlib_adapter_close(adapter);
-	return 0;
+	return ret;
 }

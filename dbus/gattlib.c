@@ -127,6 +127,7 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
+	int added_signal_id;
 
 	org_bluez_adapter1_call_start_discovery_sync((OrgBluezAdapter1*)adapter, NULL, &error);
 	if (error) {
@@ -158,7 +159,7 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 		goto DISABLE_SCAN;
 	}
 
-	g_signal_connect (G_DBUS_OBJECT_MANAGER(device_manager),
+	added_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
 	                    "object-added",
 	                    G_CALLBACK (on_dbus_object_added),
 	                    discovered_device_cb);
@@ -168,6 +169,8 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 	g_timeout_add_seconds (timeout, stop_scan_func, loop);
 	g_main_loop_run(loop);
 	g_main_loop_unref(loop);
+
+	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(device_manager), added_signal_id);
 
 	g_object_unref(device_manager);
 
@@ -509,6 +512,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 
 		// Ensure the service is attached to this device
 		if (strcmp(conn_context->device_object_path, org_bluez_gatt_service1_get_device(service_proxy))) {
+			g_object_unref(service_proxy);
 			continue;
 		}
 
@@ -522,6 +526,8 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 					&primary_services[count].uuid);
 			count++;
 		}
+
+		g_object_unref(service_proxy);
 	}
 
 	g_list_free_full(objects, g_object_unref);
@@ -581,12 +587,14 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 
 		characteristic_strs = org_bluez_gatt_service1_get_characteristics(service_proxy);
 		if (characteristic_strs == NULL) {
+			g_object_unref(service_proxy);
 			continue;
 		}
 
 		for (characteristic_str = characteristic_strs; *characteristic_str != NULL; characteristic_str++) {
 			count_max++;
 		}
+
 		g_object_unref(service_proxy);
 	}
 
@@ -617,6 +625,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 
 		characteristic_strs = org_bluez_gatt_service1_get_characteristics(service_proxy);
 		if (characteristic_strs == NULL) {
+			g_object_unref(service_proxy);
 			continue;
 		}
 
@@ -704,6 +713,7 @@ static void add_characteristics_from_service(GDBusObjectManager *device_manager,
 		}
 
 		if (strcmp(org_bluez_gatt_characteristic1_get_service(characteristic), service_object_path)) {
+			g_object_unref(characteristic);
 			continue;
 		} else {
 			characteristic_list[*count].handle       = 0;
@@ -732,6 +742,8 @@ static void add_characteristics_from_service(GDBusObjectManager *device_manager,
 					&characteristic_list[*count].uuid);
 			*count = *count + 1;
 		}
+
+		g_object_unref(characteristic);
 	}
 }
 
@@ -773,6 +785,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 
 	gattlib_characteristic_t* characteristic_list = malloc(count_max * sizeof(gattlib_characteristic_t));
 	if (characteristic_list == NULL) {
+		g_object_unref(device_manager);
 		return GATTLIB_OUT_OF_MEMORY;
 	}
 
@@ -807,11 +820,13 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 		// Ensure the service is attached to this device
 		const char* service_object_path = org_bluez_gatt_service1_get_device(service_proxy);
 		if (strcmp(conn_context->device_object_path, service_object_path)) {
+			g_object_unref(service_proxy);
 			continue;
 		}
 
 		// Add all characteristics attached to this service
 		add_characteristics_from_service(device_manager, object_path, characteristic_list, &count);
+		g_object_unref(service_proxy);
 	}
 
 	g_list_free_full(objects, g_object_unref);
