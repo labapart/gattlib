@@ -105,7 +105,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 
 	gattlib_result = malloc(sizeof(struct gattlib_result_read_uuid_t));
 	if (gattlib_result == NULL) {
-		return 1;
+		return GATTLIB_OUT_OF_MEMORY;
 	}
 	gattlib_result->buffer         = buffer;
 	gattlib_result->buffer_max_len = *buffer_len;
@@ -126,7 +126,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 	*buffer_len = gattlib_result->buffer_len;
 
 	free(gattlib_result);
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
@@ -140,7 +140,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 
 	gattlib_result = malloc(sizeof(struct gattlib_result_read_uuid_t));
 	if (gattlib_result == NULL) {
-		return 0;
+		return GATTLIB_OUT_OF_MEMORY;
 	}
 	gattlib_result->buffer         = NULL;
 	gattlib_result->buffer_max_len = 0;
@@ -154,9 +154,9 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 								gattlib_result_read_uuid_cb, gattlib_result);
 
 	if (id) {
-		return 0;
+		return GATTLIB_SUCCESS;
 	} else {
-		return -1;
+		return GATTLIB_NOT_FOUND;
 	}
 }
 
