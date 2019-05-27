@@ -1048,7 +1048,7 @@ int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** 
 	return GATTLIB_NOT_SUPPORTED;
 }
 
-static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteristic, void* buffer, size_t* buffer_len) {
+static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteristic, void **buffer, size_t* buffer_len) {
 	GVariant *out_value;
 	GError *error = NULL;
 
@@ -1070,11 +1070,16 @@ static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteris
 	gsize n_elements = 0;
 	gconstpointer const_buffer = g_variant_get_fixed_array(out_value, &n_elements, sizeof(guchar));
 	if (const_buffer) {
-		n_elements = MIN(n_elements, *buffer_len);
-		memcpy(buffer, const_buffer, n_elements);
-	}
+		*buffer = malloc(n_elements);
+		if (*buffer == NULL) {
+			return GATTLIB_OUT_OF_MEMORY;
+		}
 
-	*buffer_len = n_elements;
+		*buffer_len = n_elements;
+		memcpy(*buffer, const_buffer, n_elements);
+	} else {
+		*buffer_len = 0;
+	}
 
 	g_object_unref(dbus_characteristic->gatt);
 
@@ -1095,7 +1100,7 @@ static int read_battery_level(struct dbus_characteristic *dbus_characteristic, v
 }
 #endif
 
-int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t* buffer_len) {
+int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void **buffer, size_t *buffer_len) {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return GATTLIB_NOT_FOUND;

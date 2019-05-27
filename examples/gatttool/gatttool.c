@@ -247,23 +247,24 @@ static gboolean characteristics_read(gpointer user_data)
 	GAttrib *attrib = conn_context->attrib;
 
 	if (opt_uuid != NULL) {
-		uint8_t buffer[0x100];
+		uint8_t *buffer;
 		uuid_t uuid;
-		size_t len = sizeof(buffer);
+		size_t buffer_len;
 		int i, ret;
 
 		bt_uuid_to_uuid(opt_uuid, &uuid);
 
-		ret = gattlib_read_char_by_uuid(connection, &uuid, buffer, &len);
+		ret = gattlib_read_char_by_uuid(connection, &uuid, &buffer, &buffer_len);
 		if (ret) {
 			return FALSE;
 		} else {
 			g_print("value: ");
-			for (i = 0; i < len; i++) {
+			for (i = 0; i < buffer_len; i++) {
 				g_print("%02x ", buffer[i]);
 			}
 			g_print("\n");
 
+			free(buffer);
 			return TRUE;
 		}
 	}
