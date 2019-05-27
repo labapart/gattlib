@@ -89,22 +89,22 @@ static gboolean stop_scan_func(gpointer data) {
 	return FALSE;
 }
 
-void on_dbus_object_added(GDBusObjectManager *device_manager,
-                     GDBusObject        *object,
-                     gpointer            user_data)
-{
-	const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
-	GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.Device1");
-	if (!interface) {
-		return;
-	}
+/*
+ * Internal structure to pass to Device Manager signal handlers
+ */
+struct discovered_device_arg {
+	gattlib_discovered_device_t callback;
+	GSList** discovered_devices_ptr;
+};
 
+static void device_manager_on_device1_signal(const char* device1_path, struct discovered_device_arg *arg)
+{
 	GError *error = NULL;
 	OrgBluezDevice1* device1 = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
 			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
 			"org.bluez",
-			object_path,
+			device1_path,
 			NULL,
 			&error);
 	if (error) {
@@ -114,20 +114,62 @@ void on_dbus_object_added(GDBusObjectManager *device_manager,
 	}
 
 	if (device1) {
-		gattlib_discovered_device_t discovered_device_cb = user_data;
+		const gchar *address = org_bluez_device1_get_address(device1);
 
-		discovered_device_cb(
-			org_bluez_device1_get_address(device1),
-			org_bluez_device1_get_name(device1));
-		g_object_unref(device1);
+		// Check if the device is already part of the list
+		GSList *item = g_slist_find_custom(*arg->discovered_devices_ptr, address, (GCompareFunc)g_ascii_strcasecmp);
+
+		// First time this device is in the list
+		if (item == NULL) {
+			// Add the device to the list
+			*arg->discovered_devices_ptr = g_slist_append(*arg->discovered_devices_ptr, g_strdup(address));
+
+			arg->callback(
+				org_bluez_device1_get_address(device1),
+				org_bluez_device1_get_name(device1));
+
+			g_object_unref(device1);
+		}
 	}
+}
+
+static void on_dbus_object_added(GDBusObjectManager *device_manager,
+                     GDBusObject        *object,
+                     gpointer            user_data)
+{
+	const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
+	GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.Device1");
+	if (!interface) {
+		return;
+	}
+
+	// It is a 'org.bluez.Device1'
+	device_manager_on_device1_signal(object_path, user_data);
+}
+
+static void
+on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
+                                       GDBusObjectProxy         *object_proxy,
+                                       GDBusProxy               *interface_proxy,
+                                       GVariant                 *changed_properties,
+                                       const gchar *const       *invalidated_properties,
+                                       gpointer                  user_data)
+{
+	// Check if the object is a 'org.bluez.Device1'
+	if (strcmp(g_dbus_proxy_get_interface_name(interface_proxy), "org.bluez.Device1") != 0) {
+		return;
+	}
+
+	// It is a 'org.bluez.Device1'
+	device_manager_on_device1_signal(g_dbus_proxy_get_object_path(interface_proxy), user_data);
 }
 
 int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout) {
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
-	int added_signal_id;
+	int added_signal_id, changed_signal_id;
+	GSList *discovered_devices = NULL;
 
 	org_bluez_adapter1_call_start_discovery_sync((OrgBluezAdapter1*)adapter, NULL, &error);
 	if (error) {
@@ -159,10 +201,22 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 		goto DISABLE_SCAN;
 	}
 
+	// Pass the user callback and the discovered device list pointer to the signal handlers
+	struct discovered_device_arg discovered_device_arg = {
+		.callback = discovered_device_cb,
+		.discovered_devices_ptr = &discovered_devices
+	};
+
 	added_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
 	                    "object-added",
 	                    G_CALLBACK (on_dbus_object_added),
-	                    discovered_device_cb);
+	                    &discovered_device_arg);
+
+	// List for object changes to see if there are still devices around
+	changed_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
+					     "interface-proxy-properties-changed",
+					     G_CALLBACK(on_interface_proxy_properties_changed),
+					     &discovered_device_arg);
 
 	// Run Glib loop for 'timeout' seconds
 	GMainLoop *loop = g_main_loop_new(NULL, 0);
@@ -171,12 +225,17 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 	g_main_loop_unref(loop);
 
 	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(device_manager), added_signal_id);
+	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(device_manager), changed_signal_id);
 
 	g_object_unref(device_manager);
 
 DISABLE_SCAN:
 	// Stop BLE device discovery
 	gattlib_adapter_scan_disable(adapter);
+
+	// Free discovered device list
+	g_slist_foreach(discovered_devices, (GFunc)g_free, NULL);
+	g_slist_free(discovered_devices);
 	return ret;
 }
 
