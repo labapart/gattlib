@@ -38,7 +38,6 @@ static void usage(char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-	uint8_t buffer[100];
 	int i, ret;
 	size_t len;
 	gatt_connection_t* connection;
@@ -76,8 +75,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (g_operation == READ) {
-		len = sizeof(buffer);
-		ret = gattlib_read_char_by_uuid(connection, &g_uuid, buffer, &len);
+		uint8_t *buffer;
+
+		ret = gattlib_read_char_by_uuid(connection, &g_uuid, (void **)&buffer, &len);
 		if (ret == -1) {
 			char uuid_str[MAX_LEN_UUID_STR + 1];
 
@@ -92,8 +92,10 @@ int main(int argc, char *argv[]) {
 			printf("%02x ", buffer[i]);
 		}
 		printf("\n");
+
+		free(buffer);
 	} else {
-		ret = gattlib_write_char_by_uuid(connection, &g_uuid, buffer, sizeof(buffer));
+		ret = gattlib_write_char_by_uuid(connection, &g_uuid, &value_data, sizeof(value_data));
 		if (ret == -1) {
 			char uuid_str[MAX_LEN_UUID_STR + 1];
 

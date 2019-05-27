@@ -116,7 +116,15 @@ typedef struct _gatt_connection_t {
 
 typedef void (*gattlib_discovered_device_t)(const char* addr, const char* name);
 typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection, void* user_data);
-typedef void* (*gatt_read_cb_t)(const void* buffer, size_t buffer_len);
+
+/**
+ * @brief Callback called when GATT characteristic read value has been received
+ *
+ * @param buffer contains the value to read.
+ * @param buffer_len Length of the read data
+ *
+ */
+typedef void* (*gatt_read_cb_t)(const void *buffer, size_t buffer_len);
 
 /**
  * @brief Open Bluetooth adapter
@@ -179,7 +187,29 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
 int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count);
 int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count);
 
-int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void* buffer, size_t* buffer_len);
+/**
+ * @brief Function to read GATT characteristic
+ *
+ * @note buffer is allocated by the function. It is the responsibility of the caller to free the buffer.
+ *
+ * @param connection Active GATT connection
+ * @param uuid UUID of the GATT characteristic to read
+ * @param buffer contains the value to read. It is allocated by the function.
+ * @param buffer_len Length of the read data
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void** buffer, size_t* buffer_len);
+
+/**
+ * @brief Function to asynchronously read GATT characteristic
+ *
+ * @param connection Active GATT connection
+ * @param uuid UUID of the GATT characteristic to read
+ * @param gatt_read_cb is the callback to read when the GATT characteristic is available
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb);
 
 int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
