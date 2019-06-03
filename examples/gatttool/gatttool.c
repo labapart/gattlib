@@ -104,7 +104,7 @@ void indication_handler(const uuid_t* uuid, const uint8_t* data, size_t data_len
 	rl_forced_update_display();
 }
 
-static void connect_cb(gatt_connection_t* connection)
+static void connect_cb(gatt_connection_t* connection, void* user_data)
 {
 	if (connection == NULL) {
 		got_error = TRUE;
@@ -254,7 +254,7 @@ static gboolean characteristics_read(gpointer user_data)
 
 		bt_uuid_to_uuid(opt_uuid, &uuid);
 
-		ret = gattlib_read_char_by_uuid(connection, &uuid, &buffer, &buffer_len);
+		ret = gattlib_read_char_by_uuid(connection, &uuid, (void **)&buffer, &buffer_len);
 		if (ret) {
 			return FALSE;
 		} else {
