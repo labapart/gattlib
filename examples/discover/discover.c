@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 	}
 
 	ret = gattlib_discover_primary(connection, &services, &services_count);
-	if (ret != 0) {
+	if (ret != GATTLIB_SUCCESS) {
 		fprintf(stderr, "Fail to discover primary services.\n");
 		return 1;
 	}
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 	free(services);
 
 	ret = gattlib_discover_char(connection, &characteristics, &characteristics_count);
-	if (ret != 0) {
+	if (ret != GATTLIB_SUCCESS) {
 		fprintf(stderr, "Fail to discover characteristics.\n");
 		return 1;
 	}

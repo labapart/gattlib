@@ -75,15 +75,15 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (g_operation == READ) {
-		uint8_t *buffer;
+		uint8_t *buffer = NULL;
 
 		ret = gattlib_read_char_by_uuid(connection, &g_uuid, (void **)&buffer, &len);
-		if (ret == -1) {
+		if (ret != GATTLIB_SUCCESS) {
 			char uuid_str[MAX_LEN_UUID_STR + 1];
 
 			gattlib_uuid_to_string(&g_uuid, uuid_str, sizeof(uuid_str));
 
-			fprintf(stderr, "Could not find GATT Characteristic with UUID %s\n", uuid_str);
+			fprintf(stderr, "Could not find GATT Characteristic with UUID %s (ret:%d)\n", uuid_str, ret);
 			goto EXIT;
 		}
 
@@ -96,12 +96,12 @@ int main(int argc, char *argv[]) {
 		free(buffer);
 	} else {
 		ret = gattlib_write_char_by_uuid(connection, &g_uuid, &value_data, sizeof(value_data));
-		if (ret == -1) {
+		if (ret != GATTLIB_SUCCESS) {
 			char uuid_str[MAX_LEN_UUID_STR + 1];
 
 			gattlib_uuid_to_string(&g_uuid, uuid_str, sizeof(uuid_str));
 
-			fprintf(stderr, "Could not find GATT Characteristic with UUID %s\n", uuid_str);
+			fprintf(stderr, "Could not find GATT Characteristic with UUID %s (ret:%d)\n", uuid_str, ret);
 			goto EXIT;
 		}
 	}
