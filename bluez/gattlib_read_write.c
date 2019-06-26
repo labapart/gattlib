@@ -175,7 +175,7 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 	int write_completed = FALSE;
 
 	guint ret = gatt_write_char(conn_context->attrib, handle, (void*)buffer, buffer_len,
-								gattlib_write_result_cb, &write_completed);
+				    gattlib_write_result_cb, &write_completed);
 	if (ret == 0) {
 		return 1;
 	}
@@ -183,7 +183,7 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 	// Wait for completion of the event
 	while(write_completed == FALSE) {
 		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
-    }
+	}
 	return 0;
 }
 

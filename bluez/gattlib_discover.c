@@ -149,17 +149,17 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 	bzero(&user_data, sizeof(user_data));
 	user_data.discovered     = FALSE;
 
-    gattlib_context_t* conn_context = connection->context;
+	gattlib_context_t* conn_context = connection->context;
 	ret = gatt_discover_char(conn_context->attrib, start, end, NULL, characteristic_cb, &user_data);
 	if (ret == 0) {
 		fprintf(stderr, "Fail to discover characteristics.\n");
 		return 1;
 	}
 
-    // Wait for completion
+	// Wait for completion
 	while(user_data.discovered == FALSE) {		
 		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
-    }
+	}
 	*characteristics       = user_data.characteristics;
 	*characteristics_count = user_data.characteristics_count;
 
