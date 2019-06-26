@@ -351,7 +351,7 @@ static void cmd_primary(int argcp, char **argvp)
 		int services_count, ret, i;
 
 		ret = gattlib_discover_primary(g_connection, &services, &services_count);
-		if (ret == 0) {
+		if (ret == GATTLIB_SUCCESS) {
 			for (i = 0; i < services_count; i++) {
 				gattlib_uuid_to_string(&services[i].uuid, uuid_str, sizeof(uuid_str));
 
@@ -428,7 +428,7 @@ static void cmd_char(int argcp, char **argvp)
 	}
 
 	ret = gattlib_discover_char_range(g_connection, start, end, &characteristics, &characteristics_count);
-	if (ret == 0) {
+	if (ret == GATTLIB_SUCCESS) {
 		for (i = 0; i < characteristics_count; i++) {
 			gattlib_uuid_to_string(&characteristics[i].uuid, uuid_str, sizeof(uuid_str));
 
@@ -470,7 +470,7 @@ static void cmd_char_desc(int argcp, char **argvp)
 	}
 
 	ret = gattlib_discover_desc_range(g_connection, start, end, &descriptors, &descriptor_count);
-	if (ret == 0) {
+	if (ret == GATTLIB_SUCCESS) {
 		for (i = 0; i < descriptor_count; i++) {
 			char uuid_str[MAX_LEN_UUID_STR + 1];
 

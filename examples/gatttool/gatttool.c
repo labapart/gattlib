@@ -159,7 +159,7 @@ static gboolean primary(gpointer user_data)
 		int services_count, i;
 
 		int ret = gattlib_discover_primary(connection, &services, &services_count);
-		if (ret == 0) {
+		if (ret == GATTLIB_SUCCESS) {
 			for (i = 0; i < services_count; i++) {
 				gattlib_uuid_to_string(&services[i].uuid, uuid_str, sizeof(uuid_str));
 
