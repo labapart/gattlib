@@ -274,18 +274,20 @@ gboolean on_handle_device_property_change(
 		g_variant_get (arg_changed_properties, "a{sv}", &iter);
 		while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
 			if (strcmp(key, "Connected") == 0) {
-				if (g_variant_get_boolean(value)) {
-					// Stop the timeout for connection
-					g_source_remove(conn_context->connection_timeout);
-
-					// Tell we are now connected
-					g_main_loop_quit(conn_context->connection_loop);
-				} else {
+				if (!g_variant_get_boolean(value)) {
+					printf("on_handle_device_property_change: Connected FALSE\n");
 					// Disconnection case
 					if (connection->disconnection_handler) {
+						printf("[C] Call disconnection handler:%p\n", connection->disconnection_handler);
 						connection->disconnection_handler(connection->disconnection_user_data);
 					}
 				}
+			} else if (strcmp(key, "ServicesResolved") == 0) {
+				// Stop the timeout for connection
+				g_source_remove(conn_context->connection_timeout);
+
+				// Tell we are now connected
+				g_main_loop_quit(conn_context->connection_loop);
 			}
 		}
 	}
