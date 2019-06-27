@@ -34,6 +34,8 @@
 static const uuid_t m_battery_level_uuid = CREATE_UUID16(0x2A19);
 static const uuid_t m_ccc_uuid = CREATE_UUID16(0x2902);
 
+static const char *m_dbus_error_unknown_object = "GDBus.Error:org.freedesktop.DBus.Error.UnknownObject";
+
 struct dbus_characteristic {
 	union {
 		OrgBluezGattCharacteristic1 *gatt;
@@ -365,7 +367,16 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned lo
 	error = NULL;
 	org_bluez_device1_call_connect_sync(device, NULL, &error);
 	if (error) {
-		fprintf(stderr, "Device connected error: %s\n", error->message);
+		if (strncmp(error->message, m_dbus_error_unknown_object, strlen(m_dbus_error_unknown_object)) == 0) {
+			// You might have this error if the computer has not scanned or has not already had
+			// pairing information about the targetted device.
+			fprintf(stderr, "Device '%s' cannot be found\n", dst);
+		}  else {
+			fprintf(stderr, "Device connected error (device:%s): %s\n",
+				conn_context->device_object_path,
+				error->message);
+		}
+
 		g_error_free(error);
 		goto FREE_DEVICE;
 	}
