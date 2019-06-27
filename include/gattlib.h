@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2017 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -181,7 +181,19 @@ typedef struct {
 	uuid_t   uuid;
 } gattlib_descriptor_t;
 
+/**
+ * @brief Function to discover GATT Services
+ *
+ * @note This function can be used to force GATT services/characteristic discovery
+ *
+ * @param connection Active GATT connection
+ * @param services array of GATT services allocated by the function. Can be NULL.
+ * @param services_count Number of GATT services discovered. Can be NULL
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count);
+
 int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count);
 int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristic_count);
 int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count);

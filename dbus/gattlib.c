@@ -443,8 +443,12 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(device);
 
 	if (service_strs == NULL) {
-		*services       = NULL;
-		*services_count = 0;
+		if (services != NULL) {
+			*services       = NULL;
+		}
+		if (services_count != NULL) {
+			*services_count = 0;
+		}
 		return GATTLIB_SUCCESS;
 	}
 
@@ -492,8 +496,12 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		g_object_unref(service_proxy);
 	}
 
-	*services       = primary_services;
-	*services_count = count;
+	if (services != NULL) {
+		*services       = primary_services;
+	}
+	if (services_count != NULL) {
+		*services_count = count;
+	}
 	return GATTLIB_SUCCESS;
 }
 #else
@@ -507,8 +515,12 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	const gchar* const* service_strs = org_bluez_device1_get_uuids(device);
 
 	if (service_strs == NULL) {
-		*services       = NULL;
-		*services_count = 0;
+		if (services != NULL) {
+			*services       = NULL;
+		}
+		if (services_count != NULL) {
+			*services_count = 0;
+		}
 		return GATTLIB_SUCCESS;
 	}
 
@@ -623,8 +635,12 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	g_list_free_full(objects, g_object_unref);
 	g_object_unref(device_manager);
 
-	*services       = primary_services;
-	*services_count = count;
+	if (services != NULL) {
+		*services       = primary_services;
+	}
+	if (services_count != NULL) {
+		*services_count = count;
+	}
 
 ON_DEVICE_MANAGER_ERROR:
 	if (ret != GATTLIB_SUCCESS) {

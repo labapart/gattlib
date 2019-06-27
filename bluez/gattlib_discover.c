@@ -93,8 +93,12 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
 	}
 
-	*services       = user_data.services;
-	*services_count = user_data.services_count;
+	if (services != NULL) {
+		*services = user_data.services;
+	}
+	if (services_count != NULL) {
+		*services_count = user_data.services_count;
+	}
 
 	return 0;
 }
