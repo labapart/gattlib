@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2017  Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2019  Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -83,7 +83,12 @@ int main(int argc, char *argv[]) {
 
 			gattlib_uuid_to_string(&g_uuid, uuid_str, sizeof(uuid_str));
 
-			fprintf(stderr, "Could not find GATT Characteristic with UUID %s (ret:%d)\n", uuid_str, ret);
+			if (ret == GATTLIB_NOT_FOUND) {
+				fprintf(stderr, "Could not find GATT Characteristic with UUID %s. "
+					"You might call the program with '--gatt-discovery'.\n", uuid_str);
+			} else {
+				fprintf(stderr, "Error while reading GATT Characteristic with UUID %s (ret:%d)\n", uuid_str, ret);
+			}
 			goto EXIT;
 		}
 
@@ -101,7 +106,13 @@ int main(int argc, char *argv[]) {
 
 			gattlib_uuid_to_string(&g_uuid, uuid_str, sizeof(uuid_str));
 
-			fprintf(stderr, "Could not find GATT Characteristic with UUID %s (ret:%d)\n", uuid_str, ret);
+			if (ret == GATTLIB_NOT_FOUND) {
+				fprintf(stderr, "Could not find GATT Characteristic with UUID %s. "
+					"You might call the program with '--gatt-discovery'.\n", uuid_str);
+			} else {
+				fprintf(stderr, "Error while writing GATT Characteristic with UUID %s (ret:%d)\n",
+					uuid_str, ret);
+			}
 			goto EXIT;
 		}
 	}
