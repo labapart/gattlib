@@ -224,8 +224,53 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
  */
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb);
 
+/**
+ * @brief Function to write to the GATT characteristic UUID
+ *
+ * @param connection Active GATT connection
+ * @param uuid UUID of the GATT characteristic to read
+ * @param buffer contains the values to write to the GATT characteristic
+ * @param buffer_len is the length of the buffer to write
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
+
+/**
+ * @brief Function to write to the GATT characteristic handle
+ *
+ * @param connection Active GATT connection
+ * @param handle is the handle of the GATT characteristic
+ * @param buffer contains the values to write to the GATT characteristic
+ * @param buffer_len is the length of the buffer to write
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
+
+/**
+ * @brief Function to write without response to the GATT characteristic UUID
+ *
+ * @param connection Active GATT connection
+ * @param uuid UUID of the GATT characteristic to read
+ * @param buffer contains the values to write to the GATT characteristic
+ * @param buffer_len is the length of the buffer to write
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
+
+/**
+ * @brief Function to write without response to the GATT characteristic handle
+ *
+ * @param connection Active GATT connection
+ * @param handle is the handle of the GATT characteristic
+ * @param buffer contains the values to write to the GATT characteristic
+ * @param buffer_len is the length of the buffer to write
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_write_without_response_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
 
 /*
  * @param uuid     UUID of the characteristic that will trigger the notification

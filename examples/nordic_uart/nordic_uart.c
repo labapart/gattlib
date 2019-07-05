@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2017  Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2019  Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -125,8 +125,8 @@ int main(int argc, char *argv[]) {
 		// NUS TX can only receive 20 bytes at a time
 		input_ptr = input;
 		for (total_length = strlen(input) + 1; total_length > 0; total_length -= length) {
-			length     = MIN(total_length, 20);
-			ret = gattlib_write_char_by_handle(m_connection, tx_handle, input_ptr, length);
+			length = MIN(total_length, 20);
+			ret = gattlib_write_without_response_char_by_handle(m_connection, tx_handle, input_ptr, length);
 			if (ret) {
 				fprintf(stderr, "Fail to send data to NUS TX characteristic.\n");
 				return 1;
