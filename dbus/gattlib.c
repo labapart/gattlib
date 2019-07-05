@@ -31,6 +31,11 @@
 
 #define CONNECT_TIMEOUT  4
 
+#define BLUEZ_GATT_WRITE_VALUE_TYPE_MASK                    (0x7)
+#define BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITH_RESPONSE     (1 << 0)
+#define BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITHOUT_RESPONSE  (1 << 1)
+#define BLUEZ_GATT_WRITE_VALUE_TYPE_RELIABLE_WRITE          (1 << 2)
+
 static const uuid_t m_battery_level_uuid = CREATE_UUID16(0x2A19);
 static const uuid_t m_ccc_uuid = CREATE_UUID16(0x2902);
 
@@ -1322,7 +1327,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	return GATTLIB_SUCCESS;
 }
 
-static int write_char(struct dbus_characteristic *dbus_characteristic, const void* buffer, size_t buffer_len)
+static int write_char(struct dbus_characteristic *dbus_characteristic, const void* buffer, size_t buffer_len, uint32_t options)
 {
 	GVariant *value = g_variant_new_from_data(G_VARIANT_TYPE ("ay"), buffer, buffer_len, TRUE, NULL, NULL);
 	GError *error = NULL;
@@ -1330,9 +1335,14 @@ static int write_char(struct dbus_characteristic *dbus_characteristic, const voi
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 	org_bluez_gatt_characteristic1_call_write_value_sync(dbus_characteristic->gatt, value, NULL, &error);
 #else
-	GVariantBuilder *options =  g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-	org_bluez_gatt_characteristic1_call_write_value_sync(dbus_characteristic->gatt, value, g_variant_builder_end(options), NULL, &error);
-	g_variant_builder_unref(options);
+	GVariantBuilder *variant_options = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+
+	if ((options & BLUEZ_GATT_WRITE_VALUE_TYPE_MASK) == BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITHOUT_RESPONSE) {
+		g_variant_builder_add(variant_options, "{sv}", "type", g_variant_new("s", "request"));
+	}
+
+	org_bluez_gatt_characteristic1_call_write_value_sync(dbus_characteristic->gatt, value, g_variant_builder_end(variant_options), NULL, &error);
+	g_variant_builder_unref(variant_options);
 #endif
 
 	if (error != NULL) {
@@ -1358,7 +1368,7 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
 
-	return write_char(&dbus_characteristic, buffer, buffer_len);
+	return write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITH_RESPONSE);
 }
 
 int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len) {
@@ -1367,8 +1377,33 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 		return GATTLIB_NOT_FOUND;
 	}
 
-	return write_char(&dbus_characteristic, buffer, buffer_len);
+	return write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITH_RESPONSE);
 }
+
+int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len)
+{
+	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
+	if (dbus_characteristic.type == TYPE_NONE) {
+		return GATTLIB_NOT_FOUND;
+	} else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
+		return GATTLIB_NOT_SUPPORTED; // Battery level does not support write
+	} else {
+		assert(dbus_characteristic.type == TYPE_GATT);
+	}
+
+	return write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITHOUT_RESPONSE);
+}
+
+int gattlib_write_without_response_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len)
+{
+	struct dbus_characteristic dbus_characteristic = get_characteristic_from_handle(connection, handle);
+	if (dbus_characteristic.type == TYPE_NONE) {
+		return GATTLIB_NOT_FOUND;
+	}
+
+	return write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITHOUT_RESPONSE);
+}
+
 
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
 gboolean on_handle_battery_level_property_change(

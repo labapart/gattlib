@@ -101,6 +101,10 @@ Examples
 
         ./examples/notification/notification
 
+* [Demonstrate GATT Write Without Response](/examples/nordic_uart/nordic_uart.c):
+
+        ./examples/nordic_uart/nordic_uart
+
 **Note:** `examples/gatttool` has been partially ported to gattlib. There are two reasons: the laziness
  (some of the GATT functions could be replaced by their gattlib equivalent) and the completeness (there
  are still some missing functions in gattlib).
