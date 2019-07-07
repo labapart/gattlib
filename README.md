@@ -138,3 +138,8 @@ TODO List
 
 - Complete `examples/gatttool` port to GattLib to demonstrate the completeness of GattLib.
 - Remove GLib dependencies to GattLib (mainly replacing GLib IO Channels by Unix Domain Socket).
+
+Support
+=======
+
+Commercial Support can be obtained through [Lab A Part](https://labapart.com). Please contact us: [https://labapart.com/about/](https://labapart.com/about/).
