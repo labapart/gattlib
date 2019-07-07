@@ -714,7 +714,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 			continue;
 		}
 
-		for (characteristic_str = *characteristic_strs; *characteristic_str != NULL; characteristic_str++) {
+		for (characteristic_str = *characteristic_strs; characteristic_str != NULL; characteristic_str++) {
 			// Object path is in the form '/org/bluez/hci0/dev_DE_79_A2_A1_E9_FA/service0024/char0029'.
 			// We convert the last 4 hex characters into the handle
 			sscanf(characteristic_str + strlen(characteristic_str) - 4, "%x", &handle);
@@ -761,7 +761,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 			continue;
 		}
 
-		for (characteristic_str = characteristic_strs; *characteristic_str != NULL; characteristic_str++) {
+		for (characteristic_str = *characteristic_strs; characteristic_str != NULL; characteristic_str++) {
 			// Object path is in the form '/org/bluez/hci0/dev_DE_79_A2_A1_E9_FA/service0024/char0029'.
 			// We convert the last 4 hex characters into the handle
 			sscanf(characteristic_str + strlen(characteristic_str) - 4, "%x", &handle);
@@ -775,15 +775,15 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 					G_BUS_TYPE_SYSTEM,
 					G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
 					"org.bluez",
-					*characteristic_str,
+					characteristic_str,
 					NULL,
 					&error);
 			if (characteristic_proxy == NULL) {
 				if (error) {
-					fprintf(stderr, "Failed to open characteristic '%s': %s\n", *characteristic_str, error->message);
+					fprintf(stderr, "Failed to open characteristic '%s': %s\n", characteristic_str, error->message);
 					g_error_free(error);
 				} else {
-					fprintf(stderr, "Failed to open characteristic '%s'.\n", *characteristic_str);
+					fprintf(stderr, "Failed to open characteristic '%s'.\n", characteristic_str);
 				}
 				continue;
 			} else {
