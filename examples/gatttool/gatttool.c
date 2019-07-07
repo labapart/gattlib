@@ -46,6 +46,8 @@
 #include "gattlib.h"
 #include "gatttool.h"
 
+#include "gattlib_internal_defs.h"
+
 static gchar *opt_src = NULL;
 static gchar *opt_dst = NULL;
 static gchar *opt_dst_type = NULL;
@@ -146,7 +148,7 @@ done:
 
 static gboolean primary(gpointer user_data)
 {
-	gatt_connection_t* connection = (gatt_connection_t*)user_data;
+	struct _gatt_connection_t *connection = (struct _gatt_connection_t *)user_data;
 	gattlib_context_t* conn_context = connection->context;
 	GAttrib *attrib = conn_context->attrib;
 	char uuid_str[MAX_LEN_UUID_STR + 1];
