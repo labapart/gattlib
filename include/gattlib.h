@@ -89,7 +89,7 @@ extern "C" {
 		GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM | \
 		GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_LOW
 
-typedef struct _GAttrib GAttrib;
+typedef struct _gatt_connection_t gatt_connection_t;
 
 typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data);
 
@@ -100,19 +100,6 @@ typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data,
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
 typedef void (*gattlib_disconnection_handler_t)(void* user_data);
-
-typedef struct _gatt_connection_t {
-	void* context;
-
-	gattlib_event_handler_t notification_handler;
-	void* notification_user_data;
-
-	gattlib_event_handler_t indication_handler;
-	void* indication_user_data;
-
-	gattlib_disconnection_handler_t disconnection_handler;
-	void* disconnection_user_data;
-} gatt_connection_t;
 
 typedef void (*gattlib_discovered_device_t)(const char* addr, const char* name);
 typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection, void* user_data);

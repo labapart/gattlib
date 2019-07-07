@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2016-2017  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2016-2019  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@ pkg_search_module(GATTLIB REQUIRED gattlib)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 pkg_search_module(PCRE REQUIRED libpcre)
 
-include_directories(${GLIB_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/common ${GLIB_INCLUDE_DIRS})
 
 #
 # Add Bluetooth support: Workaround as the current 'gatttool' example

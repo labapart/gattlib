@@ -24,6 +24,7 @@
 #ifndef __GATTLIB_INTERNAL_H__
 #define __GATTLIB_INTERNAL_H__
 
+#include "gattlib_internal_defs.h"
 #include "gattlib.h"
 
 #include "org-bluez-adaptater1.h"

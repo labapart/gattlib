@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2017 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -29,6 +29,7 @@
 #define BLUEZ_VERSIONS(major, minor)	(((major) << 8) | (minor))
 #define BLUEZ_VERSION					BLUEZ_VERSIONS(BLUEZ_VERSION_MAJOR, BLUEZ_VERSION_MINOR)
 
+#include "gattlib_internal_defs.h"
 #include "gattlib.h"
 
 #include "uuid.h"
@@ -37,6 +38,8 @@
   #include "src/shared/att-types.h"
   #include "src/shared/util.h"
 #endif
+
+typedef struct _GAttrib GAttrib;
 
 struct gattlib_thread_t {
 	int           ref;
