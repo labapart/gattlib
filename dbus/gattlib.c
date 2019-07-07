@@ -288,11 +288,13 @@ gboolean on_handle_device_property_change(
 					}
 				}
 			} else if (strcmp(key, "ServicesResolved") == 0) {
-				// Stop the timeout for connection
-				g_source_remove(conn_context->connection_timeout);
+				if (g_variant_get_boolean(value)) {
+					// Stop the timeout for connection
+					g_source_remove(conn_context->connection_timeout);
 
-				// Tell we are now connected
-				g_main_loop_quit(conn_context->connection_loop);
+					// Tell we are now connected
+					g_main_loop_quit(conn_context->connection_loop);
+				}
 			}
 		}
 	}
