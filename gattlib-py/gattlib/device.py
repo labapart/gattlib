@@ -54,7 +54,7 @@ class Device:
             raise DeviceError()
 
     @staticmethod
-    def disconnection_callback(user_data):
+    def on_disconnection(user_data):
         this = user_data
 
         this.disconnection_callback(this.disconnection_user_data)
@@ -63,7 +63,7 @@ class Device:
         self.disconnection_callback = callback
         self.disconnection_user_data = user_data
 
-        gattlib.gattlib_register_on_disconnect(self._connection, Device.disconnection_callback, self)
+        gattlib_register_on_disconnect(self._connection, Device.on_disconnection, self)
 
     def disconnect(self):
         ret = gattlib.gattlib_disconnect(self._connection)
