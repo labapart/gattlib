@@ -8,8 +8,6 @@ dist: xenial
 addons:
   apt:
     packages:
-    - gcc-arm-linux-gnueabihf
-    - g++-arm-linux-gnueabihf
     - gcc-aarch64-linux-gnu
     - g++-aarch64-linux-gnu
     - libbluetooth-dev
@@ -18,6 +16,11 @@ addons:
     - python3-setuptools
 
 install:
+  - |
+    if [ ! -f $PWD/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf ]; then
+      wget https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz
+      tar xf gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz
+    fi
   - pip3 install --upgrade cross-sysroot
 
 script:
@@ -44,13 +47,13 @@ script:
   #
   # Setup build for ARM 32-bit
   #
-  # Ensure folder is empty
-  - rm -Rf $PWD/debian-stable-arm/*
-  - cross-sysroot --distribution debian --distribution-version stable --architecture armhf --build-root $PWD/debian-stable-arm requirements.dep
-
   # Set environment variables
   - export SYSROOT=$PWD/debian-stable-arm
-  - export CROSS_COMPILE=arm-linux-gnueabihf-
+  - export CROSS_COMPILE=$PWD/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+
+  # Ensure folder is empty
+  - rm -Rf $PWD/debian-stable-arm/*
+  - cross-sysroot --distribution debian --distribution-version stable --architecture armhf --cross-gcc ${CROSS_COMPILE}gcc --build-root $PWD/debian-stable-arm requirements.dep
 
   # Build and Package Gattlib with DBus support - Release - ARM32
   - mkdir build-dbus-release-arm32 && pushd build-dbus-release-arm32
