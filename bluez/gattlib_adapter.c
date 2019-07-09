@@ -84,7 +84,7 @@ static char* parse_name(uint8_t* data, size_t size) {
 	return NULL;
 }
 
-static int ble_scan(int device_desc, gattlib_discovered_device_t discovered_device_cb, int timeout) {
+static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data) {
 	struct hci_filter old_options;
 	socklen_t slen = sizeof(old_options);
 	struct hci_filter new_options;
@@ -135,7 +135,7 @@ static int ble_scan(int device_desc, gattlib_discovered_device_t discovered_devi
 		ba2str(&info->bdaddr, addr);
 
 		char* name = parse_name(info->data, info->length);
-		discovered_device_cb(addr, name);
+		discovered_device_cb(adapter, addr, name, user_data);
 		if (name) {
 			free(name);
 		}
@@ -170,7 +170,7 @@ static int ble_scan(int device_desc, gattlib_discovered_device_t discovered_devi
 		ba2str(&info->bdaddr, addr);
 
 		char* name = parse_name(info->data, info->length);
-		discovered_device_cb(addr, name);
+		discovered_device_cb(adapter, addr, name, user_data);
 		if (name) {
 			free(name);
 		}
@@ -181,7 +181,7 @@ static int ble_scan(int device_desc, gattlib_discovered_device_t discovered_devi
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout) {
+int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data) {
 	int device_desc = *(int*)adapter;
 
 	uint16_t interval = htobs(DISCOV_LE_SCAN_INT);
@@ -201,7 +201,7 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 		return 1;
 	}
 
-	ret = ble_scan(device_desc, discovered_device_cb, timeout);
+	ret = ble_scan(adapter, device_desc, discovered_device_cb, timeout, user_data);
 	if (ret != 0) {
 		fprintf(stderr, "ERROR: Advertisement fail.\n");
 		return 1;
@@ -211,7 +211,7 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 }
 
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
-		gattlib_discovered_device_t discovered_device_cb, int timeout)
+		gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }

@@ -64,7 +64,9 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
  * Internal structure to pass to Device Manager signal handlers
  */
 struct discovered_device_arg {
+	void *adapter;
 	gattlib_discovered_device_t callback;
+	void *user_data;
 	GSList** discovered_devices_ptr;
 };
 
@@ -96,8 +98,10 @@ static void device_manager_on_device1_signal(const char* device1_path, struct di
 			*arg->discovered_devices_ptr = g_slist_append(*arg->discovered_devices_ptr, g_strdup(address));
 
 			arg->callback(
+				arg->adapter,
 				org_bluez_device1_get_address(device1),
-				org_bluez_device1_get_name(device1));
+				org_bluez_device1_get_name(device1),
+				arg->user_data);
 
 			g_object_unref(device1);
 		}
@@ -136,7 +140,7 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 }
 
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
-		gattlib_discovered_device_t discovered_device_cb, int timeout)
+		gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data)
 {
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
@@ -208,8 +212,10 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 
 	// Pass the user callback and the discovered device list pointer to the signal handlers
 	struct discovered_device_arg discovered_device_arg = {
+		.adapter = adapter,
 		.callback = discovered_device_cb,
-		.discovered_devices_ptr = &discovered_devices
+		.user_data = user_data,
+		.discovered_devices_ptr = &discovered_devices,
 	};
 
 	added_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
@@ -244,12 +250,12 @@ DISABLE_SCAN:
 	return ret;
 }
 
-int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout)
+int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data)
 {
 	return gattlib_adapter_scan_enable_with_filter(adapter,
 			NULL, 0 /* RSSI Threshold */,
 			GATTLIB_DISCOVER_FILTER_USE_NONE,
-			discovered_device_cb, timeout);
+			discovered_device_cb, timeout, user_data);
 }
 
 int gattlib_adapter_scan_disable(void* adapter) {
