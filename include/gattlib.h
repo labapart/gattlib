@@ -105,7 +105,22 @@ typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data,
  */
 typedef void (*gattlib_disconnection_handler_t)(void* user_data);
 
-typedef void (*gattlib_discovered_device_t)(const char* addr, const char* name);
+/**
+ * @brief Handler called on new discovered BLE device
+ *
+ * @param adapter is the adapter that has found the BLE device
+ * @param addr is the MAC address of the BLE device
+ * @param name is the name of BLE device if advertised
+ * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
+ */
+typedef void (*gattlib_discovered_device_t)(void *adapter, const char* addr, const char* name, void *user_data);
+
+/**
+ * @brief Handler called on asynchronous connection when connection is ready
+ *
+ * @param connection Connection that is disconnecting
+ * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
+ */
 typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection, void* user_data);
 
 /**
@@ -133,10 +148,11 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter);
  * @param adapter is the context of the newly opened adapter
  * @param discovered_device_cb is the function callback called for each new Bluetooth device discovered
  * @param timeout defines the duration of the Bluetooth scanning
+ * @param user_data is the data passed to the callback `discovered_device_cb()`
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout);
+int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data);
 
 /**
  * @brief Enable Bluetooth scanning on a given adapter
@@ -149,11 +165,12 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
  *        GATTLIB_DISCOVER_FILTER_USE_UUID and GATTLIB_DISCOVER_FILTER_USE_RSSI.
  * @param discovered_device_cb is the function callback called for each new Bluetooth device discovered
  * @param timeout defines the duration of the Bluetooth scanning
+ * @param user_data is the data passed to the callback `discovered_device_cb()`
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
-		gattlib_discovered_device_t discovered_device_cb, int timeout);
+		gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data);
 
 /**
  * @brief Disable Bluetooth scanning on a given adapter

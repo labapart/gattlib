@@ -80,7 +80,7 @@ connection_exit:
 	return NULL;
 }
 
-static void ble_discovered_device(const char* addr, const char* name) {
+static void ble_discovered_device(void *adapter, const char* addr, const char* name, void *user_data) {
 	struct connection_t *connection;
 	int ret;
 
@@ -129,7 +129,7 @@ int main(int argc, const char *argv[]) {
 	}
 
 	pthread_mutex_lock(&g_mutex);
-	ret = gattlib_adapter_scan_enable(adapter, ble_discovered_device, BLE_SCAN_TIMEOUT);
+	ret = gattlib_adapter_scan_enable(adapter, ble_discovered_device, BLE_SCAN_TIMEOUT, NULL /* user_data */);
 	if (ret) {
 		fprintf(stderr, "ERROR: Failed to scan.\n");
 		goto EXIT;

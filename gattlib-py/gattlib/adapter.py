@@ -27,11 +27,11 @@ class Adapter:
     def close(self):
         return gattlib.gattlib_adapter_close(self._adapter)
 
-    def on_discovered_device(self, addr, name):
+    def on_discovered_device(self, adapter, addr, name, user_data):
         device = Device(self, addr, name)
-        self.on_discovered_device_callback(device)
+        self.on_discovered_device_callback(device, user_data)
 
-    def scan_enable(self, on_discovered_device_callback, timeout, uuids=None, rssi_threshold=None):
+    def scan_enable(self, on_discovered_device_callback, timeout, uuids=None, rssi_threshold=None, user_data=None):
         assert on_discovered_device_callback != None
         self.on_discovered_device_callback = on_discovered_device_callback
 
@@ -61,7 +61,8 @@ class Adapter:
 
         ret = gattlib_adapter_scan_enable_with_filter(self._adapter,
                                                       uuid_list, rssi, enabled_filters,
-                                                      gattlib_discovered_device_type(self.on_discovered_device), timeout)
+                                                      gattlib_discovered_device_type(self.on_discovered_device),
+                                                      timeout, user_data)
         handle_return(ret)
 
     def scan_disable(self):

@@ -29,7 +29,7 @@ def connect_ble_device(device):
     device.disconnect()
 
 
-def on_discovered_ble_device(device):
+def on_discovered_ble_device(device, user_data):
     threading.Thread(target=connect_ble_device, args=(device,)).start()
 
 
