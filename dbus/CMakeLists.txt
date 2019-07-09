@@ -80,6 +80,7 @@ include_directories(. ${CMAKE_SOURCE_DIR}/common ${CMAKE_CURRENT_BINARY_DIR} ${G
 
 set(gattlib_SRCS gattlib.c
                  gattlib_adapter.c
+                 gattlib_char.c
                  bluez5/lib/uuid.c
                  ${CMAKE_SOURCE_DIR}/common/gattlib_common.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c

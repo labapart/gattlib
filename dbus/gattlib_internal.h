@@ -24,6 +24,8 @@
 #ifndef __GATTLIB_INTERNAL_H__
 #define __GATTLIB_INTERNAL_H__
 
+#include <assert.h>
+
 #include "gattlib_internal_defs.h"
 #include "gattlib.h"
 
@@ -53,9 +55,27 @@ typedef struct {
 	guint connection_timeout;
 } gattlib_context_t;
 
+struct dbus_characteristic {
+	union {
+		OrgBluezGattCharacteristic1 *gatt;
+#if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
+		OrgBluezBattery1            *battery;
+#endif
+	};
+	enum {
+		TYPE_NONE = 0,
+		TYPE_GATT,
+		TYPE_BATTERY_LEVEL
+	} type;
+};
+
+extern const uuid_t m_battery_level_uuid;
+
 gboolean stop_scan_func(gpointer data);
 
 void get_device_path_from_mac_with_adapter(OrgBluezAdapter1* adapter, const char *mac_address, char *object_path, size_t object_path_len);
 void get_device_path_from_mac(const char *adapter_name, const char *mac_address, char *object_path, size_t object_path_len);
+
+struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* connection, const uuid_t* uuid);
 
 #endif
