@@ -548,3 +548,7 @@ int get_handle_from_uuid(gatt_connection_t* connection, const uuid_t* uuid, uint
 	}
 	return -1;
 }
+
+int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi) {
+	return GATTLIB_NOT_SUPPORTED;
+}

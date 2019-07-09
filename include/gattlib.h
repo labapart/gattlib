@@ -268,6 +268,16 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data);
 void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data);
 
+/**
+ * @brief Function to retrieve RSSI from a GATT connection
+ *
+ * @param connection Active GATT connection
+ * @param rssi is the Received Signal Strength Indicator of the remote device
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi);
+
 int gattlib_uuid_to_string(const uuid_t *uuid, char *str, size_t n);
 int gattlib_string_to_uuid(const char *str, size_t n, uuid_t *uuid);
 int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2);

@@ -1544,3 +1544,15 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 		return GATTLIB_SUCCESS;
 	}
 }
+
+int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi) {
+	gattlib_context_t* conn_context = connection->context;
+
+	if (rssi == NULL) {
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
+	*rssi = org_bluez_device1_get_rssi(conn_context->device);
+
+	return GATTLIB_SUCCESS;
+}
