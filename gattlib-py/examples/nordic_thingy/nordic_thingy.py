@@ -161,6 +161,7 @@ if __name__ == '__main__':
 
     gatt_device = device.Device(adapter=None, addr=args.mac)
     gatt_device.connect()
+    gatt_device.discover()
 
     temperature_characteristic = gatt_device.characteristics[NORDIC_THINGY_TEMPERATURE_CHAR]
     pressure_characteristic = gatt_device.characteristics[NORDIC_THINGY_PRESSURE_CHAR]
