@@ -53,4 +53,6 @@ typedef struct {
 	guint connection_timeout;
 } gattlib_context_t;
 
+gboolean stop_scan_func(gpointer data);
+
 #endif

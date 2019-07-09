@@ -79,6 +79,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-battery1.c
 include_directories(. ${CMAKE_SOURCE_DIR}/common ${CMAKE_CURRENT_BINARY_DIR} ${GIO_UNIX_INCLUDE_DIRS} ${BLUEZ_INCLUDE_DIRS})
 
 set(gattlib_SRCS gattlib.c
+                 gattlib_adapter.c
                  bluez5/lib/uuid.c
                  ${CMAKE_SOURCE_DIR}/common/gattlib_common.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
