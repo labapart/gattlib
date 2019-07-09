@@ -3,6 +3,35 @@ from .uuid import gattlib_uuid_to_uuid, gattlib_uuid_to_int
 from .exception import handle_return
 
 
+class GattStream():
+
+    def __init__(self, fd, mtu):
+        self._fd = fd
+        self._mtu = mtu
+
+    @property
+    def mtu(self):
+        # Remove ATT Header (3 bytes)
+        return self._mtu - 3
+
+    def write(self, data, mtu=None):
+        if mtu is None:
+            mtu = self.mtu
+
+        while len(data) > 0:
+            frame = data[0:mtu]
+            data = data[mtu:]
+
+            buffer_type = c_char * len(frame)
+            buffer = frame
+            buffer_len = len(frame)
+
+            gattlib.gattlib_write_char_stream_write(self._fd, buffer_type.from_buffer_copy(buffer), buffer_len)
+
+    def close(self):
+        gattlib.gattlib_write_char_stream_close(self._fd)
+
+
 class GattService():
 
     def __init__(self, device, gattlib_primary_service):
@@ -61,6 +90,15 @@ class GattCharacteristic():
 
         ret = gattlib_write_char_by_uuid(self.connection, self._gattlib_characteristic.uuid, buffer_type.from_buffer_copy(buffer), buffer_len)
         handle_return(ret)
+
+    def stream_open(self):
+        _stream = c_void_p(None)
+        _mtu = c_uint16(0)
+
+        ret = gattlib_write_char_by_uuid_stream_open(self.connection, self._gattlib_characteristic.uuid, byref(_stream), byref(_mtu))
+        handle_return(ret)
+
+        return GattStream(_stream, _mtu.value)
 
     def register_notification(self, callback, user_data=None):
         self._device._notification_add_gatt_characteristic_callback(self, callback, user_data)

@@ -94,6 +94,7 @@ extern "C" {
 #define GATTLIB_DISCOVER_FILTER_USE_RSSI                    (1 << 1)
 
 typedef struct _gatt_connection_t gatt_connection_t;
+typedef struct _gatt_stream_t gatt_stream_t;
 
 typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data);
 
@@ -335,6 +336,10 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
+
+int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t* uuid, gatt_stream_t **stream, uint16_t *mtu);
+int gattlib_write_char_stream_write(gatt_stream_t *stream, const void *buffer, size_t buffer_len);
+int gattlib_write_char_stream_close(gatt_stream_t *stream);
 
 /**
  * @brief Function to write without response to the GATT characteristic handle
