@@ -58,7 +58,7 @@ class Device:
         _rssi = c_int16(0)
         ret = gattlib_get_rssi(self._connection, byref(_rssi))
         handle_return(ret)
-        return _rssi
+        return _rssi.value
 
     @staticmethod
     def on_disconnection(user_data):
