@@ -195,8 +195,24 @@ gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 				unsigned long options,
                                 gatt_connect_cb_t connect_cb, void* data);
 
+/**
+ * @brief Function to disconnect the GATT connection
+ *
+ * @param connection Active GATT connection
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_disconnect(gatt_connection_t* connection);
 
+/**
+ * @brief Function to register a callback on GATT disconnection
+ *
+ * @param connection Active GATT connection
+ * @param handler is the callaback to invoke on disconnection
+ * @param user_data is user specific data to pass to the callaback
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 void gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data);
 
 typedef struct {
