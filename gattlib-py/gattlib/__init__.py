@@ -57,6 +57,11 @@ gattlib_adapter_open.argtypes = [c_char_p, POINTER(c_void_p)]
 # typedef void (*gattlib_discovered_device_t)(const char* addr, const char* name)
 gattlib_discovered_device_type = CFUNCTYPE(None, c_char_p, c_char_p)
 
+# int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+#        gattlib_discovered_device_t discovered_device_cb, int timeout)
+gattlib_adapter_scan_enable_with_filter = gattlib.gattlib_adapter_scan_enable_with_filter
+gattlib_adapter_scan_enable_with_filter.argtypes = [c_void_p, POINTER(POINTER(GattlibUuid)), c_int16, c_uint32, gattlib_discovered_device_type, c_int]
+
 # int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count);
 gattlib_discover_primary = gattlib.gattlib_discover_primary
 gattlib_discover_primary.argtypes = [c_void_p, POINTER(POINTER(GattlibPrimaryService)), POINTER(c_int)]

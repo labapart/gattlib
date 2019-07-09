@@ -172,12 +172,45 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 	device_manager_on_device1_signal(g_dbus_proxy_get_object_path(interface_proxy), user_data);
 }
 
-int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout) {
+int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+		gattlib_discovered_device_t discovered_device_cb, int timeout)
+{
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
 	int added_signal_id, changed_signal_id;
 	GSList *discovered_devices = NULL;
+	GVariantBuilder arg_properties_builder;
+
+	g_variant_builder_init(&arg_properties_builder, G_VARIANT_TYPE("a{sv}"));
+
+	if (enabled_filters & GATTLIB_DISCOVER_FILTER_USE_UUID) {
+		char uuid_str[MAX_LEN_UUID_STR + 1];
+		GVariantBuilder list_uuid_builder;
+
+		g_variant_builder_init(&list_uuid_builder, G_VARIANT_TYPE ("as"));
+
+		for (uuid_t **uuid_ptr = uuid_list; *uuid_ptr != NULL; uuid_ptr++) {
+			gattlib_uuid_to_string(*uuid_ptr, uuid_str, sizeof(uuid_str));
+			g_variant_builder_add(&list_uuid_builder, "s", uuid_str);
+		}
+
+		g_variant_builder_add(&arg_properties_builder, "{sv}", "UUIDs", g_variant_builder_end(&list_uuid_builder));
+	}
+
+	if (enabled_filters & GATTLIB_DISCOVER_FILTER_USE_RSSI) {
+		GVariant *rssi_variant = g_variant_new_int16(rssi_threshold);
+		g_variant_builder_add(&arg_properties_builder, "{sv}", "RSSI", rssi_variant);
+		g_variant_unref(rssi_variant);
+	}
+
+	org_bluez_adapter1_call_set_discovery_filter_sync((OrgBluezAdapter1*)adapter,
+			g_variant_builder_end(&arg_properties_builder), NULL, &error);
+	if (error) {
+		fprintf(stderr, "Failed to set discovery filter: %s\n", error->message);
+		g_error_free(error);
+		return GATTLIB_ERROR_DBUS;
+	}
 
 	org_bluez_adapter1_call_start_discovery_sync((OrgBluezAdapter1*)adapter, NULL, &error);
 	if (error) {
@@ -245,6 +278,14 @@ DISABLE_SCAN:
 	g_slist_foreach(discovered_devices, (GFunc)g_free, NULL);
 	g_slist_free(discovered_devices);
 	return ret;
+}
+
+int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout)
+{
+	return gattlib_adapter_scan_enable_with_filter(adapter,
+			NULL, 0 /* RSSI Threshold */,
+			GATTLIB_DISCOVER_FILTER_USE_NONE,
+			discovered_device_cb, timeout);
 }
 
 int gattlib_adapter_scan_disable(void* adapter) {
@@ -1555,4 +1596,12 @@ int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi) {
 	*rssi = org_bluez_device1_get_rssi(conn_context->device);
 
 	return GATTLIB_SUCCESS;
+}
+
+int gattlib_get_advertisement_data(gatt_connection_t *connection, gattlib_advertisement_data_t **advertisement_data,
+		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
+{
+	//gattlib_context_t* conn_context = connection->context;
+
+	return GATTLIB_NOT_SUPPORTED;
 }
