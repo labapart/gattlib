@@ -55,4 +55,7 @@ typedef struct {
 
 gboolean stop_scan_func(gpointer data);
 
+void get_device_path_from_mac_with_adapter(OrgBluezAdapter1* adapter, const char *mac_address, char *object_path, size_t object_path_len);
+void get_device_path_from_mac(const char *adapter_name, const char *mac_address, char *object_path, size_t object_path_len);
+
 #endif

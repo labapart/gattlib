@@ -351,6 +351,20 @@ void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_ha
 int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi);
 
 /**
+ * @brief Function to retrieve RSSI from a MAC Address
+ *
+ * @note: This function is mainly used before a connection is established. Once the connection
+ * established, the function `gattlib_get_rssi()` should be preferred.
+ *
+ * @param adapter is the adapter the new device has been seen
+ * @param mac_address is the MAC address of the device to get the RSSI
+ * @param rssi is the Received Signal Strength Indicator of the remote device
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi);
+
+/**
  * @brief Function to retrieve Advertisement Data of the GATT connection
  *
  * @param connection Active GATT connection

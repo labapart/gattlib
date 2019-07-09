@@ -93,7 +93,28 @@ gboolean on_handle_device_property_change(
 	return TRUE;
 }
 
-static void get_object_path_from_mac(const char *adapter_name, const char *mac_address, char *object_path, size_t object_path_len)
+void get_device_path_from_mac_with_adapter(OrgBluezAdapter1* adapter, const char *mac_address, char *object_path, size_t object_path_len)
+{
+	char device_address_str[20 + 1];
+	const char* adapter_path = g_dbus_proxy_get_object_path((GDBusProxy *)ORG_BLUEZ_ADAPTER1_PROXY(adapter));
+
+	// Transform string from 'DA:94:40:95:E0:87' to 'dev_DA_94_40_95_E0_87'
+	strncpy(device_address_str, mac_address, sizeof(device_address_str));
+	for (int i = 0; i < strlen(device_address_str); i++) {
+		if (device_address_str[i] == ':') {
+			device_address_str[i] = '_';
+		}
+	}
+
+	// Force a null-terminated character
+	device_address_str[20] = '\0';
+
+	// Generate object path like: /org/bluez/hci0/dev_DA_94_40_95_E0_87
+	snprintf(object_path, object_path_len, "%s/dev_%s", adapter_path, device_address_str);
+}
+
+
+void get_device_path_from_mac(const char *adapter_name, const char *mac_address, char *object_path, size_t object_path_len)
 {
 	char device_address_str[20 + 1];
 	const char* adapter;
@@ -132,7 +153,7 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned lo
 	GError *error = NULL;
 	char object_path[100];
 
-	get_object_path_from_mac(src, dst, object_path, sizeof(object_path));
+	get_device_path_from_mac(src, dst, object_path, sizeof(object_path));
 
 	gattlib_context_t* conn_context = calloc(sizeof(gattlib_context_t), 1);
 	if (conn_context == NULL) {
@@ -1344,7 +1365,8 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 	}
 }
 
-int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi) {
+int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
+{
 	gattlib_context_t* conn_context = connection->context;
 
 	if (rssi == NULL) {
@@ -1353,6 +1375,39 @@ int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi) {
 
 	*rssi = org_bluez_device1_get_rssi(conn_context->device);
 
+	return GATTLIB_SUCCESS;
+}
+
+int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi)
+{
+	GError *error = NULL;
+	char object_path[100];
+
+	if (rssi == NULL) {
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
+	if (adapter != NULL) {
+		get_device_path_from_mac_with_adapter((OrgBluezAdapter1*)adapter, mac_address, object_path, sizeof(object_path));
+	} else {
+		get_device_path_from_mac(NULL, mac_address, object_path, sizeof(object_path));
+	}
+
+	OrgBluezDevice1* bluez_device1 = org_bluez_device1_proxy_new_for_bus_sync(
+			G_BUS_TYPE_SYSTEM,
+			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+			"org.bluez",
+			object_path,
+			NULL,
+			&error);
+	if (error) {
+		fprintf(stderr, "Failed to connection to new DBus Bluez Device: %s\n",
+			error->message);
+		g_error_free(error);
+		return GATTLIB_ERROR_DBUS;
+	}
+
+	*rssi = org_bluez_device1_get_rssi(bluez_device1);
 	return GATTLIB_SUCCESS;
 }
 
