@@ -88,3 +88,7 @@ gattlib_register_notification.argtypes = [c_void_p, py_object, py_object]
 # void gattlib_register_on_disconnect_python(gatt_connection_t *connection, PyObject *handler, PyObject *user_data)
 gattlib_register_on_disconnect = gattlib.gattlib_register_on_disconnect_python
 gattlib_register_on_disconnect.argtypes = [c_void_p, py_object, py_object]
+
+# int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
+gattlib_get_rssi = gattlib.gattlib_get_rssi
+gattlib_get_rssi.argtypes = [c_void_p, POINTER(c_int16)]
