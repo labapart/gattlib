@@ -1365,6 +1365,7 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 	}
 }
 
+#if 0 // Disable until https://github.com/labapart/gattlib/issues/75 is resolved
 int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
 {
 	gattlib_context_t* conn_context = connection->context;
@@ -1377,6 +1378,7 @@ int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
 
 	return GATTLIB_SUCCESS;
 }
+#endif
 
 int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi)
 {
