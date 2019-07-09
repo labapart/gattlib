@@ -53,12 +53,13 @@ class Device:
         if self._connection == 0:
             raise DeviceError()
 
-    @property
-    def rssi(self):
-        _rssi = c_int16(0)
-        ret = gattlib_get_rssi(self._connection, byref(_rssi))
-        handle_return(ret)
-        return _rssi.value
+    # Disable until https://github.com/labapart/gattlib/issues/75 is resolved
+#     @property
+#     def rssi(self):
+#         _rssi = c_int16(0)
+#         ret = gattlib_get_rssi(self._connection, byref(_rssi))
+#         handle_return(ret)
+#         return _rssi.value
 
     @staticmethod
     def on_disconnection(user_data):

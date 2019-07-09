@@ -357,6 +357,7 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data);
 void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data);
 
+#if 0 // Disable until https://github.com/labapart/gattlib/issues/75 is resolved
 /**
  * @brief Function to retrieve RSSI from a GATT connection
  *
@@ -366,6 +367,7 @@ void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_ha
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi);
+#endif
 
 /**
  * @brief Function to retrieve RSSI from a MAC Address

@@ -549,10 +549,12 @@ int get_handle_from_uuid(gatt_connection_t* connection, const uuid_t* uuid, uint
 	return -1;
 }
 
+#if 0 // Disable until https://github.com/labapart/gattlib/issues/75 is resolved
 int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }
+#endif
 
 int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi)
 {
