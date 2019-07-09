@@ -89,6 +89,10 @@ extern "C" {
 		GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM | \
 		GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_LOW
 
+#define GATTLIB_DISCOVER_FILTER_USE_NONE                    0
+#define GATTLIB_DISCOVER_FILTER_USE_UUID                    (1 << 0)
+#define GATTLIB_DISCOVER_FILTER_USE_RSSI                    (1 << 1)
+
 typedef struct _gatt_connection_t gatt_connection_t;
 
 typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data);
@@ -117,10 +121,56 @@ typedef void* (*gatt_read_cb_t)(const void *buffer, size_t buffer_len);
  * @brief Open Bluetooth adapter
  *
  * @param adapter_name    With value NULL, the default adapter will be selected.
+ * @param adapter is the context of the newly opened adapter
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_adapter_open(const char* adapter_name, void** adapter);
+
+/**
+ * @brief Enable Bluetooth scanning on a given adapter
+ *
+ * @param adapter is the context of the newly opened adapter
+ * @param discovered_device_cb is the function callback called for each new Bluetooth device discovered
+ * @param timeout defines the duration of the Bluetooth scanning
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout);
+
+/**
+ * @brief Enable Bluetooth scanning on a given adapter
+ *
+ * @param adapter is the context of the newly opened adapter
+ * @param uuid_list is a NULL-terminated list of UUIDs to filter. The rule only applies to advertised UUID.
+ *        Returned devices would match any of the UUIDs of the list.
+ * @param rssi_threshold is the imposed RSSI threshold for the returned devices.
+ * @param filter defines the parameters to use for filtering. There are selected by using the macros
+ *        GATTLIB_DISCOVER_FILTER_USE_UUID and GATTLIB_DISCOVER_FILTER_USE_RSSI.
+ * @param discovered_device_cb is the function callback called for each new Bluetooth device discovered
+ * @param timeout defines the duration of the Bluetooth scanning
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+		gattlib_discovered_device_t discovered_device_cb, int timeout);
+
+/**
+ * @brief Disable Bluetooth scanning on a given adapter
+ *
+ * @param adapter is the context of the newly opened adapter
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_adapter_scan_disable(void* adapter);
+
+/**
+ * @brief Close Bluetooth adapter context
+ *
+ * @param adapter is the context of the newly opened adapter
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_adapter_close(void* adapter);
 
 /**
@@ -167,6 +217,12 @@ typedef struct {
 	uint16_t uuid16;
 	uuid_t   uuid;
 } gattlib_descriptor_t;
+
+typedef struct {
+	uuid_t   uuid;
+	uint8_t* data;
+	size_t   data_length;
+} gattlib_advertisement_data_t;
 
 /**
  * @brief Function to discover GATT Services
@@ -277,6 +333,16 @@ void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_ha
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi);
+
+/**
+ * @brief Function to retrieve Advertisement Data of the GATT connection
+ *
+ * @param connection Active GATT connection
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_get_advertisement_data(gatt_connection_t *connection, gattlib_advertisement_data_t **advertisement_data,
+		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size);
 
 int gattlib_uuid_to_string(const uuid_t *uuid, char *str, size_t n);
 int gattlib_string_to_uuid(const char *str, size_t n, uuid_t *uuid);

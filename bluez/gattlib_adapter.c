@@ -210,6 +210,12 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 	return GATTLIB_SUCCESS;
 }
 
+int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+		gattlib_discovered_device_t discovered_device_cb, int timeout)
+{
+	return GATTLIB_NOT_SUPPORTED;
+}
+
 int gattlib_adapter_scan_disable(void* adapter) {
 	int device_desc = *(int*)adapter;
 
