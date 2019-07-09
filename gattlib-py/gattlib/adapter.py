@@ -67,3 +67,11 @@ class Adapter:
     def scan_disable(self):
         ret = gattlib.gattlib_adapter_scan_disable(self._adapter)
         handle_return(ret)
+
+    def get_rssi_from_mac(self, mac_address):
+        if isinstance(mac_address, str):
+            mac_address = mac_address.encode("utf-8")
+
+        rssi = c_int16(0)
+        gattlib_get_rssi_from_mac(self._adapter, mac_address, byref(rssi))
+        return rssi.value

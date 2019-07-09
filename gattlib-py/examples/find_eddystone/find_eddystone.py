@@ -10,13 +10,14 @@ args = parser.parse_args()
 
 EDDYSTONE_COMMON_DATA_UUID = 'FEAA'
 
-
-def on_discovered_ble_device(device):
-    print("Find Eddystone device %s" % device.id)
-
-
 # Use default adapter
 default_adapter = adapter.Adapter()
+
+
+def on_discovered_ble_device(device, user_data):
+    rssi = default_adapter.get_rssi_from_mac(device.id)
+    print("Find Eddystone device %s (RSSI:%d)" % (device.id, rssi))
+
 
 # Scan for 30 seconds
 default_adapter.open()
