@@ -35,9 +35,11 @@ pkg_search_module(BLUEZ REQUIRED bluez)
 message("Build DBus gattlib for Bluez v${BLUEZ_VERSION_MAJOR}.${BLUEZ_VERSION_MINOR}")
 
 if (BLUEZ_VERSION_MINOR LESS 40)
-  set(DBUS_BLUEZ_API dbus-bluez-pre-v5.40)
+	set(DBUS_BLUEZ_API dbus-bluez-pre-v5.40)
+elseif (BLUEZ_VERSION_MINOR LESS 48)
+	set(DBUS_BLUEZ_API dbus-bluez-v5.40)
 else()
-  set(DBUS_BLUEZ_API dbus-bluez-v5.40)
+	set(DBUS_BLUEZ_API dbus-bluez-v5.48)
 endif()
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
