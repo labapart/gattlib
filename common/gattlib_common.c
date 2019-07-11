@@ -73,7 +73,7 @@ void gattlib_call_notification_handler(struct gattlib_handler *handler, const uu
 }
 
 void gattlib_call_disconnection_handler(struct gattlib_handler *handler) {
-	if (handler->type == NATIVE_NOTIFICATION) {
+	if (handler->type == NATIVE_DISCONNECTION) {
 		handler->disconnection_handler(handler->user_data);
 	}
 #if defined(WITH_PYTHON)
