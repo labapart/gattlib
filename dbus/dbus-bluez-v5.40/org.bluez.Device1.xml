@@ -30,8 +30,9 @@
 		<property name="Modalias" type="s" access="read"></property>
 		<property name="Adapter" type="o" access="read"></property>
 		<property name="TxPower" type="n" access="read"></property>
-		<!--<property name="ManufacturerData" type="" access="read"></property>-->
-		<!--<property name="ServiceData" type="" access="read"></property>-->
+		<property name="ManufacturerData" type="a{qv}" access="read"></property>
+		<property name="ServiceData" type="a{sv}" access="read"></property>
+		<property name="ServicesResolved" type="b" access="read"/>
 		
 		<!-- Was available until Bluez v5.37 to expose the list of available org.bluez.GattService1 -->
 		<property name="GattServices" type="ao" access="read"></property>

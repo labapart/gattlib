@@ -940,6 +940,33 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 	}
 }
 
+int get_bluez_device_from_mac(void *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1)
+{
+	GError *error = NULL;
+	char object_path[100];
+
+	if (adapter != NULL) {
+		get_device_path_from_mac_with_adapter((OrgBluezAdapter1*)adapter, mac_address, object_path, sizeof(object_path));
+	} else {
+		get_device_path_from_mac(NULL, mac_address, object_path, sizeof(object_path));
+	}
+
+	*bluez_device1 = org_bluez_device1_proxy_new_for_bus_sync(
+			G_BUS_TYPE_SYSTEM,
+			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+			"org.bluez",
+			object_path,
+			NULL,
+			&error);
+	if (error) {
+		fprintf(stderr, "Failed to connection to new DBus Bluez Device: %s\n", error->message);
+		g_error_free(error);
+		return GATTLIB_ERROR_DBUS;
+	}
+
+	return GATTLIB_SUCCESS;
+}
+
 #if 0 // Disable until https://github.com/labapart/gattlib/issues/75 is resolved
 int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
 {
@@ -957,41 +984,18 @@ int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
 
 int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi)
 {
-	GError *error = NULL;
-	char object_path[100];
+	OrgBluezDevice1 *bluez_device1;
+	int ret;
 
 	if (rssi == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	if (adapter != NULL) {
-		get_device_path_from_mac_with_adapter((OrgBluezAdapter1*)adapter, mac_address, object_path, sizeof(object_path));
-	} else {
-		get_device_path_from_mac(NULL, mac_address, object_path, sizeof(object_path));
-	}
-
-	OrgBluezDevice1* bluez_device1 = org_bluez_device1_proxy_new_for_bus_sync(
-			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
-			"org.bluez",
-			object_path,
-			NULL,
-			&error);
-	if (error) {
-		fprintf(stderr, "Failed to connection to new DBus Bluez Device: %s\n",
-			error->message);
-		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+	ret = get_bluez_device_from_mac(adapter, mac_address, &bluez_device1);
+	if (ret != GATTLIB_SUCCESS) {
+		return ret;
 	}
 
 	*rssi = org_bluez_device1_get_rssi(bluez_device1);
 	return GATTLIB_SUCCESS;
-}
-
-int gattlib_get_advertisement_data(gatt_connection_t *connection, gattlib_advertisement_data_t **advertisement_data,
-		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
-{
-	//gattlib_context_t* conn_context = connection->context;
-
-	return GATTLIB_NOT_SUPPORTED;
 }

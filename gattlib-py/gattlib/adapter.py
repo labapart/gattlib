@@ -1,6 +1,7 @@
 from gattlib import *
 from .device import Device
 from .exception import handle_return
+from .uuid import gattlib_uuid_to_int
 
 GATTLIB_DISCOVER_FILTER_USE_UUID = (1 << 0)
 GATTLIB_DISCOVER_FILTER_USE_RSSI = (1 << 1)
@@ -76,3 +77,45 @@ class Adapter:
         rssi = c_int16(0)
         gattlib_get_rssi_from_mac(self._adapter, mac_address, byref(rssi))
         return rssi.value
+
+    def gattlib_get_advertisement_data_from_mac(self, mac_address):
+        if isinstance(mac_address, str):
+            mac_address = mac_address.encode("utf-8")
+
+        _advertisement_data = POINTER(GattlibAdvertisementData)()
+        _advertisement_data_count = c_size_t(0)
+        _manufacturer_id = c_uint16(0)
+        _manufacturer_data = c_void_p(None)
+        _manufacturer_data_len = c_size_t(0)
+
+        ret = gattlib_get_advertisement_data_from_mac(self._adapter, mac_address,
+                                                      byref(_advertisement_data), byref(_advertisement_data_count),
+                                                      byref(_manufacturer_id),
+                                                      byref(_manufacturer_data), byref(_manufacturer_data_len))
+        handle_return(ret)
+
+        advertisement_data = {}
+        manufacturer_data = None
+
+        for i in range(0, _advertisement_data_count.value):
+            service_data = _advertisement_data[i]
+            uuid = gattlib_uuid_to_int(service_data.uuid)
+
+            pointer_type = POINTER(c_byte * service_data.data_length)
+            c_bytearray = cast(service_data.data, pointer_type)
+
+            data = bytearray(service_data.data_length)
+            for i in range(service_data.data_length):
+                data[i] = c_bytearray.contents[i] & 0xFF
+
+            advertisement_data[uuid] = data
+
+        if _manufacturer_data_len.value > 0:
+            pointer_type = POINTER(c_byte * _manufacturer_data_len.value)
+            c_bytearray = cast(_manufacturer_data, pointer_type)
+
+            manufacturer_data = bytearray(_manufacturer_data_len.value)
+            for i in range(_manufacturer_data_len.value):
+                manufacturer_data[i] = c_bytearray.contents[i] & 0xFF
+
+        return advertisement_data, _manufacturer_id.value, manufacturer_data

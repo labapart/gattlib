@@ -82,6 +82,7 @@ include_directories(. ${CMAKE_SOURCE_DIR}/common ${CMAKE_CURRENT_BINARY_DIR} ${G
 
 set(gattlib_SRCS gattlib.c
                  gattlib_adapter.c
+                 gattlib_advertisement.c
                  gattlib_char.c
                  gattlib_stream.c
                  bluez5/lib/uuid.c
