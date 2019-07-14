@@ -934,7 +934,7 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 	if (error) {
 		fprintf(stderr, "Failed to stop DBus GATT notification: %s\n", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		return GATTLIB_NOT_FOUND;
 	} else {
 		return GATTLIB_SUCCESS;
 	}
