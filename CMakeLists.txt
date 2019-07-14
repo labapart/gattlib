@@ -42,10 +42,12 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 # Expose 'gattlib.h' to all sub-directories
 include_directories(include)
 
-# Check version of Bluez to know which backend we use (ie: Bluez code or DBus)
-pkg_search_module(BLUEZ bluez)
-if (NOT BLUEZ_FOUND)
-  message(FATAL_ERROR "Please install 'libbluetooth-dev'")
+if (NOT BLUEZ_VERSION)
+	# Check version of Bluez to know which backend we use (ie: Bluez code or DBus)
+	pkg_search_module(BLUEZ bluez)
+	if (NOT BLUEZ_FOUND)
+		message(FATAL_ERROR "Please install 'libbluetooth-dev'")
+	endif()
 endif()
 
 # Extract Bluez version
