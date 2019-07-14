@@ -78,6 +78,10 @@ gattlib_read_char_by_uuid.argtypes = [c_void_p, POINTER(GattlibUuid), POINTER(c_
 gattlib_write_char_by_uuid = gattlib.gattlib_write_char_by_uuid
 gattlib_write_char_by_uuid.argtypes = [c_void_p, POINTER(GattlibUuid), c_void_p, c_size_t]
 
+# int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len)
+gattlib_write_without_response_char_by_uuid = gattlib.gattlib_write_without_response_char_by_uuid
+gattlib_write_without_response_char_by_uuid.argtypes = [c_void_p, POINTER(GattlibUuid), c_void_p, c_size_t]
+
 # int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t* uuid, gatt_stream_t **stream, uint16_t *mtu)
 gattlib_write_char_by_uuid_stream_open = gattlib.gattlib_write_char_by_uuid_stream_open
 gattlib_write_char_by_uuid_stream_open.argtypes = [c_void_p, POINTER(GattlibUuid), POINTER(c_void_p), POINTER(c_uint16)]

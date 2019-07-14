@@ -83,7 +83,7 @@ class GattCharacteristic():
 
             return value
 
-    def write(self, data):
+    def write(self, data, without_response=False):
         if not isinstance(data, bytes) and not isinstance(data, bytearray):
             raise TypeError("Data must be of bytes type to know its size.")
 
@@ -91,7 +91,10 @@ class GattCharacteristic():
         buffer = data
         buffer_len = len(data)
 
-        ret = gattlib_write_char_by_uuid(self.connection, self._gattlib_characteristic.uuid, buffer_type.from_buffer_copy(buffer), buffer_len)
+        if without_response:
+            ret = gattlib_write_without_response_char_by_uuid(self.connection, self._gattlib_characteristic.uuid, buffer_type.from_buffer_copy(buffer), buffer_len)
+        else:
+            ret = gattlib_write_char_by_uuid(self.connection, self._gattlib_characteristic.uuid, buffer_type.from_buffer_copy(buffer), buffer_len)
         handle_return(ret)
 
     def stream_open(self):
