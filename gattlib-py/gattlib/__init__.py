@@ -98,9 +98,10 @@ gattlib_register_notification.argtypes = [c_void_p, py_object, py_object]
 gattlib_register_on_disconnect = gattlib.gattlib_register_on_disconnect_python
 gattlib_register_on_disconnect.argtypes = [c_void_p, py_object, py_object]
 
+# Disable until https://github.com/labapart/gattlib/issues/75 is resolved
 # int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
-gattlib_get_rssi = gattlib.gattlib_get_rssi
-gattlib_get_rssi.argtypes = [c_void_p, POINTER(c_int16)]
+# gattlib_get_rssi = gattlib.gattlib_get_rssi
+# gattlib_get_rssi.argtypes = [c_void_p, POINTER(c_int16)]
 
 # int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi)
 gattlib_get_rssi_from_mac = gattlib.gattlib_get_rssi_from_mac
