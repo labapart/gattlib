@@ -84,6 +84,9 @@ class GattCharacteristic():
             return value
 
     def write(self, data):
+        if not isinstance(data, bytes) and not isinstance(data, bytearray):
+            raise TypeError("Data must be of bytes type to know its size.")
+
         buffer_type = c_char * len(data)
         buffer = data
         buffer_len = len(data)
@@ -108,6 +111,7 @@ class GattCharacteristic():
         handle_return(ret)
 
     def notification_stop(self):
+        """ Could raise gattlib.exception.NotFound if notification has not been registered"""
         ret = gattlib_notification_stop(self.connection, self._gattlib_characteristic.uuid)
         handle_return(ret)
 
