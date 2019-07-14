@@ -48,7 +48,7 @@ make
 
 ```
 mkdir build && cd build
-cmake -DBLUEZ_VERSION=TRUE ..
+cmake -DBLUEZ_VERSION=5.50 ..
 make
 ```
 
