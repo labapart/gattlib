@@ -40,6 +40,10 @@ def play_sample(config_characteristic, speaker_characteristic):
     config_characteristic.write(sound_config)
     # Test speaker
     speaker_characteristic.write(b'\x03')
+
+    # Wait a bit before finishing
+    time.sleep(1)
+
     m_mainloop.quit()
 
 
@@ -85,6 +89,10 @@ def play_wav_file(config_characteristic, speaker_characteristic, wav_filepath):
 
     stream.close()
     print("All WAV file has been sent")
+
+    # Wait a bit before finishing
+    time.sleep(1)
+
     m_mainloop.quit()
 
 

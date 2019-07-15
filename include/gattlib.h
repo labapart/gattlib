@@ -56,6 +56,8 @@ extern "C" {
 #define GATTLIB_NOT_SUPPORTED       4
 #define GATTLIB_DEVICE_ERROR        5
 #define GATTLIB_ERROR_DBUS          6
+#define GATTLIB_ERROR_BLUEZ         7
+#define GATTLIB_ERROR_INTERNAL      8
 
 /* GATT Characteristic Properties Bitfield values */
 #define GATTLIB_CHARACTERISTIC_BROADCAST			0x01
@@ -93,8 +95,20 @@ extern "C" {
 #define GATTLIB_DISCOVER_FILTER_USE_UUID                    (1 << 0)
 #define GATTLIB_DISCOVER_FILTER_USE_RSSI                    (1 << 1)
 
+#define GATTLIB_EDDYSTONE_TYPE_UID                          (1 << 0)
+#define GATTLIB_EDDYSTONE_TYPE_URL                          (1 << 1)
+#define GATTLIB_EDDYSTONE_TYPE_TLM                          (1 << 2)
+#define GATTLIB_EDDYSTONE_TYPE_EID                          (1 << 3)
+#define GATTLIB_EDDYSTONE_LIMIT_RSSI                        (1 << 4)
+
 typedef struct _gatt_connection_t gatt_connection_t;
 typedef struct _gatt_stream_t gatt_stream_t;
+
+typedef struct {
+	uuid_t   uuid;
+	uint8_t* data;
+	size_t   data_length;
+} gattlib_advertisement_data_t;
 
 typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data);
 
@@ -115,6 +129,24 @@ typedef void (*gattlib_disconnection_handler_t)(void* user_data);
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
 typedef void (*gattlib_discovered_device_t)(void *adapter, const char* addr, const char* name, void *user_data);
+
+/**
+ * @brief Handler called on new discovered BLE device
+ *
+ * @param adapter is the adapter that has found the BLE device
+ * @param addr is the MAC address of the BLE device
+ * @param name is the name of BLE device if advertised
+ * @param advertisement_data is an array of Service UUID and their respective data
+ * @param advertisement_data_count is the number of elements in the advertisement_data array
+ * @param manufacturer_id is the ID of the Manufacturer ID
+ * @param manufacturer_data is the data following Manufacturer ID
+ * @param manufacturer_data_size is the size of manufacturer_data
+ * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
+ */
+typedef void (*gattlib_discovered_device_with_data_t)(void *adapter, const char* addr, const char* name,
+		gattlib_advertisement_data_t *advertisement_data, size_t advertisement_data_count,
+		uint16_t manufacturer_id, uint8_t *manufacturer_data, size_t manufacturer_data_size,
+		void *user_data);
 
 /**
  * @brief Handler called on asynchronous connection when connection is ready
@@ -172,6 +204,23 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
  */
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 		gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data);
+
+/**
+ * @brief Enable Eddystone Bluetooth Device scanning on a given adapter
+ *
+ * @param adapter is the context of the newly opened adapter
+ * @param rssi_threshold is the imposed RSSI threshold for the returned devices.
+ * @param eddystone_types defines the type(s) of Eddystone advertisement data type to select.
+ *        The types are defined by the macros `GATTLIB_EDDYSTONE_TYPE_*`. The macro `GATTLIB_EDDYSTONE_LIMIT_RSSI`
+ *        can also be used to limit RSSI with rssi_threshold.
+ * @param discovered_device_cb is the function callback called for each new Bluetooth device discovered
+ * @param timeout defines the duration of the Bluetooth scanning
+ * @param user_data is the data passed to the callback `discovered_device_cb()`
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddsytone_types,
+		gattlib_discovered_device_with_data_t discovered_device_cb, int timeout, void *user_data);
 
 /**
  * @brief Disable Bluetooth scanning on a given adapter
@@ -251,12 +300,6 @@ typedef struct {
 	uint16_t uuid16;
 	uuid_t   uuid;
 } gattlib_descriptor_t;
-
-typedef struct {
-	uuid_t   uuid;
-	uint8_t* data;
-	size_t   data_length;
-} gattlib_advertisement_data_t;
 
 /**
  * @brief Function to discover GATT Services

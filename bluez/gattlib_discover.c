@@ -289,9 +289,49 @@ int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int en
 	*descriptors      = descriptor_data.descriptors;
 	*descriptor_count = descriptor_data.descriptors_count;
 
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count) {
 	return gattlib_discover_desc_range(connection, 0x0001, 0xffff, descriptors, descriptor_count);
+}
+
+/**
+ * @brief Function to retrieve Advertisement Data from a MAC Address
+ *
+ * @param adapter is the adapter the new device has been seen
+ * @param mac_address is the MAC address of the device to get the RSSI
+ * @param advertisement_data is an array of Service UUID and their respective data
+ * @param advertisement_data_count is the number of elements in the advertisement_data array
+ * @param manufacturer_id is the ID of the Manufacturer ID
+ * @param manufacturer_data is the data following Manufacturer ID
+ * @param manufacturer_data_size is the size of manufacturer_data
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_get_advertisement_data(gatt_connection_t *connection,
+		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
+		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
+{
+	return GATTLIB_NOT_SUPPORTED;
+}
+
+/**
+ * @brief Function to retrieve Advertisement Data from a MAC Address
+ *
+ * @param adapter is the adapter the new device has been seen
+ * @param mac_address is the MAC address of the device to get the RSSI
+ * @param advertisement_data is an array of Service UUID and their respective data
+ * @param advertisement_data_count is the number of elements in the advertisement_data array
+ * @param manufacturer_id is the ID of the Manufacturer ID
+ * @param manufacturer_data is the data following Manufacturer ID
+ * @param manufacturer_data_size is the size of manufacturer_data
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_get_advertisement_data_from_mac(void *adapter, const char *mac_address,
+		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
+		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
+{
+	return GATTLIB_NOT_SUPPORTED;
 }
