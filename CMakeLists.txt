@@ -84,6 +84,8 @@ else()
   link_directories(${PROJECT_BINARY_DIR}/bluez)
 endif()
 
+add_subdirectory(docs)
+
 # Generate pkg-config file before building the examples
 configure_file(dbus/gattlib.pc.in ${PROJECT_BINARY_DIR}/gattlib.pc @ONLY)
 

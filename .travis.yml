@@ -14,6 +14,7 @@ addons:
     - rpm
     - python3-pip
     - python3-setuptools
+    - doxygen
 
 install:
   - |
@@ -22,6 +23,8 @@ install:
       tar xf gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz
     fi
   - pip3 install --upgrade cross-sysroot
+  - pip3 install Sphinx
+  - pip3 install breathe
 
 script:
   # Build default Gattlib - Debug
