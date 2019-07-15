@@ -175,6 +175,7 @@ static void *connection_thread(void* arg) {
 	g_main_loop_run(loop_thread->loop);
 	g_main_loop_unref(loop_thread->loop);
 	assert(0);
+	return NULL;
 }
 
 static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const gchar *dst,
@@ -489,7 +490,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 		pthread_detach(g_gattlib_thread.thread);
 	}
 
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 GSource* gattlib_watch_connection_full(GIOChannel* io, GIOCondition condition,
@@ -530,10 +531,10 @@ int get_uuid_from_handle(gatt_connection_t* connection, uint16_t handle, uuid_t*
 	for (i = 0; i < conn_context->characteristic_count; i++) {
 		if (conn_context->characteristics[i].value_handle == handle) {
 			memcpy(uuid, &conn_context->characteristics[i].uuid, sizeof(uuid_t));
-			return 0;
+			return GATTLIB_SUCCESS;
 		}
 	}
-	return -1;
+	return GATTLIB_NOT_FOUND;
 }
 
 int get_handle_from_uuid(gatt_connection_t* connection, const uuid_t* uuid, uint16_t* handle) {
@@ -543,10 +544,10 @@ int get_handle_from_uuid(gatt_connection_t* connection, const uuid_t* uuid, uint
 	for (i = 0; i < conn_context->characteristic_count; i++) {
 		if (gattlib_uuid_cmp(&conn_context->characteristics[i].uuid, uuid) == 0) {
 			*handle = conn_context->characteristics[i].value_handle;
-			return 0;
+			return GATTLIB_SUCCESS;
 		}
 	}
-	return -1;
+	return GATTLIB_NOT_FOUND;
 }
 
 #if 0 // Disable until https://github.com/labapart/gattlib/issues/75 is resolved
