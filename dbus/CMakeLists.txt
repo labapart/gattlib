@@ -87,6 +87,7 @@ set(gattlib_SRCS gattlib.c
                  gattlib_stream.c
                  bluez5/lib/uuid.c
                  ${CMAKE_SOURCE_DIR}/common/gattlib_common.c
+                 ${CMAKE_SOURCE_DIR}/common/gattlib_eddystone.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-device1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattcharacteristic1.c

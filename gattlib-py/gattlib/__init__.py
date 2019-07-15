@@ -66,12 +66,25 @@ gattlib_adapter_open = gattlib.gattlib_adapter_open
 gattlib_adapter_open.argtypes = [c_char_p, POINTER(c_void_p)]
 
 # typedef void (*gattlib_discovered_device_t)(void *adapter, const char* addr, const char* name, void *user_data)
-gattlib_discovered_device_type = CFUNCTYPE(None, c_void_p, c_char_p, c_char_p, c_void_p)
+gattlib_discovered_device_type = CFUNCTYPE(None, c_void_p, c_char_p, c_char_p, py_object)
+
+# typedef void (*gattlib_discovered_device_with_data_t)(void *adapter, const char* addr, const char* name,
+#        gattlib_advertisement_data_t *advertisement_data, size_t advertisement_data_count,
+#        uint16_t manufacturer_id, uint8_t *manufacturer_data, size_t manufacturer_data_size,
+#        void *user_data);
+gattlib_discovered_device_with_data_type = CFUNCTYPE(None, c_void_p, c_char_p, c_char_p,
+                                                     POINTER(GattlibAdvertisementData), c_size_t, c_uint16, c_void_p, c_size_t,
+                                                     py_object)
 
 # int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 #        gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data)
 gattlib_adapter_scan_enable_with_filter = gattlib.gattlib_adapter_scan_enable_with_filter
-gattlib_adapter_scan_enable_with_filter.argtypes = [c_void_p, POINTER(POINTER(GattlibUuid)), c_int16, c_uint32, gattlib_discovered_device_type, c_int, c_void_p]
+gattlib_adapter_scan_enable_with_filter.argtypes = [c_void_p, POINTER(POINTER(GattlibUuid)), c_int16, c_uint32, gattlib_discovered_device_type, c_int, py_object]
+
+# int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddsytone_types,
+#        gattlib_discovered_device_with_data_t discovered_device_cb, int timeout, void *user_data)
+gattlib_adapter_scan_eddystone = gattlib.gattlib_adapter_scan_eddystone
+gattlib_adapter_scan_eddystone.argtypes = [c_void_p, c_int16, c_uint32, gattlib_discovered_device_with_data_type, c_int, py_object]
 
 # int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count);
 gattlib_discover_primary = gattlib.gattlib_discover_primary

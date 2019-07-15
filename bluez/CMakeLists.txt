@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2016-2017  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2016-2019  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -76,7 +76,8 @@ set(gattlib_SRCS gattlib_adapter.c
                  gattlib_connect.c
                  gattlib_discover.c
                  gattlib_read_write.c
-                 ${CMAKE_SOURCE_DIR}/common/gattlib_common.c)
+                 ${CMAKE_SOURCE_DIR}/common/gattlib_common.c
+                 ${CMAKE_SOURCE_DIR}/common/gattlib_eddystone.c)
 
 # Added Glib support
 pkg_search_module(GLIB REQUIRED glib-2.0)

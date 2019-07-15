@@ -52,6 +52,8 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
+	*manufacturer_id = 0;
+	*manufacturer_data_size = 0;
 	manufacturer_data_variant = org_bluez_device1_get_manufacturer_data(bluez_device1);
 	if (manufacturer_data_variant != NULL) {
 		fprintf(stderr, "Warning: Manufacturer Data not supported: %s\n",
@@ -92,6 +94,8 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 
 			index++;
 		}
+	} else {
+		*advertisement_data_count = 0;
 	}
 
 	return GATTLIB_SUCCESS;
