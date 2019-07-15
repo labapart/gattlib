@@ -32,7 +32,7 @@ static void on_eddystone_discovered_device(void *adapter, const char* addr, cons
 			callback_data->user_data);
 }
 
-int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddsytone_types,
+int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddystone_types,
 		gattlib_discovered_device_with_data_t discovered_device_cb, int timeout, void *user_data)
 {
 	uuid_t eddystone_uuid;
@@ -47,7 +47,7 @@ int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32
 
 	uuid_t *uuid_filter_list[] = { &eddystone_uuid, NULL };
 
-	if (eddsytone_types & GATTLIB_EDDYSTONE_LIMIT_RSSI) {
+	if (eddystone_types & GATTLIB_EDDYSTONE_LIMIT_RSSI) {
 		enabled_filters |= GATTLIB_DISCOVER_FILTER_USE_RSSI;
 	}
 
