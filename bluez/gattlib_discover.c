@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2017 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -85,7 +85,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	ret = gatt_discover_primary(conn_context->attrib, NULL, primary_all_cb, &user_data);
 	if (ret == 0) {
 		fprintf(stderr, "Fail to discover primary services.\n");
-		return 1;
+		return GATTLIB_ERROR_BLUEZ;
 	}
 
 	// Wait for completion
@@ -100,7 +100,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		*services_count = user_data.services_count;
 	}
 
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 struct characteristic_cb_t {
@@ -157,7 +157,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 	ret = gatt_discover_char(conn_context->attrib, start, end, NULL, characteristic_cb, &user_data);
 	if (ret == 0) {
 		fprintf(stderr, "Fail to discover characteristics.\n");
-		return 1;
+		return GATTLIB_ERROR_BLUEZ;
 	}
 
 	// Wait for completion
@@ -167,7 +167,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 	*characteristics       = user_data.characteristics;
 	*characteristics_count = user_data.characteristics_count;
 
-	return 0;
+	return GATTLIB_SUCCESS;
 }
 
 int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristics_count) {
@@ -278,7 +278,7 @@ int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int en
 #endif
 	if (ret == 0) {
 		fprintf(stderr, "Fail to discover descriptors.\n");
-		return 1;
+		return GATTLIB_ERROR_BLUEZ;
 	}
 
 	// Wait for completion
