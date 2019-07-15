@@ -380,8 +380,38 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
  */
 int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
 
+/**
+ * @brief Create a stream to a GATT characteristic to write data in continue
+ *
+ * @note: The GATT characteristic must support 'Write-Without-Response'
+ *
+ * @param connection Active GATT connection
+ * @param uuid UUID of the GATT characteristic to write
+ * @param stream is the object that is attached to the GATT characteristic that is used to write data to
+ * @param mtu is the MTU of the GATT connection to optimise the stream writting
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t* uuid, gatt_stream_t **stream, uint16_t *mtu);
+
+/**
+ * @brief Write data to the stream previously created with `gattlib_write_char_by_uuid_stream_open()`
+ *
+ * @param stream is the object that is attached to the GATT characteristic that is used to write data to
+ * @param buffer is the data to write to the stream
+ * @param buffer_len is the length of the buffer to write
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_write_char_stream_write(gatt_stream_t *stream, const void *buffer, size_t buffer_len);
+
+/**
+ * @brief Close the stream previously created with `gattlib_write_char_by_uuid_stream_open()`
+ *
+ * @param stream is the object that is attached to the GATT characteristic that is used to write data to
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
 int gattlib_write_char_stream_close(gatt_stream_t *stream);
 
 /**
