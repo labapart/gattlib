@@ -61,6 +61,9 @@ int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t
 	    &out_fd, mtu,
 		&fd_list,
 	    NULL /* cancellable */, &error);
+
+	g_variant_builder_unref(variant_options);
+
 	if (error != NULL) {
 		fprintf(stderr, "Failed to acquired write DBus GATT characteristic: %s\n", error->message);
 		g_error_free(error);

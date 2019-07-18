@@ -94,6 +94,7 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 
 			index++;
 		}
+		g_variant_iter_free(iter);
 	} else {
 		*advertisement_data_count = 0;
 	}
@@ -121,12 +122,17 @@ int gattlib_get_advertisement_data_from_mac(void *adapter, const char *mac_addre
 
 	ret = get_bluez_device_from_mac(adapter, mac_address, &bluez_device1);
 	if (ret != GATTLIB_SUCCESS) {
+		g_object_unref(bluez_device1);
 		return ret;
 	}
 
-	return get_advertisement_data_from_device(bluez_device1,
+	ret = get_advertisement_data_from_device(bluez_device1,
 			advertisement_data, advertisement_data_count,
 			manufacturer_id, manufacturer_data, manufacturer_data_size);
+
+	g_object_unref(bluez_device1);
+
+	return ret;
 }
 
 #endif /* #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40) */
