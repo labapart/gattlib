@@ -66,6 +66,7 @@ gboolean on_handle_device_property_change(
 				}
 			}
 		}
+		g_variant_iter_free(iter);
 	}
 	return TRUE;
 }
@@ -374,6 +375,8 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 			continue;
 		}
 
+		g_object_unref(interface);
+
 		error = NULL;
 		OrgBluezGattService1* service_proxy = org_bluez_gatt_service1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM,
@@ -410,9 +413,12 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 				if (!interface) {
 					continue;
 				} else if (strncmp(object_path, characteristic_path, strlen(object_path)) != 0) {
+					g_object_unref(interface);
 					continue;
 				} else {
 					int char_handle;
+
+					g_object_unref(interface);
 
 					// Object path is in the form '/org/bluez/hci0/dev_DE_79_A2_A1_E9_FA/service0024/char0029'.
 					// We convert the last 4 hex characters into the handle
@@ -628,6 +634,8 @@ static void add_characteristics_from_service(GDBusObjectManager *device_manager,
 			continue;
 		}
 
+		g_object_unref(interface);
+
 		OrgBluezGattCharacteristic1* characteristic = org_bluez_gatt_characteristic1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM,
 				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
@@ -689,6 +697,8 @@ static void add_characteristics_from_service(GDBusObjectManager *device_manager,
 
 		g_object_unref(characteristic);
 	}
+
+	g_list_free_full(objects, g_object_unref);
 }
 
 int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
@@ -724,6 +734,9 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 		if (!interface) {
 			continue;
 		}
+
+		g_object_unref(interface);
+
 		count_max++;
 	}
 
@@ -742,6 +755,8 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 		if (!interface) {
 			continue;
 		}
+
+		g_object_unref(interface);
 
 		error = NULL;
 		OrgBluezGattService1* service_proxy = org_bluez_gatt_service1_proxy_new_for_bus_sync(
@@ -825,6 +840,7 @@ gboolean on_handle_battery_level_property_change(
 					break;
 				}
 			}
+			g_variant_iter_free(iter);
 		}
 	}
 	return TRUE;
@@ -863,6 +879,7 @@ static gboolean on_handle_characteristic_property_change(
 					break;
 				}
 			}
+			g_variant_iter_free(iter);
 		}
 	}
 	return TRUE;
@@ -993,9 +1010,12 @@ int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *r
 
 	ret = get_bluez_device_from_mac(adapter, mac_address, &bluez_device1);
 	if (ret != GATTLIB_SUCCESS) {
+		g_object_unref(bluez_device1);
 		return ret;
 	}
 
 	*rssi = org_bluez_device1_get_rssi(bluez_device1);
+
+	g_object_unref(bluez_device1);
 	return GATTLIB_SUCCESS;
 }

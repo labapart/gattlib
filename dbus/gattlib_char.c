@@ -155,6 +155,8 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 
 		interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattCharacteristic1");
 		if (interface) {
+			g_object_unref(interface);
+
 			found = handle_dbus_gattcharacteristic_from_path(conn_context, uuid, &dbus_characteristic, object_path, &error);
 			if (found) {
 				break;
@@ -165,6 +167,8 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
 			interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.Battery1");
 			if (interface) {
+				g_object_unref(interface);
+
 				found = handle_dbus_battery_from_uuid(conn_context, uuid, &dbus_characteristic, object_path, &error);
 				if (found) {
 					break;
@@ -217,6 +221,8 @@ static struct dbus_characteristic get_characteristic_from_handle(gatt_connection
 
 		interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattCharacteristic1");
 		if (interface) {
+			g_object_unref(interface);
+
 			// Object path is in the form '/org/bluez/hci0/dev_DE_79_A2_A1_E9_FA/service0024'.
 			// We convert the last 4 hex characters into the handle
 			sscanf(object_path + strlen(object_path) - 4, "%x", &char_handle);
@@ -241,6 +247,7 @@ static struct dbus_characteristic get_characteristic_from_handle(gatt_connection
 static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteristic, void **buffer, size_t* buffer_len) {
 	GVariant *out_value;
 	GError *error = NULL;
+	int ret = GATTLIB_SUCCESS;
 
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 	org_bluez_gatt_characteristic1_call_read_value_sync(
@@ -262,7 +269,8 @@ static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteris
 	if (const_buffer) {
 		*buffer = malloc(n_elements);
 		if (*buffer == NULL) {
-			return GATTLIB_OUT_OF_MEMORY;
+			ret = GATTLIB_OUT_OF_MEMORY;
+			goto EXIT;
 		}
 
 		*buffer_len = n_elements;
@@ -271,12 +279,10 @@ static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteris
 		*buffer_len = 0;
 	}
 
+EXIT:
 	g_object_unref(dbus_characteristic->gatt);
-
-#if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
-	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
-#endif
-	return GATTLIB_SUCCESS;
+	g_variant_unref(out_value);
+	return ret;
 }
 
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
@@ -286,6 +292,7 @@ static int read_battery_level(struct dbus_characteristic *dbus_characteristic, v
 	memcpy(buffer, &percentage, sizeof(uint8_t));
 	*buffer_len = sizeof(uint8_t);
 
+	g_object_unref(dbus_characteristic->battery);
 	return GATTLIB_SUCCESS;
 }
 #endif
@@ -308,6 +315,8 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void 
 }
 
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb) {
+	int ret = GATTLIB_SUCCESS;
+
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return GATTLIB_NOT_FOUND;
@@ -342,7 +351,8 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	if (error != NULL) {
 		fprintf(stderr, "Failed to read DBus GATT characteristic: %s\n", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		ret = GATTLIB_ERROR_DBUS;
+		goto EXIT;
 	}
 
 	gsize n_elements;
@@ -352,17 +362,17 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	}
 
 	g_object_unref(dbus_characteristic.gatt);
+	g_variant_unref(out_value);
 
-#if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
-	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
-#endif
-	return GATTLIB_SUCCESS;
+EXIT:
+	return ret;
 }
 
 static int write_char(struct dbus_characteristic *dbus_characteristic, const void* buffer, size_t buffer_len, uint32_t options)
 {
 	GVariant *value = g_variant_new_from_data(G_VARIANT_TYPE ("ay"), buffer, buffer_len, TRUE, NULL, NULL);
 	GError *error = NULL;
+	int ret = GATTLIB_SUCCESS;
 
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 	org_bluez_gatt_characteristic1_call_write_value_sync(dbus_characteristic->gatt, value, NULL, &error);
@@ -380,14 +390,15 @@ static int write_char(struct dbus_characteristic *dbus_characteristic, const voi
 	if (error != NULL) {
 		fprintf(stderr, "Failed to write DBus GATT characteristic: %s\n", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		ret = GATTLIB_ERROR_DBUS;
+		goto EXIT;
 	}
 
 	g_object_unref(dbus_characteristic->gatt);
-#if BLUEZ_VERSION >= BLUEZ_VERSIONS(5, 40)
-	//g_variant_unref(in_params); See: https://github.com/labapart/gattlib/issues/28#issuecomment-311486629
-#endif
-	return GATTLIB_SUCCESS;
+
+EXIT:
+	g_variant_unref(value);
+	return ret;
 }
 
 int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
