@@ -56,6 +56,7 @@ static bool handle_dbus_gattcharacteristic_from_path(gattlib_context_t* conn_con
 			gattlib_string_to_uuid(characteristic_uuid_str, strlen(characteristic_uuid_str) + 1, &characteristic_uuid);
 
 			if (gattlib_uuid_cmp(uuid, &characteristic_uuid) != 0) {
+				g_object_unref(characteristic);
 				return false;
 			}
 		}
@@ -280,7 +281,6 @@ static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteris
 	}
 
 EXIT:
-	g_object_unref(dbus_characteristic->gatt);
 	g_variant_unref(out_value);
 	return ret;
 }
@@ -308,9 +308,15 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void 
 	}
 #endif
 	else {
+		int ret;
+
 		assert(dbus_characteristic.type == TYPE_GATT);
 
-		return read_gatt_characteristic(&dbus_characteristic, buffer, buffer_len);
+		ret = read_gatt_characteristic(&dbus_characteristic, buffer, buffer_len);
+
+		g_object_unref(dbus_characteristic.gatt);
+
+		return ret;
 	}
 }
 
@@ -394,14 +400,15 @@ static int write_char(struct dbus_characteristic *dbus_characteristic, const voi
 		goto EXIT;
 	}
 
-	g_object_unref(dbus_characteristic->gatt);
-
 EXIT:
 	g_variant_unref(value);
 	return ret;
 }
 
-int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
+int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len)
+{
+	int ret;
+
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return GATTLIB_NOT_FOUND;
@@ -411,20 +418,31 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
 
-	return write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITH_RESPONSE);
+	ret = write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITH_RESPONSE);
+
+	g_object_unref(dbus_characteristic.gatt);
+	return ret;
 }
 
-int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len) {
+int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len)
+{
+	int ret;
+
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_handle(connection, handle);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return GATTLIB_NOT_FOUND;
 	}
 
-	return write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITH_RESPONSE);
+	ret = write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITH_RESPONSE);
+
+	g_object_unref(dbus_characteristic.gatt);
+	return ret;
 }
 
 int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len)
 {
+	int ret;
+
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return GATTLIB_NOT_FOUND;
@@ -434,15 +452,23 @@ int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, u
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
 
-	return write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITHOUT_RESPONSE);
+	ret = write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITHOUT_RESPONSE);
+
+	g_object_unref(dbus_characteristic.gatt);
+	return ret;
 }
 
 int gattlib_write_without_response_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len)
 {
+	int ret;
+
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_handle(connection, handle);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return GATTLIB_NOT_FOUND;
 	}
 
-	return write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITHOUT_RESPONSE);
+	ret = write_char(&dbus_characteristic, buffer, buffer_len, BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITHOUT_RESPONSE);
+
+	g_object_unref(dbus_characteristic.gatt);
+	return ret;
 }
