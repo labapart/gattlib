@@ -116,7 +116,11 @@ Examples
 
         ./examples/nordic_uart/nordic_uart
 
-**Note:** `examples/gatttool` has been partially ported to gattlib. There are two reasons: the laziness
+**Note 1:** [The example 'read/write mem'](/examples/read_write_mem/read_write.c) is similar to
+[the example 'read/write'](/examples/read_write/read_write.c) except a GLib loop is used to allows
+the memory to be freed by Glib. Without this loop, some memory could be locked.
+
+**Note 2:** `examples/gatttool` has been partially ported to gattlib. There are two reasons: the laziness
  (some of the GATT functions could be replaced by their gattlib equivalent) and the completeness (there
  are still some missing functions in gattlib).
 
