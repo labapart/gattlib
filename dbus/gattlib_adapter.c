@@ -164,7 +164,6 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 		}
 
 		g_variant_builder_add(&arg_properties_builder, "{sv}", "UUIDs", g_variant_builder_end(&list_uuid_builder));
-		g_variant_builder_unref(&list_uuid_builder);
 	}
 
 	if (enabled_filters & GATTLIB_DISCOVER_FILTER_USE_RSSI) {
@@ -175,8 +174,6 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 
 	org_bluez_adapter1_call_set_discovery_filter_sync((OrgBluezAdapter1*)adapter,
 			g_variant_builder_end(&arg_properties_builder), NULL, &error);
-
-	g_variant_builder_unref(&arg_properties_builder);
 
 	if (error) {
 		printf("error: %d.%d\n", error->domain, error->code);
