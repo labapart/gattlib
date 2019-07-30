@@ -396,12 +396,14 @@ static int write_char(struct dbus_characteristic *dbus_characteristic, const voi
 	if (error != NULL) {
 		fprintf(stderr, "Failed to write DBus GATT characteristic: %s\n", error->message);
 		g_error_free(error);
-		ret = GATTLIB_ERROR_DBUS;
-		goto EXIT;
+		return GATTLIB_ERROR_DBUS;
 	}
 
-EXIT:
-	g_variant_unref(value);
+	//
+	// @note: No need to free `value` has it is freed by org_bluez_gatt_characteristic1_call_write_value_sync()
+	//        See: https://developer.gnome.org/gio/stable/GDBusProxy.html#g-dbus-proxy-call
+	//
+
 	return ret;
 }
 
