@@ -1,0 +1,1 @@
+`gattlib-py` is a wrapper for `gattlib` library.
