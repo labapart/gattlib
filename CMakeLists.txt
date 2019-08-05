@@ -111,11 +111,13 @@ endif()
 # Packaging
 #
 set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (default: /usr).")
-if (ENV{TRAVIS_TAG} AND (NOT "ENV{TRAVIS_TAG}" STREQUAL "dev"))
+if (DEFINED ENV{TRAVIS_TAG} AND (NOT "ENV{TRAVIS_TAG}" STREQUAL "dev"))
   message("Package Gattlib for tagged version $ENV{TRAVIS_TAG}")
-  set(CPACK_PACKAGE_VERSION $ENV{TRAVIS_TAG})
+
+  # Transform 'v0.3' into '0.3' and 'v0.3-rc1' into '0.3-rc1'
+  string(REGEX REPLACE "v([0-9]+).([0-9]+)(.*)" "\\1.\\2\\3" CPACK_PACKAGE_VERSION $ENV{TRAVIS_TAG})
 else()
-  set(CPACK_PACKAGE_VERSION 0.2-dev)
+  set(CPACK_PACKAGE_VERSION 0.3-dev)
   message("Package Gattlib for development version $ENV{CPACK_PACKAGE_VERSION}")
 endif()
 set(CPACK_PACKAGE_CONTACT "Olivier Martin <olivier@labapart.com>")
