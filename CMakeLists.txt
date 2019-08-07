@@ -111,7 +111,7 @@ endif()
 # Packaging
 #
 set(CPACK_PACKAGE_INSTALL_DIRECTORY /usr CACHE STRING "Install directory (default: /usr).")
-if (DEFINED ENV{TRAVIS_TAG} AND (NOT "ENV{TRAVIS_TAG}" STREQUAL "dev"))
+if (ENV{TRAVIS_TAG} AND (NOT "ENV{TRAVIS_TAG}" STREQUAL "dev"))
   message("Package Gattlib for tagged version $ENV{TRAVIS_TAG}")
 
   # Transform 'v0.3' into '0.3' and 'v0.3-rc1' into '0.3-rc1'
