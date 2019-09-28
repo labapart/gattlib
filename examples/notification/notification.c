@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 
 	ret = gattlib_notification_start(connection, &g_battery_level_uuid);
 	if (ret) {
-		fprintf(stderr, "Fail to start notification\n.");
+		fprintf(stderr, "Fail to start notification.\n");
 		goto DISCONNECT;
 	}
 
