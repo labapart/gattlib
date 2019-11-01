@@ -56,8 +56,33 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 	*manufacturer_data_size = 0;
 	manufacturer_data_variant = org_bluez_device1_get_manufacturer_data(bluez_device1);
 	if (manufacturer_data_variant != NULL) {
-		fprintf(stderr, "Warning: Manufacturer Data not supported: %s\n",
+		if (g_variant_n_children(manufacturer_data_variant) != 1) {
+			fprintf(stderr, "Warning: Manufacturer Data with multiple children: %s\n",
 				g_variant_print(manufacturer_data_variant, TRUE));
+			return GATTLIB_NOT_SUPPORTED;
+		}
+		GVariant* manufacturer_data_dict = g_variant_get_child_value(manufacturer_data_variant, 0);
+		GVariantIter *iter;
+		GVariant* values;
+
+		g_variant_get(manufacturer_data_dict, "{qv}", manufacturer_id, &values);
+		*manufacturer_data_size = g_variant_n_children(values);
+
+		*manufacturer_data = calloc(*manufacturer_data_size, sizeof(guchar));
+		if (*manufacturer_data == NULL) {
+			return GATTLIB_OUT_OF_MEMORY;
+		}
+
+		GVariant* value;
+		g_variant_get(values, "ay", &iter);
+		size_t index = 0;
+
+		while (value = g_variant_iter_next_value(iter))
+		{
+			g_variant_get(value, "y", &(*manufacturer_data)[index++]);
+			g_variant_unref(value);
+		}
+		g_variant_iter_free(iter);
 	}
 
 	service_data_variant = org_bluez_device1_get_service_data(bluez_device1);
