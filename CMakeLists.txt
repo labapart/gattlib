@@ -152,7 +152,8 @@ endif()
 #
 # List of file to install
 #
-install(FILES include/gattlib.h DESTINATION include)
-install(FILES ${PROJECT_BINARY_DIR}/gattlib.pc DESTINATION lib/pkgconfig)
+include(GNUInstallDirs)
+install(FILES include/gattlib.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${PROJECT_BINARY_DIR}/gattlib.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 include(CPack)
