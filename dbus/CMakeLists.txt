@@ -19,7 +19,7 @@
 #  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 
 find_package(PkgConfig REQUIRED)
 
@@ -119,4 +119,6 @@ endif()
 add_library(gattlib SHARED ${gattlib_SRCS})
 target_link_libraries(gattlib ${gattlib_LIBS})
 
-install(TARGETS gattlib LIBRARY DESTINATION lib)
+include(GNUInstallDirs)
+
+install(TARGETS gattlib LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
