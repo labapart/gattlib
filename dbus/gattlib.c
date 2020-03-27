@@ -885,6 +885,44 @@ static gboolean on_handle_characteristic_property_change(
 	return TRUE;
 }
 
+static gboolean on_handle_characteristic_indication(
+	    OrgBluezGattCharacteristic1 *object,
+	    GVariant *arg_changed_properties,
+	    const gchar *const *arg_invalidated_properties,
+	    gpointer user_data)
+{
+	gatt_connection_t* connection = user_data;
+
+	if (gattlib_has_valid_handler(&connection->indication)) {
+		// Retrieve 'Value' from 'arg_changed_properties'
+		if (g_variant_n_children (arg_changed_properties) > 0) {
+			GVariantIter *iter;
+			const gchar *key;
+			GVariant *value;
+
+			g_variant_get (arg_changed_properties, "a{sv}", &iter);
+			while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
+				if (strcmp(key, "Value") == 0) {
+					uuid_t uuid;
+					size_t data_length;
+					const uint8_t* data = g_variant_get_fixed_array(value, &data_length, sizeof(guchar));
+
+					gattlib_string_to_uuid(
+							org_bluez_gatt_characteristic1_get_uuid(object),
+							MAX_LEN_UUID_STR + 1,
+							&uuid);
+
+					gattlib_call_notification_handler(&connection->indication,
+							&uuid, data, data_length);
+					break;
+				}
+			}
+			g_variant_iter_free(iter);
+		}
+	}
+	return TRUE;
+}
+
 int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
@@ -950,6 +988,78 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 
 	if (error) {
 		fprintf(stderr, "Failed to stop DBus GATT notification: %s\n", error->message);
+		g_error_free(error);
+		return GATTLIB_NOT_FOUND;
+	} else {
+		return GATTLIB_SUCCESS;
+	}
+}
+
+int gattlib_indication_start(gatt_connection_t* connection, const uuid_t* uuid) {
+	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
+	if (dbus_characteristic.type == TYPE_NONE) {
+		return GATTLIB_NOT_FOUND;
+	}
+#if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
+	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
+		// Register a handle for notification
+		g_signal_connect(dbus_characteristic.battery,
+			"g-properties-changed",
+			G_CALLBACK (on_handle_battery_level_property_change),
+			connection);
+
+		return GATTLIB_SUCCESS;
+	} else {
+		assert(dbus_characteristic.type == TYPE_GATT);
+	}
+#endif
+
+	// Register a handle for notification
+	g_signal_connect(dbus_characteristic.gatt,
+		"g-properties-changed",
+		G_CALLBACK (on_handle_characteristic_indication),
+		connection);
+
+	GError *error = NULL;
+	org_bluez_gatt_characteristic1_call_start_notify_sync(dbus_characteristic.gatt, NULL, &error);
+
+	if (error) {
+		fprintf(stderr, "Failed to start DBus GATT indication: %s\n", error->message);
+		g_error_free(error);
+		return GATTLIB_ERROR_DBUS;
+	} else {
+		return GATTLIB_SUCCESS;
+	}
+}
+
+int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
+	if (dbus_characteristic.type == TYPE_NONE) {
+		return GATTLIB_NOT_FOUND;
+	}
+#if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
+	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
+		g_signal_handlers_disconnect_by_func(
+				dbus_characteristic.battery,
+				G_CALLBACK (on_handle_battery_level_property_change),
+				connection);
+		return GATTLIB_SUCCESS;
+	} else {
+		assert(dbus_characteristic.type == TYPE_GATT);
+	}
+#endif
+
+	g_signal_handlers_disconnect_by_func(
+			dbus_characteristic.gatt,
+			G_CALLBACK (on_handle_characteristic_indication),
+			connection);
+
+	GError *error = NULL;
+	org_bluez_gatt_characteristic1_call_stop_notify_sync(
+		dbus_characteristic.gatt, NULL, &error);
+
+	if (error) {
+		fprintf(stderr, "Failed to stop DBus GATT indication: %s\n", error->message);
 		g_error_free(error);
 		return GATTLIB_NOT_FOUND;
 	} else {
