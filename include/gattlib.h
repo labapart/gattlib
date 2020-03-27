@@ -531,6 +531,26 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
 int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid);
 
 /*
+ * @brief Enable indication on GATT characteristic represented by its UUID
+ *
+ * @param connection Active GATT connection
+ * @param uuid UUID of the characteristic that will trigger the indication
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_indication_start(gatt_connection_t* connection, const uuid_t* uuid);
+
+/*
+ * @brief Disable indication on GATT characteristic represented by its UUID
+ *
+ * @param connection Active GATT connection
+ * @param uuid UUID of the characteristic that will trigger the indication
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid);
+
+/*
  * @brief Register a handle for the GATT notifications
  *
  * @param connection Active GATT connection
