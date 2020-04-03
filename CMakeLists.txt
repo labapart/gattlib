@@ -87,7 +87,7 @@ else()
 endif()
 
 if(GATTLIB_BUILD_DOCS)
-  if (NOT Doxygen)
+  if (NOT Doxygen_FOUND)
     message(FATAL_ERROR "Gattlib documentation requires Doxygen. Or disable doc generation with '-DGATTLIB_BUILD_DOCS=OFF'")
   endif()
 
