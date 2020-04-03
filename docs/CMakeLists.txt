@@ -31,14 +31,17 @@ add_custom_target(gattlib-doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE})
 #
 
 find_program(SPHINX_EXECUTABLE NAMES sphinx-build DOC "Path to sphinx-build executable")
- 
-set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
-set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/docs/gattlib/sphinx)
- 
-add_custom_target(Sphinx ALL
-                  COMMAND ${SPHINX_EXECUTABLE} -b html
-                  		-Dbreathe_projects.gattlib=${DOXYGEN_OUTPUT_DIR}/xml
-                  		${SPHINX_SOURCE} ${SPHINX_BUILD}
-                  DEPENDS ${DOXYGEN_INDEX_FILE}
-                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                  COMMENT "Generating documentation with Sphinx")
+if (SPHINX_EXECUTABLE)
+    set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
+    set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/docs/gattlib/sphinx)
+
+    add_custom_target(Sphinx ALL
+                      COMMAND ${SPHINX_EXECUTABLE} -b html
+                              -Dbreathe_projects.gattlib=${DOXYGEN_OUTPUT_DIR}/xml
+                              ${SPHINX_SOURCE} ${SPHINX_BUILD}
+                      DEPENDS ${DOXYGEN_INDEX_FILE}
+                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                      COMMENT "Generating documentation with Sphinx")
+else()
+    message("Install Sphinx to generate Python documentation")
+endif()
