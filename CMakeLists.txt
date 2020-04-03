@@ -32,6 +32,7 @@ option(GATTLIB_SHARED_LIB "Build GattLib as a shared library" YES)
 option(GATTLIB_BUILD_DOCS "Build GattLib docs" YES)
 
 find_package(PkgConfig REQUIRED)
+find_package(Doxygen)
 
 # Define 'Debug' as the default build type
 if (NOT CMAKE_BUILD_TYPE)
@@ -86,6 +87,10 @@ else()
 endif()
 
 if(GATTLIB_BUILD_DOCS)
+  if (NOT Doxygen)
+    message(FATAL_ERROR "Gattlib documentation requires Doxygen. Or disable doc generation with '-DGATTLIB_BUILD_DOCS=OFF'")
+  endif()
+
   add_subdirectory(docs)
 endif()
 
