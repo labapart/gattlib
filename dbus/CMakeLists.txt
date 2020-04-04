@@ -103,15 +103,11 @@ set(gattlib_LIBS ${GLIB_LDFLAGS} ${GIO_UNIX_LDFLAGS})
 #
 # Add Python Support
 #
-pkg_search_module(PYTHON python3)
-if (NOT PYTHON_FOUND)
-	pkg_search_module(PYTHON python)
-endif()
+find_package(Python COMPONENTS Interpreter Development)
+if (Python_Development_FOUND)
+	include_directories(${Python_INCLUDE_DIRS})
+	list(APPEND gattlib_LIBS ${Python_LIBRARIES})
 
-if (PYTHON_FOUND)
-	include_directories(${PYTHON_INCLUDE_DIRS})
-	list(APPEND gattlib_LIBS ${PYTHON_LDFLAGS})
-	
 	add_definitions(-DWITH_PYTHON)
 endif()
 
