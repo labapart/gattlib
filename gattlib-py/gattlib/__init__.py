@@ -86,6 +86,15 @@ gattlib_adapter_scan_enable_with_filter.argtypes = [c_void_p, POINTER(POINTER(Ga
 gattlib_adapter_scan_eddystone = gattlib.gattlib_adapter_scan_eddystone
 gattlib_adapter_scan_eddystone.argtypes = [c_void_p, c_int16, c_uint32, gattlib_discovered_device_with_data_type, c_int, py_object]
 
+# gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned long options);
+gattlib_connect = gattlib.gattlib_connect
+gattlib_connect.restype = c_void_p
+gattlib_connect.argtypes = [c_char_p, c_char_p, c_ulong]
+
+# int gattlib_disconnect(gatt_connection_t* connection);
+gattlib_disconnect = gattlib.gattlib_disconnect
+gattlib_disconnect.argtypes = [c_void_p]
+
 # int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count);
 gattlib_discover_primary = gattlib.gattlib_discover_primary
 gattlib_discover_primary.argtypes = [c_void_p, POINTER(POINTER(GattlibPrimaryService)), POINTER(c_int)]

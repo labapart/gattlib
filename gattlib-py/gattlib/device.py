@@ -49,7 +49,7 @@ class Device:
         else:
             adapter_name = None
 
-        self._connection = gattlib.gattlib_connect(adapter_name, self._addr, options)
+        self._connection = gattlib_connect(adapter_name, self._addr, options)
         if self._connection == 0:
             raise DeviceError()
 
@@ -74,7 +74,7 @@ class Device:
         gattlib_register_on_disconnect(self._connection, Device.on_disconnection, self)
 
     def disconnect(self):
-        ret = gattlib.gattlib_disconnect(self._connection)
+        ret = gattlib_disconnect(self._connection)
         handle_return(ret)
 
     def discover(self):
