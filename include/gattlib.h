@@ -124,6 +124,17 @@ extern "C" {
 #define GATTLIB_EDDYSTONE_LIMIT_RSSI                        (1 << 4)
 //@}
 
+/**
+ * @name Eddystone ID types defined by its specification: https://github.com/google/eddystone
+ */
+//@{
+#define EDDYSTONE_TYPE_UID                                  0x00
+#define EDDYSTONE_TYPE_URL                                  0x10
+#define EDDYSTONE_TYPE_TLM                                  0x20
+#define EDDYSTONE_TYPE_EID                                  0x30
+//@}
+
+
 typedef struct _gatt_connection_t gatt_connection_t;
 typedef struct _gatt_stream_t gatt_stream_t;
 
@@ -190,6 +201,18 @@ typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection, void* user_data
  *
  */
 typedef void* (*gatt_read_cb_t)(const void *buffer, size_t buffer_len);
+
+
+/**
+ * @brief Constant defining Eddystone common data UID in Advertisement data
+ */
+extern const uuid_t gattlib_eddystone_common_data_uuid;
+
+/**
+ * @brief List of prefix for Eddystone URL Scheme
+ */
+extern const char *gattlib_eddystone_url_scheme_prefix[];
+
 
 /**
  * @brief Open Bluetooth adapter
