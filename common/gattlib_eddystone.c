@@ -4,6 +4,16 @@
 
 #define EDDYSTONE_SERVICE_UUID	"0000FEAA-0000-1000-8000-00805F9B34FB"
 
+const uuid_t gattlib_eddystone_common_data_uuid = CREATE_UUID16(0xFEAA);
+
+const char *gattlib_eddystone_url_scheme_prefix[] = {
+    "http://www.",
+    "https://www.",
+    "http://",
+    "https://"
+};
+
+
 struct on_eddystone_discovered_device_arg {
 	gattlib_discovered_device_with_data_t discovered_device_cb;
 	void *user_data;
