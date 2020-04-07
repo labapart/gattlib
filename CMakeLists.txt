@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2016-2019  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2016-2020  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -104,6 +104,7 @@ if(GATTLIB_BUILD_EXAMPLES)
   # Examples
   add_subdirectory(examples/ble_scan)
   add_subdirectory(examples/discover)
+  add_subdirectory(examples/find_eddystone)
   add_subdirectory(examples/read_write)
   add_subdirectory(examples/read_write_memory)
   add_subdirectory(examples/notification)
