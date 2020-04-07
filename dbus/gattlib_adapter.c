@@ -244,7 +244,7 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 
 	// Run Glib loop for 'timeout' seconds
 	gattlib_adapter->scan_loop = g_main_loop_new(NULL, 0);
-	g_timeout_add_seconds(timeout, stop_scan_func, gattlib_adapter->scan_loop);
+	gattlib_adapter->timeout_id = g_timeout_add_seconds(timeout, stop_scan_func, gattlib_adapter->scan_loop);
 	g_main_loop_run(gattlib_adapter->scan_loop);
 	// Note: The function only resumes when loop timeout as expired or g_main_loop_quit has been called.
 
@@ -279,6 +279,9 @@ int gattlib_adapter_scan_disable(void* adapter) {
 
 		org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 		// Ignore the error
+
+		// Remove timeout
+		g_source_remove(gattlib_adapter->timeout_id);
 
 		// Ensure the scan loop is quit
 		g_main_loop_quit(gattlib_adapter->scan_loop);

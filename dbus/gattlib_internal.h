@@ -58,6 +58,7 @@ typedef struct {
 struct gattlib_adapter {
 	OrgBluezAdapter1 *adapter_proxy;
 	GMainLoop *scan_loop;
+	guint timeout_id;
 };
 
 struct dbus_characteristic {
