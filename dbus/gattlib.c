@@ -1067,13 +1067,13 @@ int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid) {
 	}
 }
 
-int get_bluez_device_from_mac(void *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1)
+int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1)
 {
 	GError *error = NULL;
 	char object_path[100];
 
 	if (adapter != NULL) {
-		get_device_path_from_mac_with_adapter((OrgBluezAdapter1*)adapter, mac_address, object_path, sizeof(object_path));
+		get_device_path_from_mac_with_adapter(adapter->adapter_proxy, mac_address, object_path, sizeof(object_path));
 	} else {
 		get_device_path_from_mac(NULL, mac_address, object_path, sizeof(object_path));
 	}

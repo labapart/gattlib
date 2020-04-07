@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2020 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -23,9 +23,11 @@
 
 #include "gattlib_internal.h"
 
+
 int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	char object_path[20];
 	OrgBluezAdapter1 *adapter_proxy;
+	struct gattlib_adapter *gattlib_adapter;
 	GError *error = NULL;
 
 	if (adapter == NULL) {
@@ -56,7 +58,15 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	// Ensure the adapter is powered on
 	org_bluez_adapter1_set_powered(adapter_proxy, TRUE);
 
-	*adapter = adapter_proxy;
+	gattlib_adapter = calloc(1, sizeof(struct gattlib_adapter));
+	if (gattlib_adapter == NULL) {
+		return GATTLIB_OUT_OF_MEMORY;
+	}
+
+	// Initialize stucture
+	gattlib_adapter->adapter_proxy = adapter_proxy;
+
+	*adapter = gattlib_adapter;
 	return GATTLIB_SUCCESS;
 }
 
@@ -143,6 +153,7 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 		gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data)
 {
+	struct gattlib_adapter *gattlib_adapter = adapter;
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
@@ -172,7 +183,7 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 		g_variant_unref(rssi_variant);
 	}
 
-	org_bluez_adapter1_call_set_discovery_filter_sync((OrgBluezAdapter1*)adapter,
+	org_bluez_adapter1_call_set_discovery_filter_sync(gattlib_adapter->adapter_proxy,
 			g_variant_builder_end(&arg_properties_builder), NULL, &error);
 
 	if (error) {
@@ -182,7 +193,7 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 		return GATTLIB_ERROR_DBUS;
 	}
 
-	org_bluez_adapter1_call_start_discovery_sync((OrgBluezAdapter1*)adapter, NULL, &error);
+	org_bluez_adapter1_call_start_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 	if (error) {
 		fprintf(stderr, "Failed to start discovery: %s\n", error->message);
 		g_error_free(error);
@@ -232,10 +243,10 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 					     &discovered_device_arg);
 
 	// Run Glib loop for 'timeout' seconds
-	GMainLoop *loop = g_main_loop_new(NULL, 0);
-	g_timeout_add_seconds (timeout, stop_scan_func, loop);
-	g_main_loop_run(loop);
-	g_main_loop_unref(loop);
+	gattlib_adapter->scan_loop = g_main_loop_new(NULL, 0);
+	g_timeout_add_seconds(timeout, stop_scan_func, gattlib_adapter->scan_loop);
+	g_main_loop_run(gattlib_adapter->scan_loop);
+	// Note: The function only resumes when loop timeout as expired or g_main_loop_quit has been called.
 
 	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(device_manager), added_signal_id);
 	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(device_manager), changed_signal_id);
@@ -261,17 +272,30 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 }
 
 int gattlib_adapter_scan_disable(void* adapter) {
-	GError *error = NULL;
+	struct gattlib_adapter *gattlib_adapter = adapter;
 
-	org_bluez_adapter1_call_stop_discovery_sync((OrgBluezAdapter1*)adapter, NULL, &error);
-	// Ignore the error
+	if (gattlib_adapter->scan_loop && g_main_loop_is_running(gattlib_adapter->scan_loop)) {
+		GError *error = NULL;
+
+		org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
+		// Ignore the error
+
+		// Ensure the scan loop is quit
+		g_main_loop_quit(gattlib_adapter->scan_loop);
+		g_main_loop_unref(gattlib_adapter->scan_loop);
+		gattlib_adapter->scan_loop = NULL;
+	}
 
 	return GATTLIB_SUCCESS;
 }
 
 int gattlib_adapter_close(void* adapter)
 {
-	g_object_unref(adapter);
+	struct gattlib_adapter *gattlib_adapter = adapter;
+
+	g_object_unref(gattlib_adapter->adapter_proxy);
+	free(gattlib_adapter);
+
 	return GATTLIB_SUCCESS;
 }
 
