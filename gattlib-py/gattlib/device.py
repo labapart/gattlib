@@ -140,12 +140,12 @@ class Device:
         # for i in range(data_len):
         #    value[i] = data[i]
 
-        pointer_type = POINTER(c_byte * data_len)
+        pointer_type = POINTER(c_ubyte * data_len)
         c_bytearray = cast(data, pointer_type)
 
         value = bytearray(data_len)
         for i in range(data_len):
-            value[i] = c_bytearray.contents[i] & 0xFF
+            value[i] = c_bytearray.contents[i]
 
         # Call GATT characteristic Notification callback
         characteristic_callback['callback'](value, characteristic_callback['user_data'])

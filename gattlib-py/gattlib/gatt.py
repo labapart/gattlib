@@ -74,7 +74,7 @@ class GattCharacteristic():
 
             ret = gattlib_read_char_by_uuid(self.connection, self._gattlib_characteristic.uuid, byref(_buffer), byref(_buffer_len))
 
-            pointer_type = POINTER(c_byte * _buffer_len.value)
+            pointer_type = POINTER(c_ubyte * _buffer_len.value)
             c_bytearray = cast(_buffer, pointer_type)
 
             value = bytearray(_buffer_len.value)
