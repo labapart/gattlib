@@ -144,6 +144,12 @@ gattlib_register_on_disconnect.argtypes = [c_void_p, py_object, py_object]
 gattlib_get_rssi_from_mac = gattlib.gattlib_get_rssi_from_mac
 gattlib_get_rssi_from_mac.argtypes = [c_void_p, c_char_p, POINTER(c_int16)]
 
+# int gattlib_get_advertisement_data(gatt_connection_t *connection,
+# 		 gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
+# 		 uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
+gattlib_get_advertisement_data = gattlib.gattlib_get_advertisement_data
+gattlib_get_advertisement_data.argtypes = [c_void_p, POINTER(POINTER(GattlibAdvertisementData)), POINTER(c_size_t), POINTER(c_uint16), POINTER(c_void_p), POINTER(c_size_t)]
+
 # int gattlib_get_advertisement_data_from_mac(void *adapter, const char *mac_address,
 #        gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_length,
 #        uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
