@@ -961,26 +961,36 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
 }
 
 int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+	size_t count;
+
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return GATTLIB_NOT_FOUND;
 	}
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
 	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
-		g_signal_handlers_disconnect_by_func(
+		count = g_signal_handlers_disconnect_by_func(
 				dbus_characteristic.battery,
 				G_CALLBACK (on_handle_battery_level_property_change),
 				connection);
+		if (count == 0) {
+			fprintf(stderr, "Could not find any notification attached to this UUID");
+			return GATTLIB_NOT_FOUND;
+		}
 		return GATTLIB_SUCCESS;
 	} else {
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
 #endif
 
-	g_signal_handlers_disconnect_by_func(
+	count = g_signal_handlers_disconnect_by_func(
 			dbus_characteristic.gatt,
 			G_CALLBACK (on_handle_characteristic_property_change),
 			connection);
+	if (count == 0) {
+		fprintf(stderr, "Could not find any notification attached to this UUID");
+		return GATTLIB_NOT_FOUND;
+	}
 
 	GError *error = NULL;
 	org_bluez_gatt_characteristic1_call_stop_notify_sync(
@@ -1033,26 +1043,36 @@ int gattlib_indication_start(gatt_connection_t* connection, const uuid_t* uuid) 
 }
 
 int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+	size_t count;
+
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return GATTLIB_NOT_FOUND;
 	}
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
 	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
-		g_signal_handlers_disconnect_by_func(
+		count = g_signal_handlers_disconnect_by_func(
 				dbus_characteristic.battery,
 				G_CALLBACK (on_handle_battery_level_property_change),
 				connection);
+		if (count == 0) {
+			fprintf(stderr, "Could not find any notification attached to this UUID");
+			return GATTLIB_NOT_FOUND;
+		}
 		return GATTLIB_SUCCESS;
 	} else {
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
 #endif
 
-	g_signal_handlers_disconnect_by_func(
+	count = g_signal_handlers_disconnect_by_func(
 			dbus_characteristic.gatt,
 			G_CALLBACK (on_handle_characteristic_indication),
 			connection);
+	if (count == 0) {
+		fprintf(stderr, "Could not find any notification attached to this UUID");
+		return GATTLIB_NOT_FOUND;
+	}
 
 	GError *error = NULL;
 	org_bluez_gatt_characteristic1_call_stop_notify_sync(
