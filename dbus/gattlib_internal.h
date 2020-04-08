@@ -60,6 +60,9 @@ typedef struct {
 
 	// List of DBUS Object managed by 'adapter->device_manager'
 	GList *dbus_objects;
+
+	// List of 'OrgBluezGattCharacteristic1*' which has an attached notification
+	GList *notified_characteristics;
 } gattlib_context_t;
 
 struct gattlib_adapter {
@@ -98,5 +101,7 @@ void get_device_path_from_mac(const char *adapter_name, const char *mac_address,
 int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1);
 
 struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* connection, const uuid_t* uuid);
+
+void disconnect_all_notifications(gattlib_context_t* conn_context);
 
 #endif

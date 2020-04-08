@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2017-2019  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2017-2020  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -84,6 +84,7 @@ set(gattlib_SRCS gattlib.c
                  gattlib_adapter.c
                  gattlib_advertisement.c
                  gattlib_char.c
+                 gattlib_notification.c
                  gattlib_stream.c
                  bluez5/lib/uuid.c
                  ${CMAKE_SOURCE_DIR}/common/gattlib_common.c
