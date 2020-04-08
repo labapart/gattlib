@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2020 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -130,11 +130,13 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 	const char* adapter_name = NULL;
+	GDBusObjectManager *device_manager;
 	GError *error = NULL;
 	char object_path[100];
 
-	if (gattlib_adapter != NULL) {
-		adapter_name = gattlib_adapter->adapter_name;
+	// In case NULL is passed, we initialized default adapter
+	if (gattlib_adapter == NULL) {
+		gattlib_adapter = init_default_adapter();
 	}
 
 	get_device_path_from_mac(adapter_name, dst, object_path, sizeof(object_path));
@@ -203,6 +205,10 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	// Set the attribute to NULL even if not required
 	conn_context->connection_loop = NULL;
 
+	// Get list of objects belonging to Device Manager
+	device_manager = get_device_manager_from_adapter(conn_context->adapter);
+	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
+
 	return connection;
 
 FREE_DEVICE:
@@ -243,6 +249,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 
 	free(conn_context->device_object_path);
 	g_object_unref(conn_context->device);
+	g_list_free_full(conn_context->dbus_objects, g_object_unref);
 
 	free(connection->context);
 	free(connection);
@@ -324,12 +331,18 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 #else
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	gattlib_context_t* conn_context = connection->context;
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	OrgBluezDevice1* device = conn_context->device;
 	const gchar* const* service_str;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
 
 	const gchar* const* service_strs = org_bluez_device1_get_uuids(device);
+
+	if (device_manager == NULL) {
+		fprintf(stderr, "Gattlib context not initialized.\n");
+		return GATTLIB_INVALID_PARAMETER;
+	}
 
 	if (service_strs == NULL) {
 		if (services != NULL) {
@@ -352,27 +365,8 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		return GATTLIB_OUT_OF_MEMORY;
 	}
 
-	GDBusObjectManager *device_manager = g_dbus_object_manager_client_new_for_bus_sync (
-			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
-			"org.bluez",
-			"/",
-			NULL, NULL, NULL, NULL,
-			&error);
-	if (device_manager == NULL) {
-		if (error) {
-			fprintf(stderr, "Failed to get Bluez Device Manager: %s\n", error->message);
-			g_error_free(error);
-		} else {
-			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
-		}
-		ret = GATTLIB_ERROR_DBUS;
-		goto ON_DEVICE_MANAGER_ERROR;
-	}
-
-	GList *objects = g_dbus_object_manager_get_objects(device_manager);
 	GList *l;
-	for (l = objects; l != NULL; l = l->next)  {
+	for (l = conn_context->dbus_objects; l != NULL; l = l->next)  {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 
@@ -454,9 +448,6 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		g_object_unref(service_proxy);
 	}
 
-	g_list_free_full(objects, g_object_unref);
-	g_object_unref(device_manager);
-
 	if (services != NULL) {
 		*services       = primary_services;
 	}
@@ -464,7 +455,6 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		*services_count = count;
 	}
 
-ON_DEVICE_MANAGER_ERROR:
 	if (ret != GATTLIB_SUCCESS) {
 		free(primary_services);
 	}
@@ -625,14 +615,14 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 	return GATTLIB_SUCCESS;
 }
 #else
-static void add_characteristics_from_service(GDBusObjectManager *device_manager, const char* service_object_path, int start, int end,
-					     gattlib_characteristic_t* characteristic_list, int* count)
+static void add_characteristics_from_service(gattlib_context_t* conn_context, GDBusObjectManager *device_manager,
+			const char* service_object_path,
+			int start, int end,
+			gattlib_characteristic_t* characteristic_list, int* count)
 {
-	GList *objects = g_dbus_object_manager_get_objects(device_manager);
 	GError *error = NULL;
-	GList *l;
 
-	for (l = objects; l != NULL; l = l->next) {
+	for (GList *l = conn_context->dbus_objects; l != NULL; l = l->next) {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 		GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattCharacteristic1");
@@ -703,37 +693,22 @@ static void add_characteristics_from_service(GDBusObjectManager *device_manager,
 
 		g_object_unref(characteristic);
 	}
-
-	g_list_free_full(objects, g_object_unref);
 }
 
 int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	gattlib_context_t* conn_context = connection->context;
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	GError *error = NULL;
 	GList *l;
 
-	// Get list of services
-	GDBusObjectManager *device_manager = g_dbus_object_manager_client_new_for_bus_sync (
-			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
-			"org.bluez",
-			"/",
-			NULL, NULL, NULL, NULL,
-			&error);
 	if (device_manager == NULL) {
-		if (error) {
-			fprintf(stderr, "Failed to get Bluez Device Manager: %s\n", error->message);
-			g_error_free(error);
-		} else {
-			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
-		}
-		return GATTLIB_OUT_OF_MEMORY;
+		fprintf(stderr, "Gattlib context not initialized.\n");
+		return GATTLIB_INVALID_PARAMETER;
 	}
-	GList *objects = g_dbus_object_manager_get_objects(device_manager);
 
 	// Count the maximum number of characteristic to allocate the array (we count all the characterstic for all devices)
 	int count_max = 0, count = 0;
-	for (l = objects; l != NULL; l = l->next) {
+	for (l = conn_context->dbus_objects; l != NULL; l = l->next) {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 		GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattCharacteristic1");
@@ -748,12 +723,11 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 
 	gattlib_characteristic_t* characteristic_list = malloc(count_max * sizeof(gattlib_characteristic_t));
 	if (characteristic_list == NULL) {
-		g_object_unref(device_manager);
 		return GATTLIB_OUT_OF_MEMORY;
 	}
 
 	// List all services for this device
-	for (l = objects; l != NULL; l = l->next) {
+	for (l = conn_context->dbus_objects; l != NULL; l = l->next) {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 
@@ -790,12 +764,9 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 		}
 
 		// Add all characteristics attached to this service
-		add_characteristics_from_service(device_manager, object_path, start, end, characteristic_list, &count);
+		add_characteristics_from_service(conn_context, device_manager, object_path, start, end, characteristic_list, &count);
 		g_object_unref(service_proxy);
 	}
-
-	g_list_free_full(objects, g_object_unref);
-	g_object_unref(device_manager);
 
 	*characteristics       = characteristic_list;
 	*characteristics_count = count;

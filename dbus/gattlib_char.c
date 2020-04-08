@@ -114,12 +114,18 @@ static bool handle_dbus_battery_from_uuid(gattlib_context_t* conn_context, const
 
 struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* connection, const uuid_t* uuid) {
 	gattlib_context_t* conn_context = connection->context;
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	GError *error = NULL;
 	bool is_battery_level_uuid = false;
 
 	struct dbus_characteristic dbus_characteristic = {
 			.type = TYPE_NONE
 	};
+
+	if (device_manager == NULL) {
+		fprintf(stderr, "Gattlib Context not initialized.\n");
+		return dbus_characteristic; // Return characteristic of type TYPE_NONE
+	}
 
 	// Some GATT Characteristics are handled by D-BUS
 	if (gattlib_uuid_cmp(uuid, &m_battery_level_uuid) == 0) {
@@ -129,26 +135,8 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 		return dbus_characteristic;
 	}
 
-	GDBusObjectManager *device_manager = g_dbus_object_manager_client_new_for_bus_sync (
-			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
-			"org.bluez",
-			"/",
-			NULL, NULL, NULL, NULL,
-			&error);
-	if (device_manager == NULL) {
-		if (error) {
-			fprintf(stderr, "Failed to get Bluez Device Manager: %s\n", error->message);
-			g_error_free(error);
-		} else {
-			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
-		}
-		return dbus_characteristic; // Return characteristic of type TYPE_NONE
-	}
-
-	GList *objects = g_dbus_object_manager_get_objects(device_manager);
 	GList *l;
-	for (l = objects; l != NULL; l = l->next)  {
+	for (l = conn_context->dbus_objects; l != NULL; l = l->next)  {
 		GDBusInterface *interface;
 		bool found;
 		GDBusObject *object = l->data;
@@ -181,14 +169,12 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 		}
 	}
 
-	g_list_free_full(objects, g_object_unref);
-	g_object_unref(device_manager);
-
 	return dbus_characteristic;
 }
 
 static struct dbus_characteristic get_characteristic_from_handle(gatt_connection_t* connection, int handle) {
 	gattlib_context_t* conn_context = connection->context;
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	GError *error = NULL;
 	int char_handle;
 
@@ -196,25 +182,12 @@ static struct dbus_characteristic get_characteristic_from_handle(gatt_connection
 			.type = TYPE_NONE
 	};
 
-	GDBusObjectManager *device_manager = g_dbus_object_manager_client_new_for_bus_sync (
-			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
-			"org.bluez",
-			"/",
-			NULL, NULL, NULL, NULL,
-			&error);
 	if (device_manager == NULL) {
-		if (error) {
-			fprintf(stderr, "Failed to get Bluez Device Manager: %s\n", error->message);
-			g_error_free(error);
-		} else {
-			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
-		}
-		return dbus_characteristic; // Return characteristic of type TYPE_NONE
+		fprintf(stderr, "Gattlib context not initialized.\n");
+		return dbus_characteristic;
 	}
 
-	GList *objects = g_dbus_object_manager_get_objects(device_manager);
-	for (GList *l = objects; l != NULL; l = l->next)  {
+	for (GList *l = conn_context->dbus_objects; l != NULL; l = l->next)  {
 		GDBusInterface *interface;
 		bool found;
 		GDBusObject *object = l->data;
@@ -238,9 +211,6 @@ static struct dbus_characteristic get_characteristic_from_handle(gatt_connection
 			}
 		}
 	}
-
-	g_list_free_full(objects, g_object_unref);
-	g_object_unref(device_manager);
 
 	return dbus_characteristic;
 }

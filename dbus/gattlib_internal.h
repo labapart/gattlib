@@ -55,9 +55,14 @@ typedef struct {
 	GMainLoop *connection_loop;
 	// ID of the timeout to know if we managed to connect to the device
 	guint connection_timeout;
+
+	// List of DBUS Object managed by 'adapter->device_manager'
+	GList *dbus_objects;
 } gattlib_context_t;
 
 struct gattlib_adapter {
+	GDBusObjectManager *device_manager;
+
 	OrgBluezAdapter1 *adapter_proxy;
 	char* adapter_name;
 
@@ -82,6 +87,9 @@ struct dbus_characteristic {
 extern const uuid_t m_battery_level_uuid;
 
 gboolean stop_scan_func(gpointer data);
+
+struct gattlib_adapter *init_default_adapter(void);
+GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gattlib_adapter);
 
 void get_device_path_from_mac_with_adapter(OrgBluezAdapter1* adapter, const char *mac_address, char *object_path, size_t object_path_len);
 void get_device_path_from_mac(const char *adapter_name, const char *mac_address, char *object_path, size_t object_path_len);
