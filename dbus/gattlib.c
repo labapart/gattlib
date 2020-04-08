@@ -126,12 +126,18 @@ void get_device_path_from_mac(const char *adapter_name, const char *mac_address,
  * @param psm       Specify the PSM for GATT/ATT over BR/EDR
  * @param mtu       Specify the MTU size
  */
-gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned long options)
+gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long options)
 {
+	struct gattlib_adapter *gattlib_adapter = adapter;
+	const char* adapter_name = NULL;
 	GError *error = NULL;
 	char object_path[100];
 
-	get_device_path_from_mac(src, dst, object_path, sizeof(object_path));
+	if (gattlib_adapter != NULL) {
+		adapter_name = gattlib_adapter->adapter_name;
+	}
+
+	get_device_path_from_mac(adapter_name, dst, object_path, sizeof(object_path));
 
 	gattlib_context_t* conn_context = calloc(sizeof(gattlib_context_t), 1);
 	if (conn_context == NULL) {
@@ -211,13 +217,13 @@ FREE_CONN_CONTEXT:
 	return NULL;
 }
 
-gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
+gatt_connection_t *gattlib_connect_async(void *adapter, const char *dst,
 				unsigned long options,
 				gatt_connect_cb_t connect_cb, void* data)
 {
 	gatt_connection_t *connection;
 
-	connection = gattlib_connect(src, dst, options);
+	connection = gattlib_connect(adapter, dst, options);
 	if ((connection != NULL) && (connect_cb != NULL)) {
 		connect_cb(connection, data);
 	}

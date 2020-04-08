@@ -325,13 +325,22 @@ static void get_connection_options(unsigned long options, BtIOSecLevel *bt_io_se
 	*mtu = GATTLIB_CONNECTION_OPTIONS_LEGACY_GET_MTU(options);
 }
 
-gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
+gatt_connection_t *gattlib_connect_async(void *adapter, const char *dst,
 				unsigned long options,
 				gatt_connect_cb_t connect_cb, void* data)
 {
+	const char *adapter_mac_address;
 	gatt_connection_t *conn;
 	BtIOSecLevel bt_io_sec_level;
 	int psm, mtu;
+
+	if (adapter != NULL) {
+		fprintf(stderr, "Missing support");
+		assert(0); // Need to add support
+		return NULL;
+	} else {
+		adapter_mac_address = NULL;
+	}
 
 	// Check parameters
 	if ((options & (GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC | GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM)) == 0) {
@@ -350,7 +359,7 @@ gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 	io_connect_arg->user_data = data;
 
 	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC) {
-		conn = initialize_gattlib_connection(src, dst, BDADDR_LE_PUBLIC, bt_io_sec_level,
+		conn = initialize_gattlib_connection(adapter_mac_address, dst, BDADDR_LE_PUBLIC, bt_io_sec_level,
 						     psm, mtu, connect_cb, io_connect_arg);
 		if (conn != NULL) {
 			return conn;
@@ -358,7 +367,7 @@ gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
 	}
 
 	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM) {
-		conn = initialize_gattlib_connection(src, dst, BDADDR_LE_RANDOM, bt_io_sec_level,
+		conn = initialize_gattlib_connection(adapter_mac_address, dst, BDADDR_LE_RANDOM, bt_io_sec_level,
 						     psm, mtu, connect_cb, io_connect_arg);
 	}
 
@@ -431,11 +440,20 @@ static gatt_connection_t *gattlib_connect_with_options(const char *src, const ch
  * @param dst		Remote Bluetooth address
  * @param options	Options to connect to BLE device. See `GATTLIB_CONNECTION_OPTIONS_*`
  */
-gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned long options)
+gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long options)
 {
+	const char* adapter_mac_address;
 	gatt_connection_t *conn;
 	BtIOSecLevel bt_io_sec_level;
 	int psm, mtu;
+
+	if (adapter != NULL) {
+		fprintf(stderr, "Missing support");
+		assert(0); // Need to add support
+		return NULL;
+	} else {
+		adapter_mac_address = NULL;
+	}
 
 	// Check parameters
 	if ((options & (GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC | GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM)) == 0) {
@@ -448,14 +466,14 @@ gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned lo
 	get_connection_options(options, &bt_io_sec_level, &psm, &mtu);
 
 	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC) {
-		conn = gattlib_connect_with_options(src, dst, BDADDR_LE_PUBLIC, bt_io_sec_level, psm, mtu);
+		conn = gattlib_connect_with_options(adapter_mac_address, dst, BDADDR_LE_PUBLIC, bt_io_sec_level, psm, mtu);
 		if (conn != NULL) {
 			return conn;
 		}
 	}
 
 	if (options & GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM) {
-		conn = gattlib_connect_with_options(src, dst, BDADDR_LE_RANDOM, bt_io_sec_level, psm, mtu);
+		conn = gattlib_connect_with_options(adapter_mac_address, dst, BDADDR_LE_RANDOM, bt_io_sec_level, psm, mtu);
 	}
 
 	return conn;
