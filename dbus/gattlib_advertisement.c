@@ -77,8 +77,7 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 		g_variant_get(values, "ay", &iter);
 		size_t index = 0;
 
-		while (value = g_variant_iter_next_value(iter))
-		{
+		while ((value = g_variant_iter_next_value(iter)) != NULL) {
 			g_variant_get(value, "y", &(*manufacturer_data)[index++]);
 			g_variant_unref(value);
 		}

@@ -145,6 +145,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	if (conn_context == NULL) {
 		return NULL;
 	}
+	conn_context->adapter = gattlib_adapter;
 
 	gatt_connection_t* connection = calloc(sizeof(gatt_connection_t), 1);
 	if (connection == NULL) {
