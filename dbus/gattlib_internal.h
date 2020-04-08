@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2020 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -45,6 +45,8 @@
 #endif
 
 typedef struct {
+	struct gattlib_adapter *adapter;
+
 	char* device_object_path;
 	OrgBluezDevice1* device;
 
@@ -57,6 +59,8 @@ typedef struct {
 
 struct gattlib_adapter {
 	OrgBluezAdapter1 *adapter_proxy;
+	char* adapter_name;
+
 	GMainLoop *scan_loop;
 	guint timeout_id;
 };

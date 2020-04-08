@@ -292,24 +292,24 @@ int gattlib_adapter_close(void* adapter);
 /**
  * @brief Function to connect to a BLE device
  *
- * @param src		Local Adaptater interface
+ * @param adapter	Local Adaptater interface. When passing NULL, we use default adapter.
  * @param dst		Remote Bluetooth address
  * @param options	Options to connect to BLE device. See `GATTLIB_CONNECTION_OPTIONS_*`
  */
-gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned long options);
+gatt_connection_t *gattlib_connect(void *adapter, const char *dst, unsigned long options);
 
 /**
  * @brief Function to asynchronously connect to a BLE device
  *
  * @note This function is mainly used before Bluez v5.42 (prior to D-BUS support)
  *
- * @param src		Local Adaptater interface
+ * @param adapter	Local Adaptater interface. When passing NULL, we use default adapter.
  * @param dst		Remote Bluetooth address
  * @param options	Options to connect to BLE device. See `GATTLIB_CONNECTION_OPTIONS_*`
  * @param connect_cb is the callback to call when the connection is established
  * @param user_data is the user specific data to pass to the callback
  */
-gatt_connection_t *gattlib_connect_async(const char *src, const char *dst,
+gatt_connection_t *gattlib_connect_async(void *adapter, const char *dst,
 		unsigned long options,
 		gatt_connect_cb_t connect_cb, void* user_data);
 
