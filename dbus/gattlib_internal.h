@@ -44,6 +44,8 @@
 	#include "org-bluez-battery1.h"
 #endif
 
+#define GATTLIB_DEFAULT_ADAPTER "hci0"
+
 typedef struct {
 	struct gattlib_adapter *adapter;
 

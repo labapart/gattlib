@@ -34,11 +34,11 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	if (adapter_name) {
-		snprintf(object_path, sizeof(object_path), "/org/bluez/%s", adapter_name);
-	} else {
-		strncpy(object_path, "/org/bluez/hci0", sizeof(object_path));
+	if (adapter_name == NULL) {
+		adapter_name = GATTLIB_DEFAULT_ADAPTER;
 	}
+
+	snprintf(object_path, sizeof(object_path), "/org/bluez/%s", adapter_name);
 
 	adapter_proxy = org_bluez_adapter1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
