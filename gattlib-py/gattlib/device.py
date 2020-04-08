@@ -108,6 +108,47 @@ class Device:
 
             logging.debug("Characteristic UUID:0x%x" % characteristic.short_uuid)
 
+
+    def get_advertisement_data(self):
+        _advertisement_data = POINTER(GattlibAdvertisementData)()
+        _advertisement_data_count = c_size_t(0)
+        _manufacturer_id = c_uint16(0)
+        _manufacturer_data = c_void_p(None)
+        _manufacturer_data_len = c_size_t(0)
+
+        ret = gattlib_get_advertisement_data(self._connection,
+                                             byref(_advertisement_data), byref(_advertisement_data_count),
+                                             byref(_manufacturer_id),
+                                             byref(_manufacturer_data), byref(_manufacturer_data_len))
+        handle_return(ret)
+
+        advertisement_data = {}
+        manufacturer_data = None
+
+        for i in range(0, _advertisement_data_count.value):
+            service_data = _advertisement_data[i]
+            uuid = gattlib_uuid_to_int(service_data.uuid)
+
+            pointer_type = POINTER(c_byte * service_data.data_length)
+            c_bytearray = cast(service_data.data, pointer_type)
+
+            data = bytearray(service_data.data_length)
+            for i in range(service_data.data_length):
+                data[i] = c_bytearray.contents[i] & 0xFF
+
+            advertisement_data[uuid] = data
+
+        if _manufacturer_data_len.value > 0:
+            pointer_type = POINTER(c_byte * _manufacturer_data_len.value)
+            c_bytearray = cast(_manufacturer_data, pointer_type)
+
+            manufacturer_data = bytearray(_manufacturer_data_len.value)
+            for i in range(_manufacturer_data_len.value):
+                manufacturer_data[i] = c_bytearray.contents[i] & 0xFF
+
+        return advertisement_data, _manufacturer_id.value, manufacturer_data
+
+
     @property
     def services(self):
         if not hasattr(self, '_services'):
