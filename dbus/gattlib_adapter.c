@@ -64,10 +64,55 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	}
 
 	// Initialize stucture
+	gattlib_adapter->adapter_name = strdup(adapter_name);
 	gattlib_adapter->adapter_proxy = adapter_proxy;
 
 	*adapter = gattlib_adapter;
 	return GATTLIB_SUCCESS;
+}
+
+struct gattlib_adapter *init_default_adapter(void) {
+	struct gattlib_adapter *gattlib_adapter;
+	int ret;
+
+	ret = gattlib_adapter_open(NULL, (void**)&gattlib_adapter);
+	if (ret != GATTLIB_SUCCESS) {
+		return NULL;
+	} else {
+		return gattlib_adapter;
+	}
+}
+
+GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gattlib_adapter) {
+	GError *error = NULL;
+
+	if (gattlib_adapter->device_manager) {
+		return gattlib_adapter->device_manager;
+	}
+
+	//
+	// Get notification when objects are removed from the Bluez ObjectManager.
+	// We should get notified when the connection is lost with the target to allow
+	// us to advertise us again
+	//
+	gattlib_adapter->device_manager = g_dbus_object_manager_client_new_for_bus_sync(
+			G_BUS_TYPE_SYSTEM,
+			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+			"org.bluez",
+			"/",
+			NULL, NULL, NULL, NULL,
+			&error);
+	if (gattlib_adapter->device_manager == NULL) {
+		if (error) {
+			fprintf(stderr, "Failed to get Bluez Device Manager: %s\n", error->message);
+			g_error_free(error);
+		} else {
+			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
+		}
+		return NULL;
+	}
+
+	return gattlib_adapter->device_manager;
 }
 
 /*
@@ -209,21 +254,8 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	// We should get notified when the connection is lost with the target to allow
 	// us to advertise us again
 	//
-	device_manager = g_dbus_object_manager_client_new_for_bus_sync(
-			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
-			"org.bluez",
-			"/",
-			NULL, NULL, NULL, NULL,
-			&error);
+	device_manager = get_device_manager_from_adapter(gattlib_adapter);
 	if (device_manager == NULL) {
-		if (error) {
-			fprintf(stderr, "Failed to get Bluez Device Manager: %s\n", error->message);
-			g_error_free(error);
-		} else {
-			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
-		}
-		ret = GATTLIB_ERROR_DBUS;
 		goto DISABLE_SCAN;
 	}
 
@@ -254,8 +286,6 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 
 	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(device_manager), added_signal_id);
 	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(device_manager), changed_signal_id);
-
-	g_object_unref(device_manager);
 
 DISABLE_SCAN:
 	// Stop BLE device discovery
@@ -300,6 +330,7 @@ int gattlib_adapter_close(void* adapter)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
+	g_object_unref(gattlib_adapter->device_manager);
 	g_object_unref(gattlib_adapter->adapter_proxy);
 	free(gattlib_adapter);
 
