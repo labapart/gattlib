@@ -901,7 +901,7 @@ static gboolean on_handle_characteristic_indication(
 	return TRUE;
 }
 
-int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
+static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, const uuid_t* uuid, void *callback) {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		return GATTLIB_NOT_FOUND;
@@ -923,7 +923,7 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
 	// Register a handle for notification
 	g_signal_connect(dbus_characteristic.gatt,
 		"g-properties-changed",
-		G_CALLBACK (on_handle_characteristic_property_change),
+		G_CALLBACK(callback),
 		connection);
 
 	GError *error = NULL;
@@ -938,7 +938,7 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
 	}
 }
 
-int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+static int disconnect_signal_to_characteristic_uuid(gatt_connection_t* connection, const uuid_t* uuid, void *callback) {
 	size_t count;
 
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
@@ -963,7 +963,7 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 
 	count = g_signal_handlers_disconnect_by_func(
 			dbus_characteristic.gatt,
-			G_CALLBACK (on_handle_characteristic_property_change),
+			G_CALLBACK(callback),
 			connection);
 	if (count == 0) {
 		fprintf(stderr, "Could not find any notification attached to this UUID");
@@ -983,86 +983,20 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
 	}
 }
 
+int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
+	return connect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_property_change);
+}
+
+int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+	return disconnect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_property_change);
+}
+
 int gattlib_indication_start(gatt_connection_t* connection, const uuid_t* uuid) {
-	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
-	if (dbus_characteristic.type == TYPE_NONE) {
-		return GATTLIB_NOT_FOUND;
-	}
-#if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
-	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
-		// Register a handle for notification
-		g_signal_connect(dbus_characteristic.battery,
-			"g-properties-changed",
-			G_CALLBACK (on_handle_battery_level_property_change),
-			connection);
-
-		return GATTLIB_SUCCESS;
-	} else {
-		assert(dbus_characteristic.type == TYPE_GATT);
-	}
-#endif
-
-	// Register a handle for notification
-	g_signal_connect(dbus_characteristic.gatt,
-		"g-properties-changed",
-		G_CALLBACK (on_handle_characteristic_indication),
-		connection);
-
-	GError *error = NULL;
-	org_bluez_gatt_characteristic1_call_start_notify_sync(dbus_characteristic.gatt, NULL, &error);
-
-	if (error) {
-		fprintf(stderr, "Failed to start DBus GATT indication: %s\n", error->message);
-		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
-	} else {
-		return GATTLIB_SUCCESS;
-	}
+	return connect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_indication);
 }
 
 int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid) {
-	size_t count;
-
-	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
-	if (dbus_characteristic.type == TYPE_NONE) {
-		return GATTLIB_NOT_FOUND;
-	}
-#if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
-	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
-		count = g_signal_handlers_disconnect_by_func(
-				dbus_characteristic.battery,
-				G_CALLBACK (on_handle_battery_level_property_change),
-				connection);
-		if (count == 0) {
-			fprintf(stderr, "Could not find any notification attached to this UUID");
-			return GATTLIB_NOT_FOUND;
-		}
-		return GATTLIB_SUCCESS;
-	} else {
-		assert(dbus_characteristic.type == TYPE_GATT);
-	}
-#endif
-
-	count = g_signal_handlers_disconnect_by_func(
-			dbus_characteristic.gatt,
-			G_CALLBACK (on_handle_characteristic_indication),
-			connection);
-	if (count == 0) {
-		fprintf(stderr, "Could not find any notification attached to this UUID");
-		return GATTLIB_NOT_FOUND;
-	}
-
-	GError *error = NULL;
-	org_bluez_gatt_characteristic1_call_stop_notify_sync(
-		dbus_characteristic.gatt, NULL, &error);
-
-	if (error) {
-		fprintf(stderr, "Failed to stop DBus GATT indication: %s\n", error->message);
-		g_error_free(error);
-		return GATTLIB_NOT_FOUND;
-	} else {
-		return GATTLIB_SUCCESS;
-	}
+	return disconnect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_indication);
 }
 
 int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1)
