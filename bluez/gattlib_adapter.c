@@ -127,6 +127,10 @@ static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t 
 		}
 
 		len = read(device_desc, buffer, sizeof(buffer));
+		if (len < 0) {
+			fprintf(stderr, "Read error\n");
+			break;
+		}
 
 		if (meta->subevent != 0x02 || (uint8_t)buffer[BLE_EVENT_TYPE] != BLE_SCAN_RESPONSE)
 			continue;
@@ -142,7 +146,7 @@ static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t 
 
 		int elapsed = time(NULL) - ts;
 		if (elapsed >= timeout) {
-			printf("Err2");
+			fprintf(stderr, "Timeout error\n");
 			break;
 		}
 
@@ -162,6 +166,10 @@ static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t 
 		}
 
 		len = read(device_desc, buffer, sizeof(buffer));
+		if (len < 0) {
+			fprintf(stderr, "Read error\n");
+			break;
+		}
 
 		if (meta->subevent != 0x02 || (uint8_t)buffer[BLE_EVENT_TYPE] != BLE_SCAN_RESPONSE)
 			continue;
