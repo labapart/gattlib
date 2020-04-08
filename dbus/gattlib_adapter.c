@@ -160,6 +160,7 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	int added_signal_id, changed_signal_id;
 	GSList *discovered_devices = NULL;
 	GVariantBuilder arg_properties_builder;
+	GVariant *rssi_variant = NULL;
 
 	g_variant_builder_init(&arg_properties_builder, G_VARIANT_TYPE("a{sv}"));
 
@@ -180,11 +181,14 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	if (enabled_filters & GATTLIB_DISCOVER_FILTER_USE_RSSI) {
 		GVariant *rssi_variant = g_variant_new_int16(rssi_threshold);
 		g_variant_builder_add(&arg_properties_builder, "{sv}", "RSSI", rssi_variant);
-		g_variant_unref(rssi_variant);
 	}
 
 	org_bluez_adapter1_call_set_discovery_filter_sync(gattlib_adapter->adapter_proxy,
 			g_variant_builder_end(&arg_properties_builder), NULL, &error);
+
+	if (rssi_variant) {
+		g_variant_unref(rssi_variant);
+	}
 
 	if (error) {
 		printf("error: %d.%d\n", error->domain, error->code);
