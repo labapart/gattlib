@@ -59,7 +59,7 @@ class Adapter:
         device = Device(self, addr, name)
         self.on_discovered_device_callback(device, user_data)
 
-    def scan_enable(self, on_discovered_device_callback, timeout, uuids=None, rssi_threshold=None, user_data=None):
+    def scan_enable(self, on_discovered_device_callback, timeout, notify_change=False, uuids=None, rssi_threshold=None, user_data=None):
         assert on_discovered_device_callback != None
         self.on_discovered_device_callback = on_discovered_device_callback
 
@@ -89,6 +89,9 @@ class Adapter:
         if rssi_threshold is not None:
             enabled_filters |= GATTLIB_DISCOVER_FILTER_USE_RSSI
             rssi = int(rssi_threshold)
+
+        if notify_change:
+            enabled_filters |= GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE
 
         ret = gattlib_adapter_scan_enable_with_filter(self._adapter,
                                                       uuid_list, rssi, enabled_filters,
