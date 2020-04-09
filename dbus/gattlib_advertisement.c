@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2020 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -93,34 +93,37 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 
 		*advertisement_data_count = g_variant_n_children(service_data_variant);
 
-		*advertisement_data = calloc(sizeof(gattlib_advertisement_data_t), *advertisement_data_count);
-		if (*advertisement_data == NULL) {
+		gattlib_advertisement_data_t *advertisement_data_ptr = calloc(sizeof(gattlib_advertisement_data_t), *advertisement_data_count);
+		if (advertisement_data_ptr == NULL) {
 			return GATTLIB_OUT_OF_MEMORY;
 		}
 
 		g_variant_get(service_data_variant, "a{sv}", &iter);
 		while (g_variant_iter_loop(iter, "{&sv}", &key, &value)) {
-			gattlib_string_to_uuid(key, strlen(key), &advertisement_data[index]->uuid);
+			gattlib_string_to_uuid(key, strlen(key), &advertisement_data_ptr[index].uuid);
 
 			gsize n_elements = 0;
 			gconstpointer const_buffer = g_variant_get_fixed_array(value, &n_elements, sizeof(guchar));
 			if (const_buffer) {
-				advertisement_data[index]->data = malloc(n_elements);
-				if (advertisement_data[index]->data == NULL) {
+				advertisement_data_ptr[index].data = malloc(n_elements);
+				if (advertisement_data_ptr[index].data == NULL) {
 					return GATTLIB_OUT_OF_MEMORY;
 				}
 
-				advertisement_data[index]->data_length = n_elements;
-				memcpy(advertisement_data[index]->data, const_buffer, n_elements);
+				advertisement_data_ptr[index].data_length = n_elements;
+				memcpy(advertisement_data_ptr[index].data, const_buffer, n_elements);
 			} else {
-				advertisement_data[index]->data_length = 0;
+				advertisement_data_ptr[index].data_length = 0;
 			}
 
 			index++;
 		}
 		g_variant_iter_free(iter);
+
+		*advertisement_data = advertisement_data_ptr;
 	} else {
 		*advertisement_data_count = 0;
+		*advertisement_data = NULL;
 	}
 
 	return GATTLIB_SUCCESS;
