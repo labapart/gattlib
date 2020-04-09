@@ -130,7 +130,13 @@ int gattlib_get_advertisement_data(gatt_connection_t *connection,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 {
-	gattlib_context_t* conn_context = connection->context;
+	gattlib_context_t* conn_context;
+
+	if (connection == NULL) {
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
+	conn_context = connection->context;
 
 	return get_advertisement_data_from_device(conn_context->device,
 			advertisement_data, advertisement_data_count,
