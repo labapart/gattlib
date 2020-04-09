@@ -242,13 +242,6 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 		return GATTLIB_ERROR_DBUS;
 	}
 
-	org_bluez_adapter1_call_start_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
-	if (error) {
-		fprintf(stderr, "Failed to start discovery: %s\n", error->message);
-		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
-	}
-
 	//
 	// Get notification when objects are removed from the Bluez ObjectManager.
 	// We should get notified when the connection is lost with the target to allow
@@ -277,6 +270,14 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 					     "interface-proxy-properties-changed",
 					     G_CALLBACK(on_interface_proxy_properties_changed),
 					     &discovered_device_arg);
+
+	// Now, start BLE discovery
+	org_bluez_adapter1_call_start_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
+	if (error) {
+		fprintf(stderr, "Failed to start discovery: %s\n", error->message);
+		g_error_free(error);
+		return GATTLIB_ERROR_DBUS;
+	}
 
 	// Run Glib loop for 'timeout' seconds
 	gattlib_adapter->scan_loop = g_main_loop_new(NULL, 0);
