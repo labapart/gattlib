@@ -199,7 +199,7 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 }
 
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
-		gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data)
+		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 	GDBusObjectManager *device_manager;
@@ -285,7 +285,9 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 
 	// Run Glib loop for 'timeout' seconds
 	gattlib_adapter->scan_loop = g_main_loop_new(NULL, 0);
-	gattlib_adapter->timeout_id = g_timeout_add_seconds(timeout, stop_scan_func, gattlib_adapter->scan_loop);
+	if (timeout > 0) {
+		gattlib_adapter->timeout_id = g_timeout_add_seconds(timeout, stop_scan_func, gattlib_adapter->scan_loop);
+	}
 	g_main_loop_run(gattlib_adapter->scan_loop);
 	// Note: The function only resumes when loop timeout as expired or g_main_loop_quit has been called.
 
@@ -302,7 +304,7 @@ DISABLE_SCAN:
 	return ret;
 }
 
-int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data)
+int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
 {
 	return gattlib_adapter_scan_enable_with_filter(adapter,
 			NULL, 0 /* RSSI Threshold */,

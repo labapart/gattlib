@@ -43,7 +43,7 @@ static void on_eddystone_discovered_device(void *adapter, const char* addr, cons
 }
 
 int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddystone_types,
-		gattlib_discovered_device_with_data_t discovered_device_cb, int timeout, void *user_data)
+		gattlib_discovered_device_with_data_t discovered_device_cb, size_t timeout, void *user_data)
 {
 	uuid_t eddystone_uuid;
 	uint32_t enabled_filters = GATTLIB_DISCOVER_FILTER_USE_UUID;
