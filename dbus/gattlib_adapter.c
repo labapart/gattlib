@@ -120,6 +120,7 @@ GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gatt
  */
 struct discovered_device_arg {
 	void *adapter;
+	uint32_t enabled_filters;
 	gattlib_discovered_device_t callback;
 	void *user_data;
 	GSList** discovered_devices_ptr;
@@ -151,7 +152,9 @@ static void device_manager_on_device1_signal(const char* device1_path, struct di
 		if (item == NULL) {
 			// Add the device to the list
 			*arg->discovered_devices_ptr = g_slist_append(*arg->discovered_devices_ptr, g_strdup(address));
+		}
 
+		if ((item == NULL) || (arg->enabled_filters & GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE)) {
 			arg->callback(
 				arg->adapter,
 				org_bluez_device1_get_address(device1),
@@ -255,6 +258,7 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	// Pass the user callback and the discovered device list pointer to the signal handlers
 	struct discovered_device_arg discovered_device_arg = {
 		.adapter = adapter,
+		.enabled_filters = enabled_filters,
 		.callback = discovered_device_cb,
 		.user_data = user_data,
 		.discovered_devices_ptr = &discovered_devices,
