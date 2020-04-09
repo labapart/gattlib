@@ -230,12 +230,12 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter);
  *
  * @param adapter is the context of the newly opened adapter
  * @param discovered_device_cb is the function callback called for each new Bluetooth device discovered
- * @param timeout defines the duration of the Bluetooth scanning
+ * @param timeout defines the duration of the Bluetooth scanning. When timeout=0, we scan indefinitely.
  * @param user_data is the data passed to the callback `discovered_device_cb()`
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data);
+int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data);
 
 /**
  * @brief Enable Bluetooth scanning on a given adapter
@@ -247,13 +247,13 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
  * @param enabled_filters defines the parameters to use for filtering. There are selected by using the macros
  *        GATTLIB_DISCOVER_FILTER_USE_UUID and GATTLIB_DISCOVER_FILTER_USE_RSSI.
  * @param discovered_device_cb is the function callback called for each new Bluetooth device discovered
- * @param timeout defines the duration of the Bluetooth scanning
+ * @param timeout defines the duration of the Bluetooth scanning. When timeout=0, we scan indefinitely.
  * @param user_data is the data passed to the callback `discovered_device_cb()`
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
-		gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data);
+		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data);
 
 /**
  * @brief Enable Eddystone Bluetooth Device scanning on a given adapter
@@ -264,13 +264,13 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
  *        The types are defined by the macros `GATTLIB_EDDYSTONE_TYPE_*`. The macro `GATTLIB_EDDYSTONE_LIMIT_RSSI`
  *        can also be used to limit RSSI with rssi_threshold.
  * @param discovered_device_cb is the function callback called for each new Bluetooth device discovered
- * @param timeout defines the duration of the Bluetooth scanning
+ * @param timeout defines the duration of the Bluetooth scanning. When timeout=0, we scan indefinitely.
  * @param user_data is the data passed to the callback `discovered_device_cb()`
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddystone_types,
-		gattlib_discovered_device_with_data_t discovered_device_cb, int timeout, void *user_data);
+		gattlib_discovered_device_with_data_t discovered_device_cb, size_t timeout, void *user_data);
 
 /**
  * @brief Disable Bluetooth scanning on a given adapter
