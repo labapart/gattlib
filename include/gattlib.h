@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2019 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2020 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -111,6 +111,7 @@ extern "C" {
 #define GATTLIB_DISCOVER_FILTER_USE_NONE                    0
 #define GATTLIB_DISCOVER_FILTER_USE_UUID                    (1 << 0)
 #define GATTLIB_DISCOVER_FILTER_USE_RSSI                    (1 << 1)
+#define GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE               (1 << 2)
 //@}
 
 /**
