@@ -113,7 +113,13 @@ if (Python_Development_FOUND)
 endif()
 
 # Gattlib
-add_library(gattlib SHARED ${gattlib_SRCS})
+if(GATTLIB_SHARED_LIB)
+  add_library(gattlib SHARED ${gattlib_SRCS})
+else()
+  add_library(gattlib ${gattlib_SRCS})
+endif()
+
+target_include_directories(gattlib PUBLIC ../include)
 target_link_libraries(gattlib ${gattlib_LIBS})
 
 include(GNUInstallDirs)
