@@ -356,7 +356,7 @@ static int write_char(struct dbus_characteristic *dbus_characteristic, const voi
 	GVariantBuilder *variant_options = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
 	if ((options & BLUEZ_GATT_WRITE_VALUE_TYPE_MASK) == BLUEZ_GATT_WRITE_VALUE_TYPE_WRITE_WITHOUT_RESPONSE) {
-		g_variant_builder_add(variant_options, "{sv}", "type", g_variant_new("s", "request"));
+		g_variant_builder_add(variant_options, "{sv}", "type", g_variant_new("s", "command"));
 	}
 
 	org_bluez_gatt_characteristic1_call_write_value_sync(dbus_characteristic->gatt, value, g_variant_builder_end(variant_options), NULL, &error);
