@@ -124,4 +124,8 @@ target_link_libraries(gattlib ${gattlib_LIBS})
 
 include(GNUInstallDirs)
 
-install(TARGETS gattlib LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(GATTLIB_SHARED_LIB)
+  install(TARGETS gattlib LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+else()
+  install(TARGETS gattlib ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
