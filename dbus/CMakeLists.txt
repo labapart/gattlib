@@ -104,12 +104,14 @@ set(gattlib_LIBS ${GLIB_LDFLAGS} ${GIO_UNIX_LDFLAGS})
 #
 # Add Python Support
 #
-find_package(Python COMPONENTS Interpreter Development)
-if (Python_Development_FOUND)
+if(GATTLIB_PYTHON_INTERFACE)
+  find_package(Python COMPONENTS Interpreter Development)
+  if (Python_Development_FOUND)
 	include_directories(${Python_INCLUDE_DIRS})
 	list(APPEND gattlib_LIBS ${Python_LIBRARIES})
 
 	add_definitions(-DWITH_PYTHON)
+  endif()
 endif()
 
 # Gattlib
