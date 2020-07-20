@@ -137,6 +137,8 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	// In case NULL is passed, we initialized default adapter
 	if (gattlib_adapter == NULL) {
 		gattlib_adapter = init_default_adapter();
+	} else {
+		adapter_name = gattlib_adapter->adapter_name;
 	}
 
 	get_device_path_from_mac(adapter_name, dst, object_path, sizeof(object_path));
