@@ -203,6 +203,15 @@ typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection, void* user_data
  */
 typedef void* (*gatt_read_cb_t)(const void *buffer, size_t buffer_len, void* user_data);
 
+/**
+ * @brief Callback called when GATT characteristic write value has been sent
+ *
+ * @param buffer contains the value written.
+ * @param buffer_len Length of the write data
+ *
+ */
+typedef void* (*gatt_write_cb_t)(int status, const void *buffer, size_t buffer_len, void* user_data);
+
 
 /**
  * @brief Constant defining Eddystone common data UID in Advertisement data
@@ -465,6 +474,21 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
  */
 int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
 
+
+/**
+ * @brief Function to write to the GATT characteristic UUID
+ *
+ * @param connection Active GATT connection
+ * @param uuid UUID of the GATT characteristic to read
+ * @param buffer contains the values to write to the GATT characteristic
+ * @param buffer_len is the length of the buffer to write
+ * @param gatt_write_cb is the function to call at the end of the write
+ * @param user_data user data for the callback
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_write_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len, gatt_write_cb_t gatt_write_cb, void* user_data);
+
 /**
  * @brief Function to write to the GATT characteristic handle
  *
@@ -476,6 +500,20 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
+
+/**
+ * @brief Function to write to the GATT characteristic handle
+ *
+ * @param connection Active GATT connection
+ * @param handle is the handle of the GATT characteristic
+ * @param buffer contains the values to write to the GATT characteristic
+ * @param buffer_len is the length of the buffer to write
+ * @param gatt_write_cb is the function to call at the end of the write
+ * @param user_data user data for the callback
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_write_char_by_handle_async(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len, gatt_write_cb_t gatt_write_cb, void* user_data);
 
 /**
  * @brief Function to write without response to the GATT characteristic UUID
