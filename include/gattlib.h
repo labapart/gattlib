@@ -201,7 +201,7 @@ typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection, void* user_data
  * @param buffer_len Length of the read data
  *
  */
-typedef void* (*gatt_read_cb_t)(const void *buffer, size_t buffer_len);
+typedef void* (*gatt_read_cb_t)(const void *buffer, size_t buffer_len, void* user_data);
 
 
 /**
@@ -447,10 +447,11 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
  * @param connection Active GATT connection
  * @param uuid UUID of the GATT characteristic to read
  * @param gatt_read_cb is the callback to read when the GATT characteristic is available
+ * @param user_data is the user specific data to pass to the callback
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb);
+int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb, void* user_data);
 
 /**
  * @brief Function to write to the GATT characteristic UUID
