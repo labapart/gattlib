@@ -315,7 +315,8 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 int gattlib_adapter_scan_disable(void* adapter) {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
-	if (gattlib_adapter->scan_loop && g_main_loop_is_running(gattlib_adapter->scan_loop)) {
+	if (gattlib_adapter->scan_loop) {
+
 		GError *error = NULL;
 
 		org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
@@ -325,7 +326,9 @@ int gattlib_adapter_scan_disable(void* adapter) {
 		g_source_remove(gattlib_adapter->timeout_id);
 
 		// Ensure the scan loop is quit
-		g_main_loop_quit(gattlib_adapter->scan_loop);
+		if (g_main_loop_is_running(gattlib_adapter->scan_loop)) {
+			g_main_loop_quit(gattlib_adapter->scan_loop);
+		}
 		g_main_loop_unref(gattlib_adapter->scan_loop);
 		gattlib_adapter->scan_loop = NULL;
 	}
