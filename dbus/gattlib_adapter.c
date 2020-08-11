@@ -316,7 +316,6 @@ int gattlib_adapter_scan_disable(void* adapter) {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
 	if (gattlib_adapter->scan_loop) {
-
 		GError *error = NULL;
 
 		org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
