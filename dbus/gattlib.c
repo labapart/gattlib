@@ -39,6 +39,7 @@ gboolean on_handle_device_property_change(
 	    gpointer user_data)
 {
 	gatt_connection_t* connection = user_data;
+  if(connection == NULL) return;
 	gattlib_context_t* conn_context = connection->context;
 
 	// Retrieve 'Value' from 'arg_changed_properties'
@@ -52,14 +53,23 @@ gboolean on_handle_device_property_change(
 			if (strcmp(key, "Connected") == 0) {
 				if (!g_variant_get_boolean(value)) {
 					// Disconnection case
+          if(conn_context->handler_id != 0) {
+            g_signal_handler_disconnect(conn_context->device,conn_context->handler_id);
+            conn_context->handler_id = 0;
+          }
 					if (gattlib_has_valid_handler(&connection->disconnection)) {
 						gattlib_call_disconnection_handler(&connection->disconnection);
 					}
 				}
 			} else if (strcmp(key, "ServicesResolved") == 0) {
 				if (g_variant_get_boolean(value)) {
+          if(conn_context->handler_id == NULL) {
+            return false;
+          }
 					// Stop the timeout for connection
-					g_source_remove(conn_context->connection_timeout);
+          if((conn_context != NULL) && (conn_context->connection_loop != NULL) && (connection != NULL)) {
+            g_source_remove(conn_context->connection_timeout);
+          }
 
 					// Tell we are now connected
 					g_main_loop_quit(conn_context->connection_loop);
@@ -175,7 +185,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	}
 
 	// Register a handle for notification
-	g_signal_connect(device,
+  conn_context->handler_id = g_signal_connect(device,
 		"g-properties-changed",
 		G_CALLBACK (on_handle_device_property_change),
 		connection);
@@ -201,15 +211,21 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
 	conn_context->connection_loop = g_main_loop_new(NULL, 0);
 
+  if(conn_context == NULL) goto FREE_DEVICE;
 	conn_context->connection_timeout = g_timeout_add_seconds(CONNECT_TIMEOUT, stop_scan_func,
 								 conn_context->connection_loop);
+  if(conn_context == NULL) goto FREE_DEVICE;
 	g_main_loop_run(conn_context->connection_loop);
+  if(conn_context == NULL) goto FREE_DEVICE;
 	g_main_loop_unref(conn_context->connection_loop);
 	// Set the attribute to NULL even if not required
 	conn_context->connection_loop = NULL;
 
 	// Get list of objects belonging to Device Manager
 	device_manager = get_device_manager_from_adapter(conn_context->adapter);
+  if(device_manager == NULL || (conn_context == NULL) || (conn_context->adapter == NULL)) {
+    goto FREE_DEVICE;
+  }
 	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
 
 	return connection;
@@ -254,7 +270,16 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	g_object_unref(conn_context->device);
 	g_list_free_full(conn_context->dbus_objects, g_object_unref);
 	disconnect_all_notifications(conn_context);
+  if(conn_context->connection_loop != NULL)  {
+    g_main_loop_quit(conn_context->connection_loop);
+    g_main_loop_unref(conn_context->connection_loop);
+  }
+  if(conn_context->handler_id != 0) {
+    g_signal_handler_disconnect(conn_context->device,conn_context->handler_id);
+    conn_context->handler_id = 0;
+  }
 
+	free(conn_context);
 	free(connection->context);
 	free(connection);
 	return GATTLIB_SUCCESS;
