@@ -279,13 +279,7 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	org_bluez_adapter1_call_start_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 	if (error) {
 		fprintf(stderr, "Failed to start discovery %d: %s\n", error->code, error->message );
-    //If adapter complains about already started process I have not found any other solution for
-    //than to power cycle the adapter
-    if(error->code == 36) {
-		fprintf(stderr, "Power cycling adapter\n");
-    org_bluez_adapter1_set_powered(gattlib_adapter->adapter_proxy, false);
-    org_bluez_adapter1_set_powered(gattlib_adapter->adapter_proxy, true);
-    }
+    if(error-> code != 36) //Do not return error if adapter is already scanning
 		return GATTLIB_ERROR_DBUS;
 	}
 
