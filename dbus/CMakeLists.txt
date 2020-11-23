@@ -78,7 +78,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-battery1.c
                    COMMENT "Generate D-Bus 'org.bluez.Battery1.xml'"
                    )
 
-include_directories(. ${CMAKE_SOURCE_DIR}/common ${CMAKE_CURRENT_BINARY_DIR} ${GIO_UNIX_INCLUDE_DIRS} ${BLUEZ_INCLUDE_DIRS})
+include_directories(. ${CMAKE_CURRENT_LIST_DIR}/../common ${CMAKE_CURRENT_BINARY_DIR} ${GIO_UNIX_INCLUDE_DIRS} ${BLUEZ_INCLUDE_DIRS})
 
 set(gattlib_SRCS gattlib.c
                  gattlib_adapter.c
@@ -87,8 +87,8 @@ set(gattlib_SRCS gattlib.c
                  gattlib_notification.c
                  gattlib_stream.c
                  bluez5/lib/uuid.c
-                 ${CMAKE_SOURCE_DIR}/common/gattlib_common.c
-                 ${CMAKE_SOURCE_DIR}/common/gattlib_eddystone.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_common.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_eddystone.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-device1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattcharacteristic1.c
