@@ -105,6 +105,11 @@ set(gattlib_LIBS ${GLIB_LDFLAGS} ${GIO_UNIX_LDFLAGS})
 # Add Python Support
 #
 if(GATTLIB_PYTHON_INTERFACE)
+  if(GATTLIB_SHARED_LIB)
+    set(Python_USE_STATIC_LIBS FALSE)
+  else()
+    set(Python_USE_STATIC_LIBS TRUE)
+  endif()
   find_package(Python COMPONENTS Interpreter Development)
   if (Python_Development_FOUND)
 	include_directories(${Python_INCLUDE_DIRS})
