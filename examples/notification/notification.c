@@ -29,8 +29,8 @@
 
 #include "gattlib.h"
 
-// Battery Level UUID
-const uuid_t g_battery_level_uuid = CREATE_UUID16(0x2A19);
+static uuid_t g_notify_uuid;
+static uuid_t g_write_uuid;
 
 static GMainLoop *m_main_loop;
 
@@ -50,16 +50,30 @@ static void on_user_abort(int arg) {
 }
 
 static void usage(char *argv[]) {
-	printf("%s <device_address>\n", argv[0]);
+	printf("%s <device_address> <notification_characteristic_uuid> [<write_characteristic_uuid> <write_characteristic_hex_data> ...]\n", argv[0]);
 }
+
 
 int main(int argc, char *argv[]) {
 	int ret;
+	int argid;
 	gatt_connection_t* connection;
 
-	if (argc != 2) {
+	if (argc < 3) {
 		usage(argv);
 		return 1;
+	}
+
+	if (gattlib_string_to_uuid(argv[2], strlen(argv[2]) + 1, &g_notify_uuid) < 0) {
+		usage(argv);
+		return 1;
+	}
+
+	if (argc > 3) {
+		if (gattlib_string_to_uuid(argv[3], strlen(argv[3]) + 1, &g_write_uuid) < 0) {
+			usage(argv);
+			return 1;
+		}
 	}
 
 	connection = gattlib_connect(NULL, argv[1], GATTLIB_CONNECTION_OPTIONS_LEGACY_DEFAULT);
@@ -70,10 +84,31 @@ int main(int argc, char *argv[]) {
 
 	gattlib_register_notification(connection, notification_handler, NULL);
 
-	ret = gattlib_notification_start(connection, &g_battery_level_uuid);
+	ret = gattlib_notification_start(connection, &g_notify_uuid);
 	if (ret) {
 		fprintf(stderr, "Fail to start notification.\n");
 		goto DISCONNECT;
+	}
+
+	// Optional byte writes to make to trigger notifications
+	for (argid = 4; argid < argc; argid ++) {
+		unsigned char data[256];
+		char * charp;
+		unsigned char * datap;
+		for (charp = argv[4], datap = data; charp[0] && charp[1]; charp += 2, datap ++) {
+			sscanf(charp, "%02hhx", datap);
+		}
+		ret = gattlib_write_char_by_uuid(connection, &g_write_uuid, data, datap - data);
+
+		if (ret != GATTLIB_SUCCESS) {
+			if (ret == GATTLIB_NOT_FOUND) {
+				fprintf(stderr, "Could not find GATT Characteristic with UUID %s.\n", argv[3]);
+			} else {
+				fprintf(stderr, "Error while writing GATT Characteristic with UUID %s (ret:%d)\n",
+					argv[3], ret);
+			}
+			goto DISCONNECT;
+		}
 	}
 
 	// Catch CTRL-C
@@ -83,7 +118,7 @@ int main(int argc, char *argv[]) {
 	g_main_loop_run(m_main_loop);
 
 	// In case we quit the main loop, clean the connection
-	gattlib_notification_stop(connection, &g_battery_level_uuid);
+	gattlib_notification_stop(connection, &g_notify_uuid);
 	g_main_loop_unref(m_main_loop);
 
 DISCONNECT:
