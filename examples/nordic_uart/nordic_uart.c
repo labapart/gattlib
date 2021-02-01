@@ -109,12 +109,14 @@ int main(int argc, char *argv[]) {
 	}
 	free(characteristics);
 
-	// Enable Status Notification
-	uint16_t enable_notification = 0x0001;
-	gattlib_write_char_by_handle(m_connection, rx_handle + 1, &enable_notification, sizeof(enable_notification));
-
 	// Register notification handler
 	gattlib_register_notification(m_connection, notification_cb, NULL);
+
+	ret = gattlib_notification_start(m_connection, &nus_characteristic_rx_uuid);
+	if (ret) {
+		fprintf(stderr, "Fail to start notification.\n");
+		return 2;
+	}
 
 	// Register handler to catch Ctrl+C
 	signal(SIGINT, int_handler);
