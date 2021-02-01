@@ -152,7 +152,11 @@ static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, 
 
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
-		puts("Not found");
+		char uuid_str[MAX_LEN_UUID_STR + 1];
+
+		gattlib_uuid_to_string(uuid, uuid_str, sizeof(uuid_str));
+
+		fprintf(stderr, "GATT characteristic '%s' not found\n", uuid_str);
 		return GATTLIB_NOT_FOUND;
 	}
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
