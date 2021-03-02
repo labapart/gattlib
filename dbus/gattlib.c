@@ -406,39 +406,36 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		}
 
 		if (org_bluez_gatt_service1_get_primary(service_proxy)) {
-			primary_services[count].attr_handle_start = 0;
-			primary_services[count].attr_handle_end   = 0;
+			// Object path is in the form '/org/bluez/hci0/dev_DE_79_A2_A1_E9_FA/service0024
+			// We convert the last 4 hex characters into the handle
+			int service_handle = 0xFFFF; // Initialize with an invalid value.
+			sscanf(object_path + strlen(object_path) - 4, "%x", &service_handle);
+			primary_services[count].attr_handle_start = service_handle;
+			primary_services[count].attr_handle_end   = service_handle;
 
-			//Note: We assume the characteristics are always present after the services
-			for (GList *m = l; m != NULL; m = m->next)  {
+			// Loop through all objects, as ordering is not guaranteed.
+			for (GList *m = conn_context->dbus_objects; m != NULL; m = m->next)  {
 				GDBusObject *characteristic_object = m->data;
 				const char* characteristic_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(characteristic_object));
 				interface = g_dbus_object_manager_get_interface(device_manager, characteristic_path, "org.bluez.GattCharacteristic1");
+
 				if (!interface) {
 					continue;
 				} else if (strncmp(object_path, characteristic_path, strlen(object_path)) != 0) {
+					// The selected characteristic does not belong to the object, ignore.
 					g_object_unref(interface);
 					continue;
 				} else {
-					int char_handle;
-
+					// Release the interface object to prevent memory leak.
 					g_object_unref(interface);
 
 					// Object path is in the form '/org/bluez/hci0/dev_DE_79_A2_A1_E9_FA/service0024/char0029'.
 					// We convert the last 4 hex characters into the handle
+					int char_handle = primary_services[count].attr_handle_end; // Initialize with existing good value for safety.
 					sscanf(characteristic_path + strlen(characteristic_path) - 4, "%x", &char_handle);
 
-					if (primary_services[count].attr_handle_start == 0) {
-						primary_services[count].attr_handle_start = char_handle;
-					} else {
-						primary_services[count].attr_handle_start = MIN(primary_services[count].attr_handle_start, char_handle);
-					}
-
-					if (primary_services[count].attr_handle_end == 0) {
-						primary_services[count].attr_handle_end = char_handle;
-					} else {
-						primary_services[count].attr_handle_end = MAX(primary_services[count].attr_handle_end, char_handle);
-					}
+					// Once here, update the end handle of the service
+					primary_services[count].attr_handle_end = MAX(primary_services[count].attr_handle_end, char_handle);
 				}
 			}
 
