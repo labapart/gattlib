@@ -138,7 +138,7 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 	GList *l;
 	for (l = conn_context->dbus_objects; l != NULL; l = l->next)  {
 		GDBusInterface *interface;
-		bool found;
+		bool found = false;
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 
