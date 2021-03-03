@@ -32,6 +32,12 @@
 
 static const char *m_dbus_error_unknown_object = "GDBus.Error:org.freedesktop.DBus.Error.UnknownObject";
 
+static void* glib_event_thread(void* main_loop_p) {
+	GMainLoop** main_loop = (GMainLoop**) main_loop_p;
+	g_main_loop_run(*main_loop);
+	return NULL;
+}
+
 gboolean on_handle_device_property_change(
 	    OrgBluezGattCharacteristic1 *object,
 	    GVariant *arg_changed_properties,
@@ -212,6 +218,11 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
 
+	// Set up a new GMainLoop to handle notification/indication events.
+	conn_context->connection_loop = g_main_loop_new(NULL, 0);
+	fprintf(stderr, "Creating external thread\n");
+	pthread_create(&conn_context->event_thread, NULL, glib_event_thread, &conn_context->connection_loop);
+
 	return connection;
 
 FREE_DEVICE:
@@ -253,6 +264,9 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	free(conn_context->device_object_path);
 	g_object_unref(conn_context->device);
 	g_list_free_full(conn_context->dbus_objects, g_object_unref);
+	g_main_loop_quit(conn_context->connection_loop);
+	pthread_join(conn_context->event_thread, NULL);
+	g_main_loop_unref(conn_context->connection_loop);
 	disconnect_all_notifications(conn_context);
 
 	free(connection->context);

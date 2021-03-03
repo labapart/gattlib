@@ -25,6 +25,7 @@
 #define __GATTLIB_INTERNAL_H__
 
 #include <assert.h>
+#include <pthread.h>
 
 #include "gattlib_internal_defs.h"
 #include "gattlib.h"
@@ -52,8 +53,8 @@ typedef struct {
 	char* device_object_path;
 	OrgBluezDevice1* device;
 
-	// This attribute is only used during the connection stage. By placing the attribute here, we can pass
-	// `gatt_connection_t` to
+	// These attributes are needed to handle incoming events from GLib
+	pthread_t event_thread;
 	GMainLoop *connection_loop;
 	// ID of the timeout to know if we managed to connect to the device
 	guint connection_timeout;
