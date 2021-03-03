@@ -220,7 +220,6 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 
 	// Set up a new GMainLoop to handle notification/indication events.
 	conn_context->connection_loop = g_main_loop_new(NULL, 0);
-	fprintf(stderr, "Creating external thread\n");
 	pthread_create(&conn_context->event_thread, NULL, glib_event_thread, &conn_context->connection_loop);
 
 	return connection;
