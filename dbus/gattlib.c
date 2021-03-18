@@ -848,7 +848,7 @@ int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *r
 	OrgBluezDevice1 *bluez_device1;
 	int ret;
 
-	if (rssi == NULL) {
+	if (rssi == NULL || mac_address == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
