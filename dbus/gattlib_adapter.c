@@ -145,6 +145,12 @@ static void device_manager_on_device1_signal(const char* device1_path, struct di
 	if (device1) {
 		const gchar *address = org_bluez_device1_get_address(device1);
 
+		// Sometimes org_bluez_device1_get_address returns null addresses. If that's the case, early return.
+		if (address == NULL) {
+			g_object_unref(device1);
+			return;
+		}
+
 		// Check if the device is already part of the list
 		GSList *item = g_slist_find_custom(*arg->discovered_devices_ptr, address, (GCompareFunc)g_ascii_strcasecmp);
 
