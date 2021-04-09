@@ -284,8 +284,8 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	// Now, start BLE discovery
 	org_bluez_adapter1_call_start_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 	if (error) {
-		fprintf(stderr, "Failed to start discovery: %s\n", error->message);
-		g_error_free(error);
+		fprintf(stderr, "Failed to start discovery %d: %s\n", error->code, error->message );
+    if(error-> code != 36) //Do not return error if adapter is already scanning
 		return GATTLIB_ERROR_DBUS;
 	}
 
@@ -350,9 +350,14 @@ int gattlib_adapter_scan_disable(void* adapter) {
 int gattlib_adapter_close(void* adapter)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
+  if(gattlib_adapter == NULL) return GATTLIB_SUCCESS;
 
-	g_object_unref(gattlib_adapter->device_manager);
-	g_object_unref(gattlib_adapter->adapter_proxy);
+	if (gattlib_adapter->device_manager != NULL) {
+    g_object_unref(gattlib_adapter->device_manager);
+  }
+	if (gattlib_adapter->device_manager != NULL) {
+    g_object_unref(gattlib_adapter->adapter_proxy);
+  }
 	free(gattlib_adapter);
 
 	return GATTLIB_SUCCESS;
@@ -360,6 +365,7 @@ int gattlib_adapter_close(void* adapter)
 
 gboolean stop_scan_func(gpointer data)
 {
+  if(data != NULL)
 	g_main_loop_quit(data);
 	return FALSE;
 }
