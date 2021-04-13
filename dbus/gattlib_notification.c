@@ -83,8 +83,8 @@ static gboolean on_handle_characteristic_property_change(
 		// Retrieve 'Value' from 'arg_changed_properties'
 		if (g_variant_n_children (arg_changed_properties) > 0) {
 			GVariantIter *iter;
-			const gchar *key;
-			GVariant *value;
+			const gchar *key = NULL;
+			GVariant *value = NULL;
 
 			g_variant_get (arg_changed_properties, "a{sv}", &iter);
 			while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
@@ -103,6 +103,12 @@ static gboolean on_handle_characteristic_property_change(
 					break;
 				}
 			}
+
+			if (key != NULL)
+				g_free(key);
+			if (value != NULL)
+				g_variant_unref(value);
+				
 			g_variant_iter_free(iter);
 		}
 	}
