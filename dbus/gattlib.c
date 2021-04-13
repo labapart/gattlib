@@ -267,6 +267,9 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	pthread_join(conn_context->event_thread, NULL);
 	g_main_loop_unref(conn_context->connection_loop);
 	disconnect_all_notifications(conn_context);
+	
+	free(conn_context->adapter);
+	free(conn_context->adapter->adapter_name);
 
 	free(connection->context);
 	free(connection);
