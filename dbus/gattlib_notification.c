@@ -100,15 +100,14 @@ static gboolean on_handle_characteristic_property_change(
 
 					gattlib_call_notification_handler(&connection->notification,
 							&uuid, data, data_length);
+
+					// As per https://developer.gnome.org/glib/stable/glib-GVariant.html#g-variant-iter-loop, clean up `key` and `value`.
+					g_free(key);
+					g_variant_unref(value);
 					break;
 				}
 			}
 
-			if (key != NULL)
-				g_free(key);
-			if (value != NULL)
-				g_variant_unref(value);
-				
 			g_variant_iter_free(iter);
 		}
 	}
