@@ -104,8 +104,6 @@ static gboolean on_handle_characteristic_property_change(
 				}
 			}
 
-			if (key != NULL)
-				g_free(key);
 			if (value != NULL)
 				g_variant_unref(value);
 				
