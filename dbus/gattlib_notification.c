@@ -102,6 +102,10 @@ static gboolean on_handle_characteristic_property_change(
 							&uuid, data, data_length);
 
 					// As per https://developer.gnome.org/glib/stable/glib-GVariant.html#g-variant-iter-loop, clean up `key` and `value`.
+
+					// cause error "free(): invalid next size (fast)", https://developer.gnome.org/glib/stable/gvariant-format-strings.html, see "Characters: &" 
+					// ...This pointer should not be freed.
+					// g_free(key) 
 					g_variant_unref(value);
 					break;
 				}
