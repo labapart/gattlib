@@ -102,7 +102,7 @@ static gboolean on_handle_characteristic_property_change(
 							&uuid, data, data_length);
 
 					// As per https://developer.gnome.org/glib/stable/glib-GVariant.html#g-variant-iter-loop, clean up `key` and `value`.
-					g_free(key);
+					//&sv, key is fixed memory
 					g_variant_unref(value);
 					break;
 				}
@@ -270,6 +270,6 @@ void disconnect_all_notifications(gattlib_context_t* conn_context) {
 		g_signal_handler_disconnect(notification_handle->gatt, notification_handle->signal_id);
 		free(notification_handle);
 	}
-
-	g_list_free_full(conn_context->notified_characteristics, g_object_unref);
+	
+	g_list_free(conn_context->notified_characteristics);
 }
