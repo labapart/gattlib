@@ -417,8 +417,9 @@ static gatt_connection_t *gattlib_connect_with_options(const char *src, const ch
 	while ((io_connect_arg.connected == FALSE) && (io_connect_arg.timeout == FALSE)) {
 		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
 	}
-	// Disconnect the timeout source
-	g_source_destroy(timeout);
+	
+	// Disconnect the timeout source if connection success
+	if (io_connect_arg.connected) g_source_destroy(timeout);
 
 	if (io_connect_arg.timeout) {
 		return NULL;
