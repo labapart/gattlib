@@ -99,13 +99,16 @@ else()
 endif()
 
 # gattlib
+include(GNUInstallDirs)
 if(GATTLIB_SHARED_LIB)
   add_library(gattlib SHARED ${gattlib_SRCS})
   target_link_libraries(gattlib ${gattlib_LIBS})
   
-  install(TARGETS gattlib LIBRARY DESTINATION lib)
+  install(TARGETS gattlib LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 else()
   add_library(gattlib ${gattlib_SRCS})
   target_include_directories(gattlib INTERFACE ../include)
   target_link_libraries(gattlib ${gattlib_LIBS})
+  
+  install(TARGETS gattlib LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
