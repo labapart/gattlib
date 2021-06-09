@@ -1,0 +1,23 @@
+name: gattlib
+on: [push]
+jobs:
+  build-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo apt install libbluetooth-dev
+      - run: mkdir build && pushd build && cmake -DCMAKE_BUILD_TYPE=Debug -DGATTLIB_BUILD_DOCS=OFF .. && make
+
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo apt install libbluetooth-dev doxygen
+      - run: mkdir build && pushd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make
+
+  build-release-force-dbus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo apt install libbluetooth-dev
+      - run: mkdir build && pushd build && cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release -DGATTLIB_BUILD_DOCS=OFF .. && make
