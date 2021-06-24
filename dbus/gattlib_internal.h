@@ -64,6 +64,8 @@ typedef struct {
 
 	// List of 'OrgBluezGattCharacteristic1*' which has an attached notification
 	GList *notified_characteristics;
+
+	int need_release_adapter;
 } gattlib_context_t;
 
 struct gattlib_adapter {

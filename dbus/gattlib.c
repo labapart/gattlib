@@ -139,12 +139,15 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
 	char object_path[100];
+	int need_release_adapter = 0;
 
 	// In case NULL is passed, we initialized default adapter
 	if (gattlib_adapter == NULL) {
 		gattlib_adapter = init_default_adapter();
+		need_release_adapter = 1;
 	} else {
 		adapter_name = gattlib_adapter->adapter_name;
+		need_release_adapter = 0;
 	}
 
 	get_device_path_from_mac(adapter_name, dst, object_path, sizeof(object_path));
@@ -154,6 +157,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 		return NULL;
 	}
 	conn_context->adapter = gattlib_adapter;
+	conn_context->need_release_adapter = need_release_adapter;
 
 	gatt_connection_t* connection = calloc(sizeof(gatt_connection_t), 1);
 	if (connection == NULL) {
@@ -268,8 +272,8 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	g_main_loop_unref(conn_context->connection_loop);
 	disconnect_all_notifications(conn_context);
 	
-	free(conn_context->adapter);
-	free(conn_context->adapter->adapter_name);
+	if (conn_context->need_release_adapter)
+		gattlib_adapter_close(conn_context->adapter);
 
 	free(connection->context);
 	free(connection);
