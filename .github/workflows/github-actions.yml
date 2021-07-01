@@ -20,4 +20,22 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: sudo apt install libbluetooth-dev
-      - run: mkdir build && pushd build && cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release -DGATTLIB_BUILD_DOCS=OFF .. && make
+      - run: mkdir build && pushd build && cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release -DGATTLIB_BUILD_DOCS=OFF .. && make && cpack
+
+  build-arm32:
+    runs-on: ubuntu-latest
+    env:
+      SYSROOT: $PWD/debian-stable-arm
+      CROSS_COMPILE: arm-linux-gnueabihf-
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo apt install doxygen gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+      - name: Install ARM 32bit environment
+        uses: labapart/cross_sysroot@master
+        with:
+          distribution: debian
+          distribution_version: stable
+          architecture: armhf
+          build_root: $PWD/debian-stable-arm
+          package_requirements: requirements.dep
+      - run: mkdir build && pushd build && cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release .. && make && cpack
