@@ -102,7 +102,6 @@ static gboolean on_handle_characteristic_property_change(
 							&uuid, data, data_length);
 
 					// As per https://developer.gnome.org/glib/stable/glib-GVariant.html#g-variant-iter-loop, clean up `key` and `value`.
-					g_free(key);
 					g_variant_unref(value);
 					break;
 				}

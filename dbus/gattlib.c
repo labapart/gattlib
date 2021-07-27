@@ -268,8 +268,8 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	g_main_loop_unref(conn_context->connection_loop);
 	disconnect_all_notifications(conn_context);
 	
-	free(conn_context->adapter);
 	free(conn_context->adapter->adapter_name);
+	free(conn_context->adapter);
 
 	free(connection->context);
 	free(connection);
@@ -598,6 +598,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 			} else {
 				characteristic_list[count].handle       = 0;
 				characteristic_list[count].value_handle = 0;
+				characteristic_list[count].properties = 0;
 
 				const gchar *const * flags = org_bluez_gatt_characteristic1_get_flags(characteristic_proxy);
 				for (; *flags != NULL; flags++) {
@@ -683,6 +684,7 @@ static void add_characteristics_from_service(gattlib_context_t* conn_context, GD
 
 			characteristic_list[*count].handle = handle;
 			characteristic_list[*count].value_handle = handle;
+			characteristic_list[*count].properties = 0;
 
 			const gchar *const * flags = org_bluez_gatt_characteristic1_get_flags(characteristic);
 			for (; *flags != NULL; flags++) {
