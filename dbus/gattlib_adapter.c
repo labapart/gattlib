@@ -351,8 +351,10 @@ int gattlib_adapter_close(void* adapter)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
-	g_object_unref(gattlib_adapter->device_manager);
+	if (gattlib_adapter->device_manager)
+		g_object_unref(gattlib_adapter->device_manager);
 	g_object_unref(gattlib_adapter->adapter_proxy);
+	free(gattlib_adapter->adapter_name);
 	free(gattlib_adapter);
 
 	return GATTLIB_SUCCESS;
