@@ -1,3 +1,9 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-or-later
+ *
+ * Copyright (c) 2021, Olivier Martin <olivier@labapart.org>
+ */
+
 #if defined(WITH_PYTHON)
 	#include <Python.h>
 #endif

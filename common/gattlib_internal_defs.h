@@ -1,3 +1,9 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-or-later
+ *
+ * Copyright (c) 2021, Olivier Martin <olivier@labapart.org>
+ */
+
 #ifndef __GATTLIB_INTERNAL_DEFS_H__
 #define __GATTLIB_INTERNAL_DEFS_H__
 

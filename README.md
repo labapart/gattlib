@@ -154,6 +154,13 @@ TODO List
 - Complete `examples/gatttool` port to GattLib to demonstrate the completeness of GattLib.
 - Remove GLib dependencies to GattLib (mainly replacing GLib IO Channels by Unix Domain Socket).
 
+License
+=======
+
+Gattlib with Bluez Legacy support (for Bluez v4) has a GPL v2.0 or later license.  
+While Gattlib for recent version of Bluez (v5.40+) has a BSD-3-Clause license - except `dbus/bluez5/lib/uuid.c`
+and `dbus/bluez5/lib/uuid.h` that have a GPL v2.0 or later license.
+
 Support
 =======
 

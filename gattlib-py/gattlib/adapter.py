@@ -1,3 +1,9 @@
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+#
+
 from gattlib import *
 from .device import Device
 from .exception import handle_return, AdapterNotOpened
