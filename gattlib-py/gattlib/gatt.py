@@ -1,3 +1,9 @@
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+#
+
 from gattlib import *
 from .uuid import gattlib_uuid_to_uuid, gattlib_uuid_to_int
 from .exception import handle_return

@@ -1,3 +1,9 @@
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+#
+
 GATTLIB_SUCCESS = 0
 GATTLIB_INVALID_PARAMETER = 1
 GATTLIB_NOT_FOUND = 2

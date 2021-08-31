@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+#
+
 import argparse
 import threading
 

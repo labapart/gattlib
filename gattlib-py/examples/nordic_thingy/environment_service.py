@@ -1,3 +1,9 @@
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+#
+
 import struct
 import sys
 import threading
@@ -59,7 +65,7 @@ def graph_init():
     global ax_temp, ax_hum
     global simulation
 
-    font = {'size'   : 9}
+    font = {'size': 9}
     matplotlib.rc('font', **font)
 
     # Setup figure and subplots
