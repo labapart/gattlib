@@ -35,6 +35,11 @@ static bool handle_dbus_gattcharacteristic_from_path(gattlib_context_t* conn_con
 		if (uuid != NULL) {
 			uuid_t characteristic_uuid;
 			const gchar *characteristic_uuid_str = org_bluez_gatt_characteristic1_get_uuid(characteristic);
+			if (characteristic_uuid_str == NULL) {
+				// It should not be expected to get NULL from GATT characteristic UUID but we still test it
+				fprintf(stderr, "Error: %s path unexpectly returns a NULL UUID.\n", object_path);
+				return false;
+			}
 
 			gattlib_string_to_uuid(characteristic_uuid_str, strlen(characteristic_uuid_str) + 1, &characteristic_uuid);
 
