@@ -244,14 +244,11 @@ int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid) {
 	return disconnect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_indication);
 }
 
+static int end_notification(struct gattlib_notification_handle *notification_handle) {
+	g_signal_handler_disconnect(notification_handle->gatt, notification_handle->signal_id);
+	free(notification_handle);
+}
+
 void disconnect_all_notifications(gattlib_context_t* conn_context) {
-	// Find notification handle
-	for (GList *l = conn_context->notified_characteristics; l != NULL; l = l->next) {
-		struct gattlib_notification_handle *notification_handle = l->data;
-
-		g_signal_handler_disconnect(notification_handle->gatt, notification_handle->signal_id);
-		free(notification_handle);
-	}
-
-	g_list_free_full(conn_context->notified_characteristics, g_object_unref);
+	g_list_free_full(g_steal_pointer(&conn_context->notified_characteristics), end_notification);
 }
