@@ -244,7 +244,9 @@ int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid) {
 	return disconnect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_indication);
 }
 
-static int end_notification(struct gattlib_notification_handle *notification_handle) {
+static void end_notification(void *notified_characteristic) {
+	struct gattlib_notification_handle *notification_handle = notified_characteristic;
+
 	g_signal_handler_disconnect(notification_handle->gatt, notification_handle->signal_id);
 	free(notification_handle);
 }
