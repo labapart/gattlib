@@ -40,8 +40,8 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 	manufacturer_data_variant = org_bluez_device1_get_manufacturer_data(bluez_device1);
 	if (manufacturer_data_variant != NULL) {
 		if (g_variant_n_children(manufacturer_data_variant) != 1) {
-			fprintf(stderr, "Warning: Manufacturer Data with multiple children: %s\n",
-				g_variant_print(manufacturer_data_variant, TRUE));
+			GATTLIB_LOG(GATTLIB_WARNING, "Manufacturer Data with multiple children: %s",
+					g_variant_print(manufacturer_data_variant, TRUE));
 			return GATTLIB_NOT_SUPPORTED;
 		}
 		GVariant* manufacturer_data_dict = g_variant_get_child_value(manufacturer_data_variant, 0);

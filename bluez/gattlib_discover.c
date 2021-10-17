@@ -84,7 +84,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	gattlib_context_t* conn_context = connection->context;
 	ret = gatt_discover_primary(conn_context->attrib, NULL, primary_all_cb, &user_data);
 	if (ret == 0) {
-		fprintf(stderr, "Fail to discover primary services.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to discover primary services.");
 		return GATTLIB_ERROR_BLUEZ;
 	}
 
@@ -156,7 +156,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 	gattlib_context_t* conn_context = connection->context;
 	ret = gatt_discover_char(conn_context->attrib, start, end, NULL, characteristic_cb, &user_data);
 	if (ret == 0) {
-		fprintf(stderr, "Fail to discover characteristics.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to discover characteristics.");
 		return GATTLIB_ERROR_BLUEZ;
 	}
 

@@ -30,10 +30,10 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 			NULL, &error);
 	if (adapter_proxy == NULL) {
 		if (error) {
-			fprintf(stderr, "Failed to get adapter %s: %s\n", object_path, error->message);
+			GATTLIB_LOG(GATTLIB_ERROR, "Failed to get adapter %s: %s", object_path, error->message);
 			g_error_free(error);
 		} else {
-			fprintf(stderr, "Failed to get adapter %s\n", object_path);
+			GATTLIB_LOG(GATTLIB_ERROR, "Failed to get adapter %s", object_path);
 		}
 		return GATTLIB_ERROR_DBUS;
 	}
@@ -87,10 +87,10 @@ GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gatt
 			&error);
 	if (gattlib_adapter->device_manager == NULL) {
 		if (error) {
-			fprintf(stderr, "Failed to get Bluez Device Manager: %s\n", error->message);
+			GATTLIB_LOG(GATTLIB_ERROR, "Failed to get Bluez Device Manager: %s", error->message);
 			g_error_free(error);
 		} else {
-			fprintf(stderr, "Failed to get Bluez Device Manager.\n");
+			GATTLIB_LOG(GATTLIB_ERROR, "Failed to get Bluez Device Manager.");
 		}
 		return NULL;
 	}
@@ -120,7 +120,7 @@ static void device_manager_on_device1_signal(const char* device1_path, struct di
 			NULL,
 			&error);
 	if (error) {
-		fprintf(stderr, "Failed to connection to new DBus Bluez Device: %s\n",
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to connection to new DBus Bluez Device: %s",
 			error->message);
 		g_error_free(error);
 	}
@@ -159,10 +159,14 @@ static void on_dbus_object_added(GDBusObjectManager *device_manager,
                      gpointer            user_data)
 {
 	const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
+
 	GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.Device1");
 	if (!interface) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_object_added: %s (not 'org.bluez.Device1')", object_path);
 		return;
 	}
+
+	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_object_added: %s (has 'org.bluez.Device1')", object_path);
 
 	// It is a 'org.bluez.Device1'
 	device_manager_on_device1_signal(object_path, user_data);
@@ -178,6 +182,11 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
                                        const gchar *const       *invalidated_properties,
                                        gpointer                  user_data)
 {
+	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_interface_proxy_properties_changed: interface:%s changed_properties:%s invalidated_properties:%s",
+			g_dbus_proxy_get_interface_name(interface_proxy),
+			g_variant_print(changed_properties, TRUE),
+			invalidated_properties);
+
 	// Check if the object is a 'org.bluez.Device1'
 	if (strcmp(g_dbus_proxy_get_interface_name(interface_proxy), "org.bluez.Device1") != 0) {
 		return;
@@ -228,8 +237,8 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	}
 
 	if (error) {
-		printf("error: %d.%d\n", error->domain, error->code);
-		fprintf(stderr, "Failed to set discovery filter: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to set discovery filter: %s (%d.%d)",
+				error->message, error->domain, error->code);
 		g_error_free(error);
 		return GATTLIB_ERROR_DBUS;
 	}
@@ -267,7 +276,7 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	// Now, start BLE discovery
 	org_bluez_adapter1_call_start_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 	if (error) {
-		fprintf(stderr, "Failed to start discovery: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to start discovery: %s", error->message);
 		g_error_free(error);
 		return GATTLIB_ERROR_DBUS;
 	}

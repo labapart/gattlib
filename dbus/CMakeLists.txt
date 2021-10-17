@@ -74,6 +74,7 @@ set(gattlib_SRCS gattlib.c
                  bluez5/lib/uuid.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_common.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_eddystone.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/logging_backend/${GATTLIB_LOG_BACKEND}/gattlib_logging.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-device1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattcharacteristic1.c
@@ -109,6 +110,11 @@ if(GATTLIB_SHARED_LIB)
   add_library(gattlib SHARED ${gattlib_SRCS})
 else()
   add_library(gattlib ${gattlib_SRCS})
+endif()
+
+target_compile_definitions(gattlib PUBLIC -DGATTLIB_LOG_LEVEL=${GATTLIB_LOG_LEVEL})
+if (GATTLIB_LOG_BACKEND STREQUAL "syslog")
+	target_compile_definitions(gattlib PUBLIC -DGATTLIB_LOG_BACKEND_SYSLOG)
 endif()
 
 target_include_directories(gattlib PUBLIC ../include)

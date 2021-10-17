@@ -119,6 +119,13 @@ extern "C" {
 //@}
 
 
+#define GATTLIB_ERROR           0
+#define GATTLIB_WARNING         1
+#define GATTLIB_INFO            2
+#define GATTLIB_DEBUG           3
+
+#define GATTLIB_LOG(level, args...) if (level <= GATTLIB_LOG_LEVEL) { gattlib_log(level, args); }
+
 typedef struct _gatt_connection_t gatt_connection_t;
 typedef struct _gatt_stream_t gatt_stream_t;
 
@@ -669,6 +676,8 @@ int gattlib_string_to_uuid(const char *str, size_t size, uuid_t *uuid);
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2);
+
+void gattlib_log(int level, const char *format, ...);
 
 #ifdef __cplusplus
 }

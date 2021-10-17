@@ -48,7 +48,7 @@ int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t
 	g_variant_builder_unref(variant_options);
 
 	if (error != NULL) {
-		fprintf(stderr, "Failed to acquired write DBus GATT characteristic: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to acquired write DBus GATT characteristic: %s", error->message);
 		g_error_free(error);
 		return GATTLIB_ERROR_DBUS;
 	}
@@ -56,7 +56,7 @@ int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t
 	error = NULL;
 	fd = g_unix_fd_list_get(fd_list, g_variant_get_handle(out_fd), &error);
 	if (error != NULL) {
-		fprintf(stderr, "Failed to retrieve Unix File Descriptor: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to retrieve Unix File Descriptor: %s", error->message);
 		g_error_free(error);
 		return GATTLIB_ERROR_DBUS;
 	}

@@ -77,7 +77,8 @@ set(gattlib_SRCS gattlib_adapter.c
                  gattlib_discover.c
                  gattlib_read_write.c
                  ${CMAKE_SOURCE_DIR}/common/gattlib_common.c
-                 ${CMAKE_SOURCE_DIR}/common/gattlib_eddystone.c)
+                 ${CMAKE_SOURCE_DIR}/common/gattlib_eddystone.c
+                 ${CMAKE_SOURCE_DIR}/common/logging_backend/${GATTLIB_LOG_BACKEND}/gattlib_logging.c)
 
 # Added Glib support
 pkg_search_module(GLIB REQUIRED glib-2.0)
@@ -99,6 +100,11 @@ else()
 endif()
 
 # gattlib
+target_compile_definitions(gattlib PUBLIC -DGATTLIB_LOG_LEVEL=${GATTLIB_LOG_LEVEL})
+if (GATTLIB_LOG_BACKEND STREQUAL "syslog")
+	target_compile_definitions(gattlib PUBLIC -DGATTLIB_LOG_BACKEND_SYSLOG)
+endif()
+
 include(GNUInstallDirs)
 if(GATTLIB_SHARED_LIB)
   add_library(gattlib SHARED ${gattlib_SRCS})

@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2019  Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2021  Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+#include <syslog.h>
+#endif
 
 #include "gattlib.h"
 
@@ -63,23 +67,28 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+	openlog("gattlib_nordic_uart", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
+	setlogmask(LOG_UPTO(LOG_INFO));
+#endif
+
 	m_connection = gattlib_connect(NULL, argv[1],
 				       GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM |
 				       GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_LOW);
 	if (m_connection == NULL) {
-		fprintf(stderr, "Fail to connect to the bluetooth device.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to connect to the bluetooth device.");
 		return 1;
 	}
 
 	// Convert characteristics to their respective UUIDs
 	ret = gattlib_string_to_uuid(NUS_CHARACTERISTIC_TX_UUID, strlen(NUS_CHARACTERISTIC_TX_UUID) + 1, &nus_characteristic_tx_uuid);
 	if (ret) {
-		fprintf(stderr, "Fail to convert characteristic TX to UUID.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to convert characteristic TX to UUID.");
 		return 1;
 	}
 	ret = gattlib_string_to_uuid(NUS_CHARACTERISTIC_RX_UUID, strlen(NUS_CHARACTERISTIC_RX_UUID) + 1, &nus_characteristic_rx_uuid);
 	if (ret) {
-		fprintf(stderr, "Fail to convert characteristic RX to UUID.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to convert characteristic RX to UUID.");
 		return 1;
 	}
 
@@ -88,7 +97,7 @@ int main(int argc, char *argv[]) {
 	int characteristic_count;
 	ret = gattlib_discover_char(m_connection, &characteristics, &characteristic_count);
 	if (ret) {
-		fprintf(stderr, "Fail to discover characteristic.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to discover characteristic.");
 		return 1;
 	}
 
@@ -101,10 +110,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	if (tx_handle == 0) {
-		fprintf(stderr, "Fail to find NUS TX characteristic.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to find NUS TX characteristic.");
 		return 1;
 	} else if (rx_handle == 0) {
-		fprintf(stderr, "Fail to find NUS RX characteristic.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to find NUS RX characteristic.");
 		return 1;
 	}
 	free(characteristics);
@@ -114,7 +123,7 @@ int main(int argc, char *argv[]) {
 
 	ret = gattlib_notification_start(m_connection, &nus_characteristic_rx_uuid);
 	if (ret) {
-		fprintf(stderr, "Fail to start notification.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to start notification.");
 		return 2;
 	}
 
@@ -130,7 +139,7 @@ int main(int argc, char *argv[]) {
 			length = MIN(total_length, 20);
 			ret = gattlib_write_without_response_char_by_handle(m_connection, tx_handle, input_ptr, length);
 			if (ret) {
-				fprintf(stderr, "Fail to send data to NUS TX characteristic.\n");
+				GATTLIB_LOG(GATTLIB_ERROR, "Fail to send data to NUS TX characteristic.");
 				return 1;
 			}
 			input_ptr += length;

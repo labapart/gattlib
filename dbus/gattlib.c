@@ -38,6 +38,7 @@ gboolean on_handle_device_property_change(
 
 		g_variant_get (arg_changed_properties, "a{sv}", &iter);
 		while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
+			GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change: %s: %s", key, g_variant_print(value, TRUE));
 			if (strcmp(key, "Connected") == 0) {
 				if (!g_variant_get_boolean(value)) {
 					// Disconnection case
@@ -154,7 +155,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 			&error);
 	if (device == NULL) {
 		if (error) {
-			fprintf(stderr, "Failed to connect to DBus Bluez Device: %s\n", error->message);
+			GATTLIB_LOG(GATTLIB_ERROR, "Failed to connect to DBus Bluez Device: %s", error->message);
 			g_error_free(error);
 		}
 		goto FREE_CONNECTION;
@@ -175,9 +176,9 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 		if (strncmp(error->message, m_dbus_error_unknown_object, strlen(m_dbus_error_unknown_object)) == 0) {
 			// You might have this error if the computer has not scanned or has not already had
 			// pairing information about the targetted device.
-			fprintf(stderr, "Device '%s' cannot be found\n", dst);
+			GATTLIB_LOG(GATTLIB_ERROR, "Device '%s' cannot be found", dst);
 		}  else {
-			fprintf(stderr, "Device connected error (device:%s): %s\n",
+			GATTLIB_LOG(GATTLIB_ERROR, "Device connected error (device:%s): %s",
 				conn_context->device_object_path,
 				error->message);
 		}
@@ -239,7 +240,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 
 	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
 	if (error) {
-		fprintf(stderr, "Failed to disconnect DBus Bluez Device: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to disconnect DBus Bluez Device: %s", error->message);
 		g_error_free(error);
 	}
 
@@ -301,10 +302,10 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 				&error);
 		if (service_proxy == NULL) {
 			if (error) {
-				fprintf(stderr, "Failed to open service '%s': %s\n", *service_str, error->message);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open service '%s': %s", *service_str, error->message);
 				g_error_free(error);
 			} else {
-				fprintf(stderr, "Failed to open service '%s'.\n", *service_str);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open service '%s'.", *service_str);
 			}
 			continue;
 		}
@@ -343,7 +344,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	const gchar* const* service_strs = org_bluez_device1_get_uuids(device);
 
 	if (device_manager == NULL) {
-		fprintf(stderr, "Gattlib context not initialized.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib context not initialized.");
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
@@ -390,10 +391,10 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 				&error);
 		if (service_proxy == NULL) {
 			if (error) {
-				fprintf(stderr, "Failed to open service '%s': %s\n", object_path, error->message);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open service '%s': %s", object_path, error->message);
 				g_error_free(error);
 			} else {
-				fprintf(stderr, "Failed to open service '%s'.\n", object_path);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open service '%s'.", object_path);
 			}
 			continue;
 		}
@@ -492,10 +493,10 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 				&error);
 		if (service_proxy == NULL) {
 			if (error) {
-				fprintf(stderr, "Failed to open services '%s': %s\n", *service_str, error->message);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open services '%s': %s", *service_str, error->message);
 				g_error_free(error);
 			} else {
-				fprintf(stderr, "Failed to open services '%s'.\n", *service_str);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open services '%s'.", *service_str);
 			}
 			continue;
 		}
@@ -539,10 +540,10 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 				&error);
 		if (service_proxy == NULL) {
 			if (error) {
-				fprintf(stderr, "Failed to open service '%s': %s\n", *service_str, error->message);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open service '%s': %s", *service_str, error->message);
 				g_error_free(error);
 			} else {
-				fprintf(stderr, "Failed to open service '%s'.\n", *service_str);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open service '%s'.", *service_str);
 			}
 			continue;
 		}
@@ -572,10 +573,10 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 					&error);
 			if (characteristic_proxy == NULL) {
 				if (error) {
-					fprintf(stderr, "Failed to open characteristic '%s': %s\n", characteristic_str, error->message);
+					GATTLIB_LOG(GATTLIB_ERROR, "Failed to open characteristic '%s': %s", characteristic_str, error->message);
 					g_error_free(error);
 				} else {
-					fprintf(stderr, "Failed to open characteristic '%s'.\n", characteristic_str);
+					GATTLIB_LOG(GATTLIB_ERROR, "Failed to open characteristic '%s'.", characteristic_str);
 				}
 				continue;
 			} else {
@@ -642,10 +643,10 @@ static void add_characteristics_from_service(gattlib_context_t* conn_context, GD
 				&error);
 		if (characteristic == NULL) {
 			if (error) {
-				fprintf(stderr, "Failed to open characteristic '%s': %s\n", object_path, error->message);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open characteristic '%s': %s", object_path, error->message);
 				g_error_free(error);
 			} else {
-				fprintf(stderr, "Failed to open characteristic '%s'.\n", object_path);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open characteristic '%s'.", object_path);
 			}
 			continue;
 		}
@@ -704,7 +705,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 	GList *l;
 
 	if (device_manager == NULL) {
-		fprintf(stderr, "Gattlib context not initialized.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib context not initialized.");
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
@@ -750,10 +751,10 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 				&error);
 		if (service_proxy == NULL) {
 			if (error) {
-				fprintf(stderr, "Failed to open service '%s': %s\n", object_path, error->message);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open service '%s': %s", object_path, error->message);
 				g_error_free(error);
 			} else {
-				fprintf(stderr, "Failed to open service '%s'.\n", object_path);
+				GATTLIB_LOG(GATTLIB_ERROR, "Failed to open service '%s'.", object_path);
 			}
 			continue;
 		}
@@ -808,7 +809,7 @@ int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_a
 			NULL,
 			&error);
 	if (error) {
-		fprintf(stderr, "Failed to connection to new DBus Bluez Device: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to connection to new DBus Bluez Device: %s", error->message);
 		g_error_free(error);
 		return GATTLIB_ERROR_DBUS;
 	}

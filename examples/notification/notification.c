@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2017  Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2021  Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,10 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+#include <syslog.h>
+#endif
 
 #include "gattlib.h"
 
@@ -76,17 +80,27 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+	openlog("gattlib_notification", LOG_CONS | LOG_NDELAY | LOG_PERROR | LOG_PID, LOG_USER);
+	setlogmask(LOG_UPTO(LOG_DEBUG));
+#endif
+
 	connection = gattlib_connect(NULL, argv[1], GATTLIB_CONNECTION_OPTIONS_LEGACY_DEFAULT);
 	if (connection == NULL) {
-		fprintf(stderr, "Fail to connect to the bluetooth device.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to connect to the bluetooth device.");
 		return 1;
 	}
 
 	gattlib_register_notification(connection, notification_handler, NULL);
 
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+	openlog("gattlib_notification", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
+	setlogmask(LOG_UPTO(LOG_DEBUG));
+#endif
+
 	ret = gattlib_notification_start(connection, &g_notify_uuid);
 	if (ret) {
-		fprintf(stderr, "Fail to start notification.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to start notification.");
 		goto DISCONNECT;
 	}
 
@@ -102,9 +116,9 @@ int main(int argc, char *argv[]) {
 
 		if (ret != GATTLIB_SUCCESS) {
 			if (ret == GATTLIB_NOT_FOUND) {
-				fprintf(stderr, "Could not find GATT Characteristic with UUID %s.\n", argv[3]);
+				GATTLIB_LOG(GATTLIB_ERROR, "Could not find GATT Characteristic with UUID %s.", argv[3]);
 			} else {
-				fprintf(stderr, "Error while writing GATT Characteristic with UUID %s (ret:%d)\n",
+				GATTLIB_LOG(GATTLIB_ERROR, "Error while writing GATT Characteristic with UUID %s (ret:%d)",
 					argv[3], ret);
 			}
 			goto DISCONNECT;
