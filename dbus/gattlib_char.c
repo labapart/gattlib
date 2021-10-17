@@ -38,6 +38,7 @@ static bool handle_dbus_gattcharacteristic_from_path(gattlib_context_t* conn_con
 			if (characteristic_uuid_str == NULL) {
 				// It should not be expected to get NULL from GATT characteristic UUID but we still test it
 				fprintf(stderr, "Error: %s path unexpectly returns a NULL UUID.\n", object_path);
+				g_object_unref(characteristic);
 				return false;
 			}
 
