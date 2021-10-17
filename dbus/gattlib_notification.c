@@ -27,6 +27,10 @@ gboolean on_handle_battery_level_property_change(
 	static guint8 percentage;
 	gatt_connection_t* connection = user_data;
 
+	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_handle_battery_level_property_change: changed_properties:%s invalidated_properties:%s",
+			g_variant_print(arg_changed_properties, TRUE),
+			arg_invalidated_properties);
+
 	if (gattlib_has_valid_handler(&connection->notification)) {
 		// Retrieve 'Value' from 'arg_changed_properties'
 		if (g_variant_n_children (arg_changed_properties) > 0) {
@@ -71,6 +75,9 @@ static gboolean on_handle_characteristic_property_change(
 
 			g_variant_get (arg_changed_properties, "a{sv}", &iter);
 			while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
+				GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_characteristic_property_change: %s:%s",
+						key, g_variant_print(value, TRUE));
+
 				if (strcmp(key, "Value") == 0) {
 					uuid_t uuid;
 					size_t data_length;
@@ -92,6 +99,8 @@ static gboolean on_handle_characteristic_property_change(
 
 			g_variant_iter_free(iter);
 		}
+	} else {
+		GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_characteristic_property_change: not a notification handler");
 	}
 	return TRUE;
 }
@@ -113,6 +122,9 @@ static gboolean on_handle_characteristic_indication(
 
 			g_variant_get (arg_changed_properties, "a{sv}", &iter);
 			while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
+				GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_indication_property_change: %s:%s",
+						key, g_variant_print(value, TRUE));
+
 				if (strcmp(key, "Value") == 0) {
 					uuid_t uuid;
 					size_t data_length;
@@ -130,6 +142,8 @@ static gboolean on_handle_characteristic_indication(
 			}
 			g_variant_iter_free(iter);
 		}
+	} else {
+		GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_indication_property_change: Not a valid indication handler");
 	}
 	return TRUE;
 }
@@ -143,7 +157,7 @@ static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, 
 
 		gattlib_uuid_to_string(uuid, uuid_str, sizeof(uuid_str));
 
-		fprintf(stderr, "GATT characteristic '%s' not found\n", uuid_str);
+		GATTLIB_LOG(GATTLIB_ERROR, "GATT characteristic '%s' not found", uuid_str);
 		return GATTLIB_NOT_FOUND;
 	}
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
@@ -166,7 +180,7 @@ static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, 
 		G_CALLBACK(callback),
 		connection);
 	if (signal_id == 0) {
-		fprintf(stderr, "Failed to connect signal to DBus GATT notification\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to connect signal to DBus GATT notification");
 		return GATTLIB_ERROR_DBUS;
 	}
 
@@ -184,7 +198,7 @@ static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, 
 	org_bluez_gatt_characteristic1_call_start_notify_sync(dbus_characteristic.gatt, NULL, &error);
 
 	if (error) {
-		fprintf(stderr, "Failed to start DBus GATT notification: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to start DBus GATT notification: %s", error->message);
 		g_error_free(error);
 		return GATTLIB_ERROR_DBUS;
 	} else {
@@ -220,7 +234,7 @@ static int disconnect_signal_to_characteristic_uuid(gatt_connection_t* connectio
 	free(notification_handle);
 
 	if (error) {
-		fprintf(stderr, "Failed to stop DBus GATT notification: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to stop DBus GATT notification: %s", error->message);
 		g_error_free(error);
 		return GATTLIB_NOT_FOUND;
 	} else {

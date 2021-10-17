@@ -1,8 +1,29 @@
-//#include <pthread.h>
-//#include <stdio.h>
-//#include <stdint.h>
-//#include <stdlib.h>
-//#include <sys/queue.h>
+/*
+ *
+ *  GattLib - GATT Library
+ *
+ *  Copyright (C) 2021  Olivier Martin <olivier@labapart.org>
+ *
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ */
+
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+#include <syslog.h>
+#endif
 
 #include "gattlib.h"
 
@@ -49,7 +70,7 @@ void on_eddystone_found(void *adapter, const char* addr, const char* name,
 				puts("\tEddystone EID");
 				break;
 			default:
-				fprintf(stderr, "\tEddystone ID %d not supported\n", advertisement_data_ptr->data[0]);
+				printf("\tEddystone ID %d not supported\n", advertisement_data_ptr->data[0]);
 			}
 		}
 	}
@@ -68,13 +89,18 @@ int main(int argc, const char *argv[]) {
 	} else if (argc == 2) {
 		adapter_name = argv[1];
 	} else {
-		fprintf(stderr, "%s [<bluetooth-adapter>]\n", argv[0]);
+		printf("%s [<bluetooth-adapter>]\n", argv[0]);
 		return 1;
 	}
 
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+	openlog("gattlib_find_eddystone", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
+	setlogmask(LOG_UPTO(LOG_INFO));
+#endif
+
 	ret = gattlib_adapter_open(adapter_name, &adapter);
 	if (ret) {
-		fprintf(stderr, "ERROR: Failed to open adapter.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to open adapter.");
 		return 1;
 	}
 
@@ -83,7 +109,7 @@ int main(int argc, const char *argv[]) {
 			GATTLIB_EDDYSTONE_TYPE_URL,
 			on_eddystone_found, BLE_SCAN_EDDYSTONE_TIMEOUT, NULL);
 	if (ret) {
-		fprintf(stderr, "ERROR: Failed to scan.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to scan.");
 		goto EXIT;
 	}
 

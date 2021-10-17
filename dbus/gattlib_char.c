@@ -37,7 +37,7 @@ static bool handle_dbus_gattcharacteristic_from_path(gattlib_context_t* conn_con
 			const gchar *characteristic_uuid_str = org_bluez_gatt_characteristic1_get_uuid(characteristic);
 			if (characteristic_uuid_str == NULL) {
 				// It should not be expected to get NULL from GATT characteristic UUID but we still test it
-				fprintf(stderr, "Error: %s path unexpectly returns a NULL UUID.\n", object_path);
+				GATTLIB_LOG(GATTLIB_ERROR, "Error: %s path unexpectly returns a NULL UUID.", object_path);
 				g_object_unref(characteristic);
 				return false;
 			}
@@ -112,7 +112,7 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 	};
 
 	if (device_manager == NULL) {
-		fprintf(stderr, "Gattlib Context not initialized.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized.");
 		return dbus_characteristic; // Return characteristic of type TYPE_NONE
 	}
 
@@ -120,7 +120,7 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 	if (gattlib_uuid_cmp(uuid, &m_battery_level_uuid) == 0) {
 		is_battery_level_uuid = true;
 	} else if (gattlib_uuid_cmp(uuid, &m_ccc_uuid) == 0) {
-		fprintf(stderr, "Error: Bluez v5.42+ does not expose Client Characteristic Configuration Descriptor through DBUS interface\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Error: Bluez v5.42+ does not expose Client Characteristic Configuration Descriptor through DBUS interface");
 		return dbus_characteristic;
 	}
 
@@ -153,7 +153,7 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 				}
 			}
 #else
-			fprintf(stderr, "You might use Bluez v5.48 with gattlib built for pre-v5.40\n");
+			GATTLIB_LOG(GATTLIB_ERROR, "You might use Bluez v5.48 with gattlib built for pre-v5.40");
 #endif
 		}
 	}
@@ -172,7 +172,7 @@ static struct dbus_characteristic get_characteristic_from_handle(gatt_connection
 	};
 
 	if (device_manager == NULL) {
-		fprintf(stderr, "Gattlib context not initialized.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib context not initialized.");
 		return dbus_characteristic;
 	}
 
@@ -219,7 +219,7 @@ static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteris
 	g_variant_builder_unref(options);
 #endif
 	if (error != NULL) {
-		fprintf(stderr, "Failed to read DBus GATT characteristic: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to read DBus GATT characteristic: %s", error->message);
 		g_error_free(error);
 		return GATTLIB_ERROR_DBUS;
 	}
@@ -314,7 +314,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	g_variant_builder_unref(options);
 #endif
 	if (error != NULL) {
-		fprintf(stderr, "Failed to read DBus GATT characteristic: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to read DBus GATT characteristic: %s", error->message);
 		g_error_free(error);
 		ret = GATTLIB_ERROR_DBUS;
 		goto EXIT;
@@ -353,7 +353,7 @@ static int write_char(struct dbus_characteristic *dbus_characteristic, const voi
 #endif
 
 	if (error != NULL) {
-		fprintf(stderr, "Failed to write DBus GATT characteristic: %s\n", error->message);
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to write DBus GATT characteristic: %s", error->message);
 		g_error_free(error);
 		return GATTLIB_ERROR_DBUS;
 	}

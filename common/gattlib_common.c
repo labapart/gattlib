@@ -80,7 +80,7 @@ void gattlib_call_notification_handler(struct gattlib_handler *handler, const uu
 	}
 #endif
 	else {
-		fprintf(stderr, "Invalid notification handler.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Invalid notification handler.");
 	}
 }
 
@@ -100,7 +100,7 @@ void gattlib_call_disconnection_handler(struct gattlib_handler *handler) {
 	}
 #endif
 	else {
-		fprintf(stderr, "Invalid disconnection handler.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Invalid disconnection handler.");
 	}
 }
 

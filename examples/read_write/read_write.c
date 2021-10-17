@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2019  Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2021  Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+#include <syslog.h>
+#endif
+
 #include "gattlib.h"
 
 typedef enum { READ, WRITE} operation_t;
@@ -46,6 +50,11 @@ int main(int argc, char *argv[]) {
 		usage(argv);
 		return 1;
 	}
+
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+	openlog("gattlib_read_write", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
+	setlogmask(LOG_UPTO(LOG_INFO));
+#endif
 
 	if (strcmp(argv[2], "read") == 0) {
 		g_operation = READ;
@@ -70,7 +79,7 @@ int main(int argc, char *argv[]) {
 
 	connection = gattlib_connect(NULL, argv[1], GATTLIB_CONNECTION_OPTIONS_LEGACY_DEFAULT);
 	if (connection == NULL) {
-		fprintf(stderr, "Fail to connect to the bluetooth device.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to connect to the bluetooth device.");
 		return 1;
 	}
 
@@ -84,10 +93,10 @@ int main(int argc, char *argv[]) {
 			gattlib_uuid_to_string(&g_uuid, uuid_str, sizeof(uuid_str));
 
 			if (ret == GATTLIB_NOT_FOUND) {
-				fprintf(stderr, "Could not find GATT Characteristic with UUID %s. "
-					"You might call the program with '--gatt-discovery'.\n", uuid_str);
+				GATTLIB_LOG(GATTLIB_ERROR, "Could not find GATT Characteristic with UUID %s. "
+					"You might call the program with '--gatt-discovery'.", uuid_str);
 			} else {
-				fprintf(stderr, "Error while reading GATT Characteristic with UUID %s (ret:%d)\n", uuid_str, ret);
+				GATTLIB_LOG(GATTLIB_ERROR, "Error while reading GATT Characteristic with UUID %s (ret:%d)", uuid_str, ret);
 			}
 			goto EXIT;
 		}
@@ -107,10 +116,10 @@ int main(int argc, char *argv[]) {
 			gattlib_uuid_to_string(&g_uuid, uuid_str, sizeof(uuid_str));
 
 			if (ret == GATTLIB_NOT_FOUND) {
-				fprintf(stderr, "Could not find GATT Characteristic with UUID %s. "
-					"You might call the program with '--gatt-discovery'.\n", uuid_str);
+				GATTLIB_LOG(GATTLIB_ERROR, "Could not find GATT Characteristic with UUID %s. "
+					"You might call the program with '--gatt-discovery'.", uuid_str);
 			} else {
-				fprintf(stderr, "Error while writing GATT Characteristic with UUID %s (ret:%d)\n",
+				GATTLIB_LOG(GATTLIB_ERROR, "Error while writing GATT Characteristic with UUID %s (ret:%d)",
 					uuid_str, ret);
 			}
 			goto EXIT;

@@ -57,7 +57,7 @@ int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32
 
 	ret = gattlib_string_to_uuid(EDDYSTONE_SERVICE_UUID, strlen(EDDYSTONE_SERVICE_UUID) + 1, &eddystone_uuid);
 	if (ret != 0) {
-		fprintf(stderr, "Fail to convert characteristic TX to UUID.\n");
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to convert characteristic TX to UUID.");
 		return GATTLIB_ERROR_INTERNAL;
 	}
 
