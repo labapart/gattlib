@@ -1,8 +1,7 @@
 #
-#
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2016-2017  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2016-2021  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -20,7 +19,7 @@
 #  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.12)
 
 find_package(PkgConfig REQUIRED)
 
