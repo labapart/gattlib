@@ -44,6 +44,7 @@ void notification_cb(const uuid_t* uuid, const uint8_t* data, size_t data_length
 	for(i = 0; i < data_length; i++) {
 		printf("%c", data[i]);
 	}
+    fflush(stdout);
 }
 
 static void usage(char *argv[]) {
