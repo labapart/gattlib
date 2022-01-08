@@ -205,6 +205,9 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 
 	// Get list of objects belonging to Device Manager
 	device_manager = get_device_manager_from_adapter(conn_context->adapter);
+    if (device_manager == NULL) {
+        goto FREE_DEVICE;
+    }
 	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
 
 	// Set up a new GMainLoop to handle notification/indication events.
