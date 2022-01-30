@@ -72,7 +72,7 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	}
 
 	*device_desc = hci_open_dev(dev_id);
-	if (device_desc < 0) {
+	if (*device_desc < 0) {
 		fprintf(stderr, "ERROR: Could not open device.\n");
 		return GATTLIB_DEVICE_ERROR;
 	}
