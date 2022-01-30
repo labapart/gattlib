@@ -1383,14 +1383,16 @@ static void attr_print_func(void *value, void *userData)
 {
 	sdp_data_t *d = (sdp_data_t *)value;
 
-	SDPDBG("=====================================\n");
-	SDPDBG("ATTRIBUTE IDENTIFIER : 0x%x\n",  d->attrId);
-	SDPDBG("ATTRIBUTE VALUE PTR : %p\n", value);
-	if (d)
+	if (d) {
+		SDPDBG("=====================================\n");
+		SDPDBG("ATTRIBUTE IDENTIFIER : 0x%x\n",  d->attrId);
+		SDPDBG("ATTRIBUTE VALUE PTR : %p\n", value);
 		sdp_data_print(d);
-	else
+	}
+	else {
 		SDPDBG("NULL value\n");
-	SDPDBG("=====================================\n");
+		SDPDBG("=====================================\n");
+	}
 }
 
 void sdp_print_service_attr(sdp_list_t *svcAttrList)
