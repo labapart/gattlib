@@ -408,7 +408,17 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		}
 
 		// Ensure the service is attached to this device
-		if (strcmp(conn_context->device_object_path, org_bluez_gatt_service1_get_device(service_proxy))) {
+        const gchar * service_property = org_bluez_gatt_service1_get_device(service_proxy);
+        if (service_property == NULL) {
+            if (error) {
+                GATTLIB_LOG(GATTLIB_ERROR, "Failed to get service property '%s': %s", object_path, error->message);
+                g_error_free(error);
+            } else {
+                GATTLIB_LOG(GATTLIB_ERROR, "Failed to get service property '%s'.", object_path);
+            }
+            continue;
+        }
+		if (strcmp(conn_context->device_object_path, service_property)) {
 			g_object_unref(service_proxy);
 			continue;
 		}
