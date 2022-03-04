@@ -669,7 +669,17 @@ static void add_characteristics_from_service(gattlib_context_t* conn_context, GD
 			continue;
 		}
 
-		if (strcmp(org_bluez_gatt_characteristic1_get_service(characteristic), service_object_path)) {
+        const gchar * property_value = org_bluez_gatt_characteristic1_get_service(characteristic);
+        if (property_value == NULL){
+            if (error) {
+                GATTLIB_LOG(GATTLIB_ERROR, "Failed to get service '%s': %s", object_path, error->message);
+                g_error_free(error);
+            } else {
+                GATTLIB_LOG(GATTLIB_ERROR, "Failed to get service '%s'.", object_path);
+            }
+            continue;
+        }
+		if (strcmp(property_value, service_object_path)) {
 			g_object_unref(characteristic);
 			continue;
 		} else {
