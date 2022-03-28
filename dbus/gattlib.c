@@ -225,6 +225,13 @@ FREE_CONNECTION:
 
 FREE_CONN_CONTEXT:
 	free(conn_context);
+
+	// destroy default adapter
+	if(adapter == NULL)
+	{
+		gattlib_adapter_close(gattlib_adapter);
+	}
+
 	return NULL;
 }
 
