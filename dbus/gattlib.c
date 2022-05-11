@@ -278,6 +278,11 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 38)
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
+	if (connection == NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib connection not initialized.");
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
 	gattlib_context_t* conn_context = connection->context;
 	OrgBluezDevice1* device = conn_context->device;
 	const gchar* const* service_str;
@@ -349,6 +354,11 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 }
 #else
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
+	if (connection == NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib connection not initialized.");
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
 	gattlib_context_t* conn_context = connection->context;
 	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	OrgBluezDevice1* device = conn_context->device;
