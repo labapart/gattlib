@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+# Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
 #
 
 import logging
@@ -42,7 +42,8 @@ class Device:
         self._gatt_characteristic_callbacks = {}
 
     @property
-    def id(self):
+    def mac_address(self):
+        """Return Device MAC Address"""
         return self._addr.decode("utf-8")
 
     @property
