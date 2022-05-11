@@ -24,7 +24,7 @@ def connect_ble_device(device):
     lock.acquire()
 
     print("---------------------------------")
-    print(f"Found BLE Device {device.id}. Connection tentative...")
+    print(f"Found BLE Device {device.mac_address}. Connection tentative...")
     device.discover()
 
     for key, val in device.characteristics.items():

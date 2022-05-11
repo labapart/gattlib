@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+# Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
 #
 
 import argparse
@@ -19,8 +19,8 @@ default_adapter = adapter.Adapter()
 
 
 def on_eddystone_device_found(device, advertisement_data, manufacturer_id, manufacturer_data, user_data):
-    rssi = default_adapter.get_rssi_from_mac(device.id)
-    print("Find Eddystone device %s (RSSI:%d)" % (device.id, rssi))
+    rssi = default_adapter.get_rssi_from_mac(device.mac_address)
+    print("Find Eddystone device %s (RSSI:%d)" % (device.mac_address, rssi))
 
     # Service Data
     eddystone_data = advertisement_data[adapter.EDDYSTONE_COMMON_DATA_UUID]
