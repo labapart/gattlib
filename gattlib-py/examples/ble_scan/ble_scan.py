@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+# Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
 #
 
 import argparse
@@ -24,7 +24,7 @@ def connect_ble_device(device):
     lock.acquire()
 
     print("---------------------------------")
-    print("Found BLE Device %s" % device.id)
+    print(f"Found BLE Device {device.id}. Connection tentative...")
     device.discover()
 
     for key, val in device.characteristics.items():
