@@ -1,8 +1,10 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+# Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
 #
+
+from uuid import UUID
 
 from gattlib import *
 from .device import Device
@@ -107,7 +109,11 @@ class Adapter:
             for uuid in uuids:
                 gattlib_uuid = GattlibUuid()
 
-                uuid_ascii = uuid.encode("utf-8")
+                if isinstance(uuid, UUID):
+                    uuid_ascii = str(uuid).encode("utf-8")
+                else:
+                    uuid_ascii = uuid.encode("utf-8")
+
                 ret = gattlib.gattlib_string_to_uuid(uuid_ascii, len(uuid_ascii), byref(gattlib_uuid))
                 handle_return(ret)
 
