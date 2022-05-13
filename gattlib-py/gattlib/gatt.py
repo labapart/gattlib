@@ -115,6 +115,9 @@ class GattCharacteristic():
     def register_notification(self, callback, user_data=None):
         self._device._notification_add_gatt_characteristic_callback(self, callback, user_data)
 
+    def unregister_notification(self):
+        self._device._notification_remove_gatt_characteristic_callback(self)
+
     def notification_start(self):
         ret = gattlib_notification_start(self.connection, self._gattlib_characteristic.uuid)
         handle_return(ret)
