@@ -222,6 +222,9 @@ class Device:
 
         self._gatt_characteristic_callbacks[gatt_characteristic.short_uuid] = { 'callback': callback, 'user_data': user_data }
 
+    def _notification_remove_gatt_characteristic_callback(self, gatt_characteristic):
+        self._gatt_characteristic_callbacks[gatt_characteristic.short_uuid] = None
+
     def __str__(self):
         name = self._name
         if name:
