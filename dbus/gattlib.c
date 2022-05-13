@@ -862,9 +862,12 @@ int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_a
 	return GATTLIB_SUCCESS;
 }
 
-#if 0 // Disable until https://github.com/labapart/gattlib/issues/75 is resolved
 int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
 {
+	if (connection == NULL) {
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
 	gattlib_context_t* conn_context = connection->context;
 
 	if (rssi == NULL) {
@@ -875,7 +878,6 @@ int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
 
 	return GATTLIB_SUCCESS;
 }
-#endif
 
 int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi)
 {
