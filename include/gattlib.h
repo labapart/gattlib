@@ -230,6 +230,8 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 /**
  * @brief Enable Bluetooth scanning on a given adapter
  *
+ * This function will block until either the timeout has expired or gattlib_adapter_scan_disable() has been called.
+ *
  * @param adapter is the context of the newly opened adapter
  * @param uuid_list is a NULL-terminated list of UUIDs to filter. The rule only applies to advertised UUID.
  *        Returned devices would match any of the UUIDs of the list.
@@ -243,6 +245,26 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data);
+
+/**
+ * @brief Enable Bluetooth scanning on a given adapter (non-blocking)
+ *
+ * This function will return as soon as the BLE scan has been started.
+ *
+ * @param adapter is the context of the newly opened adapter
+ * @param uuid_list is a NULL-terminated list of UUIDs to filter. The rule only applies to advertised UUID.
+ *        Returned devices would match any of the UUIDs of the list.
+ * @param rssi_threshold is the imposed RSSI threshold for the returned devices.
+ * @param enabled_filters defines the parameters to use for filtering. There are selected by using the macros
+ *        GATTLIB_DISCOVER_FILTER_USE_UUID and GATTLIB_DISCOVER_FILTER_USE_RSSI.
+ * @param discovered_device_cb is the function callback called for each new Bluetooth device discovered
+ * @param timeout defines the duration of the Bluetooth scanning. When timeout=0, we scan indefinitely.
+ * @param user_data is the data passed to the callback `discovered_device_cb()`
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ */
+int gattlib_adapter_scan_enable_with_filter_non_blocking(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data);
 
 /**

@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
  */
 
 #include "gattlib_internal.h"
@@ -98,18 +98,7 @@ GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gatt
 	return gattlib_adapter->device_manager;
 }
 
-/*
- * Internal structure to pass to Device Manager signal handlers
- */
-struct discovered_device_arg {
-	void *adapter;
-	uint32_t enabled_filters;
-	gattlib_discovered_device_t callback;
-	void *user_data;
-	GSList** discovered_devices_ptr;
-};
-
-static void device_manager_on_device1_signal(const char* device1_path, struct discovered_device_arg *arg)
+static void device_manager_on_device1_signal(const char* device1_path, struct gattlib_adapter* gattlib_adapter)
 {
 	GError *error = NULL;
 	OrgBluezDevice1* device1 = org_bluez_device1_proxy_new_for_bus_sync(
@@ -135,20 +124,31 @@ static void device_manager_on_device1_signal(const char* device1_path, struct di
 		}
 
 		// Check if the device is already part of the list
-		GSList *item = g_slist_find_custom(*arg->discovered_devices_ptr, address, (GCompareFunc)g_ascii_strcasecmp);
+		GSList *item = g_slist_find_custom(gattlib_adapter->ble_scan.discovered_devices, address, (GCompareFunc)g_ascii_strcasecmp);
 
 		// First time this device is in the list
 		if (item == NULL) {
 			// Add the device to the list
-			*arg->discovered_devices_ptr = g_slist_append(*arg->discovered_devices_ptr, g_strdup(address));
+			gattlib_adapter->ble_scan.discovered_devices = g_slist_append(gattlib_adapter->ble_scan.discovered_devices, g_strdup(address));
 		}
 
-		if ((item == NULL) || (arg->enabled_filters & GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE)) {
-			arg->callback(
-				arg->adapter,
+		if ((item == NULL) || (gattlib_adapter->ble_scan.enabled_filters & GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE)) {
+#if defined(WITH_PYTHON)
+			// In case of Python support, we ensure we acquire the GIL (Global Intepreter Lock) to have
+			// a thread-safe Python execution.
+			PyGILState_STATE d_gstate;
+			d_gstate = PyGILState_Ensure();
+#endif
+
+			gattlib_adapter->ble_scan.discovered_device_callback(
+				gattlib_adapter,
 				org_bluez_device1_get_address(device1),
 				org_bluez_device1_get_name(device1),
-				arg->user_data);
+				gattlib_adapter->ble_scan.discovered_device_user_data);
+
+#if defined(WITH_PYTHON)
+			PyGILState_Release(d_gstate);
+#endif
 		}
 		g_object_unref(device1);
 	}
@@ -196,15 +196,41 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 	device_manager_on_device1_signal(g_dbus_proxy_get_object_path(interface_proxy), user_data);
 }
 
-int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+static void* _ble_scan_loop(void* args) {
+	struct gattlib_adapter *gattlib_adapter = args;
+
+	// Run Glib loop for 'timeout' seconds
+	gattlib_adapter->ble_scan.scan_loop = g_main_loop_new(NULL, 0);
+	if (gattlib_adapter->ble_scan.ble_scan_timeout > 0) {
+		gattlib_adapter->ble_scan.ble_scan_timeout_id = g_timeout_add_seconds(gattlib_adapter->ble_scan.ble_scan_timeout,
+			stop_scan_func, gattlib_adapter->ble_scan.scan_loop);
+	}
+
+	// And start the loop...
+	g_main_loop_run(gattlib_adapter->ble_scan.scan_loop);
+	// At this point, either the timeout expired (and automatically was removed) or scan_disable was called, removing the timer.
+	gattlib_adapter->ble_scan.ble_scan_timeout_id = 0;
+
+	// Note: The function only resumes when loop timeout as expired or g_main_loop_quit has been called.
+
+	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(gattlib_adapter->device_manager), gattlib_adapter->ble_scan.added_signal_id);
+	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(gattlib_adapter->device_manager), gattlib_adapter->ble_scan.changed_signal_id);
+
+	// Ensure BLE device discovery is stopped
+	gattlib_adapter_scan_disable(gattlib_adapter);
+
+	// Free discovered device list
+	g_slist_foreach(gattlib_adapter->ble_scan.discovered_devices, (GFunc)g_free, NULL);
+	g_slist_free(gattlib_adapter->ble_scan.discovered_devices);
+	return 0;
+}
+
+static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
-	int ret = GATTLIB_SUCCESS;
-	int added_signal_id, changed_signal_id;
-	GSList *discovered_devices = NULL;
 	GVariantBuilder arg_properties_builder;
 	GVariant *rssi_variant = NULL;
 
@@ -250,28 +276,26 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	//
 	device_manager = get_device_manager_from_adapter(gattlib_adapter);
 	if (device_manager == NULL) {
-		goto DISABLE_SCAN;
+		return GATTLIB_ERROR_DBUS;
 	}
 
-	// Pass the user callback and the discovered device list pointer to the signal handlers
-	struct discovered_device_arg discovered_device_arg = {
-		.adapter = adapter,
-		.enabled_filters = enabled_filters,
-		.callback = discovered_device_cb,
-		.user_data = user_data,
-		.discovered_devices_ptr = &discovered_devices,
-	};
+	// Clear BLE scan structure
+	memset(&gattlib_adapter->ble_scan, 0, sizeof(gattlib_adapter->ble_scan));
+	gattlib_adapter->ble_scan.enabled_filters = enabled_filters;
+	gattlib_adapter->ble_scan.ble_scan_timeout = timeout;
+	gattlib_adapter->ble_scan.discovered_device_callback = discovered_device_cb;
+	gattlib_adapter->ble_scan.discovered_device_user_data = user_data;
 
-	added_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
+	gattlib_adapter->ble_scan.added_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
 	                    "object-added",
 	                    G_CALLBACK (on_dbus_object_added),
-	                    &discovered_device_arg);
+	                    gattlib_adapter);
 
 	// List for object changes to see if there are still devices around
-	changed_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
+	gattlib_adapter->ble_scan.changed_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
 					     "interface-proxy-properties-changed",
 					     G_CALLBACK(on_interface_proxy_properties_changed),
-					     &discovered_device_arg);
+					     gattlib_adapter);
 
 	// Now, start BLE discovery
 	org_bluez_adapter1_call_start_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
@@ -281,28 +305,43 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 		return GATTLIB_ERROR_DBUS;
 	}
 
-	// Run Glib loop for 'timeout' seconds
-	gattlib_adapter->scan_loop = g_main_loop_new(NULL, 0);
-	if (timeout > 0) {
-		gattlib_adapter->timeout_id = g_timeout_add_seconds(timeout, stop_scan_func, gattlib_adapter->scan_loop);
+	return GATTLIB_SUCCESS;
+}
+
+int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
+{
+	int ret;
+
+	ret = _gattlib_adapter_scan_enable_with_filter(adapter, uuid_list, rssi_threshold, enabled_filters,
+		discovered_device_cb, timeout, user_data);
+	if (ret != GATTLIB_SUCCESS) {
+		return ret;
 	}
-	g_main_loop_run(gattlib_adapter->scan_loop);
-	// At this point, either the timeout expired (and automatically was removed) or scan_disable was called, removing the timer.
-	gattlib_adapter->timeout_id = 0;
 
-	// Note: The function only resumes when loop timeout as expired or g_main_loop_quit has been called.
+	_ble_scan_loop(adapter);
+	return 0;
+}
 
-	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(device_manager), added_signal_id);
-	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(device_manager), changed_signal_id);
+int gattlib_adapter_scan_enable_with_filter_non_blocking(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
+{
+	struct gattlib_adapter *gattlib_adapter = adapter;
+	int ret;
 
-DISABLE_SCAN:
-	// Stop BLE device discovery
-	gattlib_adapter_scan_disable(adapter);
+	ret = _gattlib_adapter_scan_enable_with_filter(adapter, uuid_list, rssi_threshold, enabled_filters,
+		discovered_device_cb, timeout, user_data);
+	if (ret != GATTLIB_SUCCESS) {
+		return ret;
+	}
 
-	// Free discovered device list
-	g_slist_foreach(discovered_devices, (GFunc)g_free, NULL);
-	g_slist_free(discovered_devices);
-	return ret;
+	ret = pthread_create(&gattlib_adapter->ble_scan.thread, NULL, _ble_scan_loop, gattlib_adapter);
+	if (ret != 0) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failt to create BLE scan thread.");
+		return ret;
+	}
+
+	return 0;
 }
 
 int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
@@ -316,24 +355,24 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 int gattlib_adapter_scan_disable(void* adapter) {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
-	if (gattlib_adapter->scan_loop) {
+	if (gattlib_adapter->ble_scan.scan_loop) {
 		GError *error = NULL;
 
 		org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 		// Ignore the error
 
 		// Remove timeout
-		if (gattlib_adapter->timeout_id) {
-			g_source_remove(gattlib_adapter->timeout_id);
-			gattlib_adapter->timeout_id = 0;
+		if (gattlib_adapter->ble_scan.ble_scan_timeout_id) {
+			g_source_remove(gattlib_adapter->ble_scan.ble_scan_timeout_id);
+			gattlib_adapter->ble_scan.ble_scan_timeout_id = 0;
 		}
 
 		// Ensure the scan loop is quit
-		if (g_main_loop_is_running(gattlib_adapter->scan_loop)) {
-			g_main_loop_quit(gattlib_adapter->scan_loop);
+		if (g_main_loop_is_running(gattlib_adapter->ble_scan.scan_loop)) {
+			g_main_loop_quit(gattlib_adapter->ble_scan.scan_loop);
 		}
-		g_main_loop_unref(gattlib_adapter->scan_loop);
-		gattlib_adapter->scan_loop = NULL;
+		g_main_loop_unref(gattlib_adapter->ble_scan.scan_loop);
+		gattlib_adapter->ble_scan.scan_loop = NULL;
 	}
 
 	return GATTLIB_SUCCESS;
