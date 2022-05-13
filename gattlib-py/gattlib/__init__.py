@@ -5,6 +5,9 @@
 #
 
 from ctypes import *
+import logging
+
+logger = logging.getLogger(__name__)
 
 gattlib = CDLL("libgattlib.so")
 
@@ -82,10 +85,10 @@ gattlib_discovered_device_with_data_type = CFUNCTYPE(None, c_void_p, c_char_p, c
                                                      POINTER(GattlibAdvertisementData), c_size_t, c_uint16, c_void_p, c_size_t,
                                                      py_object)
 
-# int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+# int gattlib_adapter_scan_enable_with_filter_non_blocking(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 #        gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
-gattlib_adapter_scan_enable_with_filter = gattlib.gattlib_adapter_scan_enable_with_filter
-gattlib_adapter_scan_enable_with_filter.argtypes = [c_void_p, POINTER(POINTER(GattlibUuid)), c_int16, c_uint32, gattlib_discovered_device_type, c_size_t, py_object]
+gattlib_adapter_scan_enable_with_filter_non_blocking = gattlib.gattlib_adapter_scan_enable_with_filter_non_blocking
+gattlib_adapter_scan_enable_with_filter_non_blocking.argtypes = [c_void_p, POINTER(POINTER(GattlibUuid)), c_int16, c_uint32, gattlib_discovered_device_type, c_size_t, py_object]
 
 # int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddsytone_types,
 #        gattlib_discovered_device_with_data_t discovered_device_cb, size_t timeout, void *user_data)

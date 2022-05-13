@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
  */
 
 #ifndef __GATTLIB_INTERNAL_H__
@@ -18,6 +18,10 @@
 #include "org-bluez-gattcharacteristic1.h"
 #include "org-bluez-gattdescriptor1.h"
 #include "org-bluez-gattservice1.h"
+
+#if defined(WITH_PYTHON)
+	#include <Python.h>
+#endif
 
 #include "bluez5/lib/uuid.h"
 
@@ -55,8 +59,25 @@ struct gattlib_adapter {
 	OrgBluezAdapter1 *adapter_proxy;
 	char* adapter_name;
 
-	GMainLoop *scan_loop;
-	guint timeout_id;
+	// Internal attributes only needed during BLE scanning
+	struct {
+		// This list is used to stored discovered devices during BLE scan.
+		// The list is freed when the BLE scanning is completed.
+		GSList *discovered_devices;
+
+		int added_signal_id;
+		int changed_signal_id;
+
+		size_t ble_scan_timeout;
+		guint ble_scan_timeout_id;
+
+		pthread_t thread; // Thread used to run the scan_loop
+		GMainLoop *scan_loop;
+
+		uint32_t enabled_filters;
+		gattlib_discovered_device_t discovered_device_callback;
+		void *discovered_device_user_data;
+	} ble_scan;
 };
 
 struct dbus_characteristic {

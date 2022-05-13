@@ -61,13 +61,35 @@ class Adapter:
         self._is_opened = False
         return ret
 
-    def on_discovered_device(self, adapter, addr, name, user_data):
-        device = Device(self, addr, name)
-        self.on_discovered_device_callback(device, user_data)
+    # Use a closure to return a method that can be called by the C-library (see: https://stackoverflow.com/a/7261524/6267288)
+    def get_on_discovered_device_callback(self):
+        def on_discovered_device(adapter, addr, name, user_data):
+            try:
+                device = Device(self, addr, name)
+                self.on_discovered_device_user_callback(device, user_data)
+            except Exception as e:
+                logger.exception(e)
+        return gattlib_discovered_device_type(on_discovered_device)
 
     def scan_enable(self, on_discovered_device_callback, timeout, notify_change=False, uuids=None, rssi_threshold=None, user_data=None):
+        """
+        Scan for BLE devices
+
+        @param adapter: is the context of the newly opened adapter
+        @param uuid_list: is a NULL-terminated list of UUIDs to filter. The rule only applies to advertised UUID.
+               Returned devices would match any of the UUIDs of the list.
+        @param rssi_threshold: is the imposed RSSI threshold for the returned devices.
+        @param enabled_filters: defines the parameters to use for filtering. There are selected by using the macros
+               GATTLIB_DISCOVER_FILTER_USE_UUID and GATTLIB_DISCOVER_FILTER_USE_RSSI.
+        @param discovered_device_cb: is the function callback called for each new Bluetooth device discovered
+        @param timeout: defines the duration of the Bluetooth scanning. When timeout=None or 0, we scan indefinitely.
+        @param user_data: is the data passed to the callback `discovered_device_cb()`
+        """
         assert on_discovered_device_callback != None
-        self.on_discovered_device_callback = on_discovered_device_callback
+        self.on_discovered_device_user_callback = on_discovered_device_callback
+        # Save callback to prevent it to be cleaned by garbage collector see
+        # comment: https://stackoverflow.com/questions/7259794/how-can-i-get-methods-to-work-as-callbacks-with-python-ctypes#comment38658391_7261524
+        self.on_discovered_device_callback = self.get_on_discovered_device_callback()
 
         if not self._is_opened:
             raise AdapterNotOpened()
@@ -99,9 +121,13 @@ class Adapter:
         if notify_change:
             enabled_filters |= GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE
 
-        ret = gattlib_adapter_scan_enable_with_filter(self._adapter,
+        # gattlib_adapter_scan_enable_with_filter_non_blocking() assumes a 0-timeout means scanning indefintely
+        if timeout is None:
+            timeout = 0
+
+        ret = gattlib_adapter_scan_enable_with_filter_non_blocking(self._adapter,
                                                       uuid_list, rssi, enabled_filters,
-                                                      gattlib_discovered_device_type(self.on_discovered_device),
+                                                      self.on_discovered_device_callback,
                                                       timeout, user_data)
         handle_return(ret)
 
