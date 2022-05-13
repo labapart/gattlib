@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+# Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
 #
 
 GATTLIB_SUCCESS = 0
@@ -58,5 +58,7 @@ def handle_return(ret):
         raise DeviceError()
     elif ret == GATTLIB_ERROR_DBUS:
         raise DBusError()
+    elif ret == -22: # From '-EINVAL'
+        raise ValueError("Gattlib value error")
     elif ret != 0:
         raise RuntimeError("Gattlib exception %d" % ret)
