@@ -73,12 +73,13 @@ class GattCharacteristic():
 
     def read(self, callback=None):
         if callback:
-            raise RuntimeError("Not supported yet")
+            raise NotImplementedError()
         else:
             _buffer = c_void_p(None)
             _buffer_len = c_size_t(0)
 
             ret = gattlib_read_char_by_uuid(self.connection, self._gattlib_characteristic.uuid, byref(_buffer), byref(_buffer_len))
+            handle_return(ret)
 
             pointer_type = POINTER(c_ubyte * _buffer_len.value)
             c_bytearray = cast(_buffer, pointer_type)
