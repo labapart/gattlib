@@ -245,10 +245,16 @@ EXIT:
 }
 
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
-static int read_battery_level(struct dbus_characteristic *dbus_characteristic, void* buffer, size_t* buffer_len) {
+static int read_battery_level(struct dbus_characteristic *dbus_characteristic, void** buffer, size_t* buffer_len) {
 	guchar percentage = org_bluez_battery1_get_percentage(dbus_characteristic->battery);
 
-	memcpy(buffer, &percentage, sizeof(uint8_t));
+	*buffer = malloc(sizeof(uint8_t));
+	if (buffer == NULL) {
+		*buffer_len = 0;
+		return GATTLIB_OUT_OF_MEMORY;
+	}
+
+	memcpy(*buffer, &percentage, sizeof(uint8_t));
 	*buffer_len = sizeof(uint8_t);
 
 	g_object_unref(dbus_characteristic->battery);
