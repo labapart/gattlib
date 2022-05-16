@@ -761,7 +761,11 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 		GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattCharacteristic1");
 		if (!interface) {
-			continue;
+			// Check if this DBUS Path is actually the Battery interface
+			interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.Battery1");
+			if (!interface) {
+				continue;
+			}
 		}
 
 		g_object_unref(interface);
@@ -781,6 +785,23 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 
 		GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattService1");
 		if (!interface) {
+			// Check if this DBUS Path is actually the Battery interface. In this case,
+			// we add a fake characteristic for the battery.
+			interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.Battery1");
+			if (interface) {
+				g_object_unref(interface);
+	
+				characteristic_list[count].handle = 0;
+				characteristic_list[count].value_handle = 0;
+				characteristic_list[count].properties = GATTLIB_CHARACTERISTIC_READ | GATTLIB_CHARACTERISTIC_NOTIFY;
+
+				gattlib_string_to_uuid(
+						"00002a19-0000-1000-8000-00805f9b34fb",
+						MAX_LEN_UUID_STR + 1,
+						&characteristic_list[count].uuid);
+				count++;
+			}
+
 			continue;
 		}
 
