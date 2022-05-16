@@ -439,3 +439,7 @@ int gattlib_write_without_response_char_by_handle(gatt_connection_t* connection,
 	g_object_unref(dbus_characteristic.gatt);
 	return ret;
 }
+
+void gattlib_characteristic_free_value(void *ptr) {
+	free(ptr);
+}

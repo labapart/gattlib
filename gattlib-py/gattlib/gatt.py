@@ -87,6 +87,7 @@ class GattCharacteristic():
             for i in range(_buffer_len.value):
                 value[i] = c_bytearray.contents[i]
 
+            gattlib_characteristic_free_value(_buffer)
             return value
 
     def write(self, data, without_response=False):
