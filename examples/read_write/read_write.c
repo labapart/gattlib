@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
 		}
 		printf("\n");
 
-		free(buffer);
+		gattlib_characteristic_free_value(buffer);
 	} else {
 		ret = gattlib_write_char_by_uuid(connection, &g_uuid, &value_data, sizeof(value_data));
 		if (ret != GATTLIB_SUCCESS) {

@@ -465,6 +465,13 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb);
 
 /**
+ * @brief Free buffer allocated by the characteristic reading to store the value
+ *
+ * @param buffer Buffer to free
+ */
+void gattlib_characteristic_free_value(void *ptr);
+
+/**
  * @brief Function to write to the GATT characteristic UUID
  *
  * @param connection Active GATT connection

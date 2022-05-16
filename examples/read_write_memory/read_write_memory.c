@@ -83,7 +83,7 @@ void *connect_ble(void *arg) {
 			}
 			printf("\n");
 
-			free(buffer);
+			gattlib_characteristic_free_value(buffer);
 		}
 	} else {
 		ret = gattlib_write_char_by_uuid(connection, &m_uuid, &params->value_data, sizeof(params->value_data));

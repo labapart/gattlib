@@ -266,7 +266,7 @@ static gboolean characteristics_read(gpointer user_data)
 			}
 			g_print("\n");
 
-			free(buffer);
+			gattlib_characteristic_free_value(buffer);
 			return TRUE;
 		}
 	}

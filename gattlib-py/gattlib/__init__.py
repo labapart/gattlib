@@ -116,6 +116,10 @@ gattlib_discover_char.argtypes = [c_void_p, POINTER(POINTER(GattlibCharacteristi
 gattlib_read_char_by_uuid = gattlib.gattlib_read_char_by_uuid
 gattlib_read_char_by_uuid.argtypes = [c_void_p, POINTER(GattlibUuid), POINTER(c_void_p), POINTER(c_size_t)]
 
+# void gattlib_characteristic_free_value(void* buffer);
+gattlib_characteristic_free_value = gattlib.gattlib_characteristic_free_value
+gattlib_characteristic_free_value.argtypes = [c_void_p]
+
 # int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len)
 gattlib_write_char_by_uuid = gattlib.gattlib_write_char_by_uuid
 gattlib_write_char_by_uuid.argtypes = [c_void_p, POINTER(GattlibUuid), c_void_p, c_size_t]
