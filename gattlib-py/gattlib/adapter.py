@@ -77,6 +77,8 @@ class Adapter:
         """
         Scan for BLE devices
 
+        Note: This function is not blocking
+
         @param adapter: is the context of the newly opened adapter
         @param uuid_list: is a NULL-terminated list of UUIDs to filter. The rule only applies to advertised UUID.
                Returned devices would match any of the UUIDs of the list.
