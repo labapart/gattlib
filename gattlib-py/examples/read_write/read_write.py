@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+# Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
 import argparse
