@@ -133,6 +133,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 
     // even after init_default_adapter() - the adapter can be NULL
     if (gattlib_adapter == NULL) {
+        GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: No adapter");
         return NULL;
     }
 
@@ -140,12 +141,14 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 
 	gattlib_context_t* conn_context = calloc(sizeof(gattlib_context_t), 1);
 	if (conn_context == NULL) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot allocate context");
 		return NULL;
 	}
 	conn_context->adapter = gattlib_adapter;
 
 	gatt_connection_t* connection = calloc(sizeof(gatt_connection_t), 1);
 	if (connection == NULL) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot allocate connection");
 		goto FREE_CONN_CONTEXT;
 	} else {
 		connection->context = conn_context;
@@ -162,6 +165,8 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 		if (error) {
 			GATTLIB_LOG(GATTLIB_ERROR, "Failed to connect to DBus Bluez Device: %s", error->message);
 			g_error_free(error);
+		} else {
+			GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Failed to connect to DBus Bluez Device");
 		}
 		goto FREE_CONNECTION;
 	} else {
@@ -206,6 +211,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	// Get list of objects belonging to Device Manager
 	device_manager = get_device_manager_from_adapter(conn_context->adapter);
     if (device_manager == NULL) {
+        GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Failed to get device manager from adapter");
         goto FREE_DEVICE;
     }
 	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
@@ -227,8 +233,7 @@ FREE_CONN_CONTEXT:
 	free(conn_context);
 
 	// destroy default adapter
-	if(adapter == NULL)
-	{
+	if(adapter == NULL) {
 		gattlib_adapter_close(gattlib_adapter);
 	}
 
@@ -250,8 +255,20 @@ gatt_connection_t *gattlib_connect_async(void *adapter, const char *dst,
 }
 
 int gattlib_disconnect(gatt_connection_t* connection) {
-	gattlib_context_t* conn_context = connection->context;
+	gattlib_context_t* conn_context;
 	GError *error = NULL;
+
+	if (connection == NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection parameter is not valid.");
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
+	conn_context = connection->context;
+
+	if (conn_context == NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection context is not valid.");
+		return GATTLIB_NOT_SUPPORTED;
+	}
 
 	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
 	if (error) {
@@ -266,7 +283,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	pthread_join(conn_context->event_thread, NULL);
 	g_main_loop_unref(conn_context->connection_loop);
 	disconnect_all_notifications(conn_context);
-	
+
 	free(conn_context->adapter->adapter_name);
 	free(conn_context->adapter);
 
@@ -790,7 +807,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 			interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.Battery1");
 			if (interface) {
 				g_object_unref(interface);
-	
+
 				characteristic_list[count].handle = 0;
 				characteristic_list[count].value_handle = 0;
 				characteristic_list[count].properties = GATTLIB_CHARACTERISTIC_READ | GATTLIB_CHARACTERISTIC_NOTIFY;

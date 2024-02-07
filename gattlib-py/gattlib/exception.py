@@ -38,8 +38,12 @@ class NotSupported(GattlibException):
 
 
 class DeviceError(GattlibException):
-    pass
+    def __init__(self, adapter: str = None, mac_address: str = None) -> None:
+        self.adapter = adapter
+        self.mac_address = mac_address
 
+    def __str__(self) -> str:
+        return f"Error with device {self.mac_address} on adapter {self.adapter}"
 
 class DBusError(GattlibException):
     pass

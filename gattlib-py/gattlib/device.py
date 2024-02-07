@@ -42,7 +42,7 @@ class Device:
         self._gatt_characteristic_callbacks = {}
 
     @property
-    def mac_address(self):
+    def mac_address(self) -> str:
         """Return Device MAC Address"""
         return self._addr.decode("utf-8")
 
@@ -53,6 +53,10 @@ class Device:
         else:
             return c_void_p(None)
 
+    @property
+    def is_connected(self) -> bool:
+        return (self._connection is not None)
+
     def connect(self, options=CONNECTION_OPTIONS_LEGACY_DEFAULT):
         if self._adapter:
             adapter_name = self._adapter.name
@@ -61,7 +65,7 @@ class Device:
 
         self._connection = gattlib_connect(adapter_name, self._addr, options)
         if self._connection is None:
-            raise DeviceError()
+            raise DeviceError(adapter=adapter_name, mac_address=self._addr)
 
     @property
     def rssi(self):
@@ -86,8 +90,10 @@ class Device:
         gattlib_register_on_disconnect(self.connection, Device.on_disconnection, self)
 
     def disconnect(self):
-        ret = gattlib_disconnect(self.connection)
-        handle_return(ret)
+        if self._connection:
+            ret = gattlib_disconnect(self.connection)
+            handle_return(ret)
+        self._connection = None
 
     def discover(self):
         #
