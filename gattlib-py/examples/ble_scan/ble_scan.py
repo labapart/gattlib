@@ -8,40 +8,44 @@
 
 import argparse
 import threading
+import time
 
 from gattlib import adapter
 
 parser = argparse.ArgumentParser(description='Gattlib BLE scan example')
+parser.add_argument('--duration', default=30, type=int, help='Duration of the BLE scanning')
 args = parser.parse_args()
 
 # We only use a lock to not mixed printing statements of various devices
 lock = threading.Lock()
 
-
 def connect_ble_device(device):
-    device.connect()
-
     lock.acquire()
+    try:
+        print("---------------------------------")
+        print(f"Found BLE Device {device.mac_address}. Connection tentative...")
+        device.connect()
 
-    print("---------------------------------")
-    print(f"Found BLE Device {device.mac_address}. Connection tentative...")
-    device.discover()
+        device.discover()
 
-    for key, val in device.characteristics.items():
-        print("- GATTCharacteristic: 0x%x" % key)
-
+        for key, val in device.characteristics.items():
+            print("- GATTCharacteristic: 0x%x" % key)
+        device.disconnect()
+    except Exception as e:
+        print("EXCEPTION: %s:%s", type(e), str(e))
     lock.release()
 
-    device.disconnect()
 
 
 def on_discovered_ble_device(device, user_data):
     threading.Thread(target=connect_ble_device, args=(device,)).start()
 
-
 # Use default adapter
 default_adapter = adapter.Adapter()
 
-# Scan for 30 seconds
+# Scan for 'args.duration' seconds
 default_adapter.open()
-default_adapter.scan_enable(on_discovered_ble_device, 30)
+default_adapter.scan_enable(on_discovered_ble_device, args.duration)
+
+# Because scan_enable() is not blocking, we need to wait for the same duration
+time.sleep(args.duration)
