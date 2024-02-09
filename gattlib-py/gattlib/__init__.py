@@ -186,3 +186,7 @@ gattlib_get_advertisement_data.argtypes = [c_void_p, POINTER(POINTER(GattlibAdve
 #        uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 gattlib_get_advertisement_data_from_mac = gattlib.gattlib_get_advertisement_data_from_mac
 gattlib_get_advertisement_data_from_mac.argtypes = [c_void_p, c_char_p, POINTER(POINTER(GattlibAdvertisementData)), POINTER(c_size_t), POINTER(c_uint16), POINTER(c_void_p), POINTER(c_size_t)]
+
+# int gattlib_mainloop_python(PyObject *handler, PyObject *user_data)
+gattlib_mainloop = gattlib.gattlib_mainloop_python
+gattlib_mainloop.argtypes = [py_object, py_object]

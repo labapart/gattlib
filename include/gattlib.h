@@ -735,6 +735,8 @@ int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2);
  */
 void gattlib_log(int level, const char *format, ...);
 
+int gattlib_mainloop(void* (*task)(void* arg), void *arg);
+
 #ifdef __cplusplus
 }
 #endif

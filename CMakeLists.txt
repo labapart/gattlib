@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-or-later
 #
-# Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
+# Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
 cmake_minimum_required(VERSION 3.4)

@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+# Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
 cmake_minimum_required(VERSION 3.0)
@@ -80,6 +80,7 @@ set(gattlib_SRCS gattlib.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_notification_device.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_python.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/logging_backend/${GATTLIB_LOG_BACKEND}/gattlib_logging.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/mainloop/gattlib_glib_mainloop.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-device1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattcharacteristic1.c
