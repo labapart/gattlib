@@ -1,12 +1,8 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-or-later
  *
- * Copyright (c) 2021-2022, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2021-2024, Olivier Martin <olivier@labapart.org>
  */
-
-#if defined(WITH_PYTHON)
-	#include <Python.h>
-#endif
 
 #include <stdio.h>
 
@@ -62,6 +58,7 @@ void gattlib_call_notification_handler(struct gattlib_handler *handler, const uu
 	else if (handler->type == PYTHON) {
 		char uuid_str[MAX_LEN_UUID_STR + 1];
 		PyGILState_STATE d_gstate;
+		PyObject *result;
 
 		gattlib_uuid_to_string(uuid, uuid_str, sizeof(uuid_str));
 
@@ -74,8 +71,16 @@ void gattlib_call_notification_handler(struct gattlib_handler *handler, const uu
 			argument_string = "(sIIO)";
 		}
 		PyObject *arglist = Py_BuildValue(argument_string, uuid_str, data, data_length, handler->user_data);
-		PyEval_CallObject((PyObject *)handler->notification_handler, arglist);
+#if PYTHON_VERSION >= PYTHON_VERSIONS(3, 9)
+		result = PyObject_Call((PyObject *)handler->notification_handler, arglist, NULL);
+#else
+	    result = PyEval_CallObject((PyObject *)handler->notification_handler, arglist);
+#endif
 		Py_DECREF(arglist);
+
+		if (result == NULL) {
+			GATTLIB_LOG(GATTLIB_ERROR, "Python notification handler has raised an exception.");
+		}
 
 		PyGILState_Release(d_gstate);
 	}
@@ -91,12 +96,21 @@ void gattlib_call_disconnection_handler(struct gattlib_handler *handler) {
 	}
 #if defined(WITH_PYTHON)
 	else if (handler->type == PYTHON) {
+		PyObject *result;
 	    PyGILState_STATE d_gstate;
 	    d_gstate = PyGILState_Ensure();
 
 	    PyObject *arglist = Py_BuildValue("(O)", handler->user_data);
-	    PyEval_CallObject((PyObject *)handler->disconnection_handler, arglist);
+#if PYTHON_VERSION >= PYTHON_VERSIONS(3, 9)
+		result = PyObject_Call((PyObject *)handler->disconnection_handler, arglist, NULL);
+#else
+	    result = PyEval_CallObject((PyObject *)handler->disconnection_handler, arglist);
+#endif
 	    Py_DECREF(arglist);
+
+		if (result == NULL) {
+			GATTLIB_LOG(GATTLIB_ERROR, "Python handler has raised an exception.");
+		}
 
 	    PyGILState_Release(d_gstate);
 	}

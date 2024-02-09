@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
  */
 
 #ifndef __GATTLIB_INTERNAL_H__
@@ -21,6 +21,9 @@
 
 #if defined(WITH_PYTHON)
 	#include <Python.h>
+
+	#define PYTHON_VERSIONS(major, minor)	(((major) << 8) | (minor))
+	#define PYTHON_VERSION					PYTHON_VERSIONS(PYTHON_VERSION_MAJOR, PYTHON_VERSION_MINOR)
 #endif
 
 #include "bluez5/lib/uuid.h"

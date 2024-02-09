@@ -101,7 +101,7 @@ if(GATTLIB_PYTHON_INTERFACE)
 	include_directories(${Python_INCLUDE_DIRS})
 	list(APPEND gattlib_LIBS ${Python_LIBRARIES})
 
-	add_definitions(-DWITH_PYTHON)
+	add_definitions(-DWITH_PYTHON -DPYTHON_VERSION_MAJOR=${Python_VERSION_MAJOR} -DPYTHON_VERSION_MINOR=${Python_VERSION_MINOR})
   endif()
 endif()
 
