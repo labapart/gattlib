@@ -38,12 +38,13 @@ extern "C" {
 #define GATTLIB_SUCCESS             0
 #define GATTLIB_INVALID_PARAMETER   1
 #define GATTLIB_NOT_FOUND           2
-#define GATTLIB_OUT_OF_MEMORY       3
-#define GATTLIB_NOT_SUPPORTED       4
-#define GATTLIB_DEVICE_ERROR        5
-#define GATTLIB_ERROR_DBUS          6
-#define GATTLIB_ERROR_BLUEZ         7
-#define GATTLIB_ERROR_INTERNAL      8
+#define GATTLIB_ERROR_TIMEOUT       3
+#define GATTLIB_OUT_OF_MEMORY       4
+#define GATTLIB_NOT_SUPPORTED       5
+#define GATTLIB_DEVICE_ERROR        6
+#define GATTLIB_ERROR_DBUS          7
+#define GATTLIB_ERROR_BLUEZ         8
+#define GATTLIB_ERROR_INTERNAL      9
 //@}
 
 /**

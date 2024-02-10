@@ -7,10 +7,13 @@
 GATTLIB_SUCCESS = 0
 GATTLIB_INVALID_PARAMETER = 1
 GATTLIB_NOT_FOUND = 2
-GATTLIB_OUT_OF_MEMORY = 3
-GATTLIB_NOT_SUPPORTED = 4
-GATTLIB_DEVICE_ERROR = 5
-GATTLIB_ERROR_DBUS = 6
+GATTLIB_ERROR_TIMEOUT = 3
+GATTLIB_OUT_OF_MEMORY = 4
+GATTLIB_NOT_SUPPORTED = 5
+GATTLIB_DEVICE_ERROR = 6
+GATTLIB_ERROR_DBUS = 7
+GATTLIB_ERROR_BLUEZ = 8
+GATTLIB_ERROR_INTERNAL = 9
 
 
 class GattlibException(Exception):
@@ -56,6 +59,8 @@ def handle_return(ret):
         raise NotFound()
     elif ret == GATTLIB_OUT_OF_MEMORY:
         raise OutOfMemory()
+    elif ret == GATTLIB_ERROR_TIMEOUT:
+        raise TimeoutError()
     elif ret == GATTLIB_NOT_SUPPORTED:
         raise NotSupported()
     elif ret == GATTLIB_DEVICE_ERROR:
