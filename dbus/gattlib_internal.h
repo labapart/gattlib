@@ -67,6 +67,7 @@ struct gattlib_adapter {
 		// This list is used to stored discovered devices during BLE scan.
 		// The list is freed when the BLE scanning is completed.
 		GSList *discovered_devices;
+		GMutex discovered_devices_mutex;
 
 		int added_signal_id;
 		int changed_signal_id;

@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2016-2022, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
  */
 
 #include "gattlib_internal.h"
@@ -124,13 +124,14 @@ static void device_manager_on_device1_signal(const char* device1_path, struct ga
 		}
 
 		// Check if the device is already part of the list
+		g_mutex_lock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
 		GSList *item = g_slist_find_custom(gattlib_adapter->ble_scan.discovered_devices, address, (GCompareFunc)g_ascii_strcasecmp);
-
 		// First time this device is in the list
 		if (item == NULL) {
 			// Add the device to the list
 			gattlib_adapter->ble_scan.discovered_devices = g_slist_append(gattlib_adapter->ble_scan.discovered_devices, g_strdup(address));
 		}
+		g_mutex_unlock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
 
 		if ((item == NULL) || (gattlib_adapter->ble_scan.enabled_filters & GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE)) {
 #if defined(WITH_PYTHON)
@@ -219,9 +220,6 @@ static void* _ble_scan_loop(void* args) {
 	// Ensure BLE device discovery is stopped
 	gattlib_adapter_scan_disable(gattlib_adapter);
 
-	// Free discovered device list
-	g_slist_foreach(gattlib_adapter->ble_scan.discovered_devices, (GFunc)g_free, NULL);
-	g_slist_free(gattlib_adapter->ble_scan.discovered_devices);
 	return 0;
 }
 
@@ -354,26 +352,30 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 
 int gattlib_adapter_scan_disable(void* adapter) {
 	struct gattlib_adapter *gattlib_adapter = adapter;
+	GError *error = NULL;
 
-	if (gattlib_adapter->ble_scan.scan_loop) {
-		GError *error = NULL;
-
-		org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
-		// Ignore the error
-
-		// Remove timeout
-		if (gattlib_adapter->ble_scan.ble_scan_timeout_id) {
-			g_source_remove(gattlib_adapter->ble_scan.ble_scan_timeout_id);
-			gattlib_adapter->ble_scan.ble_scan_timeout_id = 0;
-		}
-
-		// Ensure the scan loop is quit
-		if (g_main_loop_is_running(gattlib_adapter->ble_scan.scan_loop)) {
-			g_main_loop_quit(gattlib_adapter->ble_scan.scan_loop);
-		}
-		g_main_loop_unref(gattlib_adapter->ble_scan.scan_loop);
-		gattlib_adapter->ble_scan.scan_loop = NULL;
+	if (gattlib_adapter->ble_scan.is_scanning) {
+		g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+		gattlib_adapter->ble_scan.is_scanning = false;
+		g_cond_broadcast(&gattlib_adapter->ble_scan.scan_loop_cond);
+		g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
 	}
+
+	org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
+	// Ignore the error
+
+	// Remove timeout
+	if (gattlib_adapter->ble_scan.ble_scan_timeout_id) {
+		g_source_remove(gattlib_adapter->ble_scan.ble_scan_timeout_id);
+		gattlib_adapter->ble_scan.ble_scan_timeout_id = 0;
+	}
+
+	// Free discovered device list
+	g_mutex_lock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
+	g_slist_foreach(gattlib_adapter->ble_scan.discovered_devices, (GFunc)g_free, NULL);
+	g_slist_free(gattlib_adapter->ble_scan.discovered_devices);
+	gattlib_adapter->ble_scan.discovered_devices = NULL;
+	g_mutex_unlock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
 
 	return GATTLIB_SUCCESS;
 }
