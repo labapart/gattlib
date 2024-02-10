@@ -183,10 +183,20 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
                                        const gchar *const       *invalidated_properties,
                                        gpointer                  user_data)
 {
-	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_interface_proxy_properties_changed: interface:%s changed_properties:%s invalidated_properties:%s",
+	// Count number of invalidated properties
+	size_t invalidated_properties_count = 0;
+	if (invalidated_properties != NULL) {
+		const gchar *const *invalidated_properties_ptr = invalidated_properties;
+		while (*invalidated_properties_ptr != NULL) {
+			invalidated_properties_count++;
+			invalidated_properties_ptr++;
+		}
+	}
+
+	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_interface_proxy_properties_changed: interface:%s changed_properties:%s invalidated_properties:%d",
 			g_dbus_proxy_get_interface_name(interface_proxy),
 			g_variant_print(changed_properties, TRUE),
-			invalidated_properties);
+			invalidated_properties_count);
 
 	// Check if the object is a 'org.bluez.Device1'
 	if (strcmp(g_dbus_proxy_get_interface_name(interface_proxy), "org.bluez.Device1") != 0) {
