@@ -75,8 +75,10 @@ struct gattlib_adapter {
 		size_t ble_scan_timeout;
 		guint ble_scan_timeout_id;
 
-		pthread_t thread; // Thread used to run the scan_loop
-		GMainLoop *scan_loop;
+		GThread *scan_loop_thread; // Thread used to run the '_scan_loop()' when non-blocking
+		bool is_scanning;
+		GMutex scan_loop_mutex;
+		GCond scan_loop_cond;
 
 		uint32_t enabled_filters;
 		gattlib_discovered_device_t discovered_device_callback;
@@ -99,8 +101,6 @@ struct dbus_characteristic {
 };
 
 extern const uuid_t m_battery_level_uuid;
-
-gboolean stop_scan_func(gpointer data);
 
 struct gattlib_adapter *init_default_adapter(void);
 GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gattlib_adapter);

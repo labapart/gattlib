@@ -108,6 +108,16 @@ void get_device_path_from_mac(const char *adapter_name, const char *mac_address,
 	snprintf(object_path, object_path_len, "/org/bluez/%s/dev_%s", adapter, device_address_str);
 }
 
+static gboolean _stop_connect_func(gpointer data) {
+	gattlib_context_t *conn_context = data;
+
+	// Reset the connection timeout
+	conn_context->connection_timeout = 0;
+
+	// We return FALSE when it is a one-off event
+	return FALSE;
+}
+
 /**
  * @param src		Local Adaptater interface
  * @param dst		Remote Bluetooth address
@@ -201,7 +211,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
 	conn_context->connection_loop = g_main_loop_new(NULL, 0);
 
-	conn_context->connection_timeout = g_timeout_add_seconds(CONNECT_TIMEOUT, stop_scan_func,
+	conn_context->connection_timeout = g_timeout_add_seconds(CONNECT_TIMEOUT, _stop_connect_func,
 								 conn_context->connection_loop);
 	g_main_loop_run(conn_context->connection_loop);
 	g_main_loop_unref(conn_context->connection_loop);
