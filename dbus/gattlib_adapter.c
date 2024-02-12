@@ -406,11 +406,21 @@ int gattlib_adapter_close(void* adapter)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
-	if (gattlib_adapter->device_manager)
+	if (gattlib_adapter->device_manager) {
 		g_object_unref(gattlib_adapter->device_manager);
+		gattlib_adapter->device_manager = NULL;
+	}
+	if (gattlib_adapter->ble_scan.scan_loop_thread) {
+		g_object_unref(gattlib_adapter->ble_scan.scan_loop_thread);
+		gattlib_adapter->ble_scan.scan_loop_thread = NULL;
+	}
+
 	g_object_unref(gattlib_adapter->adapter_proxy);
+	gattlib_adapter->adapter_proxy = NULL;
 	free(gattlib_adapter->adapter_name);
+	gattlib_adapter->adapter_name = NULL;
 	free(gattlib_adapter);
+	gattlib_adapter = NULL;
 
 	return GATTLIB_SUCCESS;
 }
