@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
  */
 
 #include <glib.h>
@@ -21,6 +21,29 @@ static void* glib_event_thread(void* main_loop_p) {
 	return NULL;
 }
 
+static void _on_device_connect(gatt_connection_t* connection) {
+	gattlib_context_t* conn_context = connection->context;
+	GDBusObjectManager *device_manager;
+
+	// Stop the timeout for connection
+	if (conn_context->connection_timeout) {
+		g_source_remove(conn_context->connection_timeout);
+		conn_context->connection_timeout = 0;
+	}
+
+	// Get list of objects belonging to Device Manager
+	device_manager = get_device_manager_from_adapter(conn_context->adapter);
+	if (device_manager == NULL) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Failed to get device manager from adapter");
+
+		//TODO: Free device
+		return;
+	}
+	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
+
+	gattlib_on_connected_device(connection);
+}
+
 gboolean on_handle_device_property_change(
 	    OrgBluezGattCharacteristic1 *object,
 	    GVariant *arg_changed_properties,
@@ -28,7 +51,6 @@ gboolean on_handle_device_property_change(
 	    gpointer user_data)
 {
 	gatt_connection_t* connection = user_data;
-	gattlib_context_t* conn_context = connection->context;
 
 	// Retrieve 'Value' from 'arg_changed_properties'
 	if (g_variant_n_children (arg_changed_properties) > 0) {
@@ -41,18 +63,11 @@ gboolean on_handle_device_property_change(
 			GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change: %s: %s", key, g_variant_print(value, TRUE));
 			if (strcmp(key, "Connected") == 0) {
 				if (!g_variant_get_boolean(value)) {
-					// Disconnection case
-					if (gattlib_has_valid_handler(&connection->disconnection)) {
-						gattlib_call_disconnection_handler(&connection->disconnection);
-					}
+					gattlib_on_disconnected_device(connection);
 				}
 			} else if (strcmp(key, "ServicesResolved") == 0) {
 				if (g_variant_get_boolean(value)) {
-					// Stop the timeout for connection
-					g_source_remove(conn_context->connection_timeout);
-
-					// Tell we are now connected
-					g_main_loop_quit(conn_context->connection_loop);
+					_on_device_connect(connection);
 				}
 			}
 		}
@@ -160,9 +175,9 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	if (connection == NULL) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot allocate connection");
 		goto FREE_CONN_CONTEXT;
-	} else {
-		connection->context = conn_context;
 	}
+
+	connection->context = conn_context;
 
 	OrgBluezDevice1* device = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
@@ -258,7 +273,7 @@ gatt_connection_t *gattlib_connect_async(void *adapter, const char *dst,
 
 	connection = gattlib_connect(adapter, dst, options);
 	if ((connection != NULL) && (connect_cb != NULL)) {
-		connect_cb(connection, data);
+		connect_cb(adapter, dst, connection, 0 /* error */, data);
 	}
 
 	return connection;

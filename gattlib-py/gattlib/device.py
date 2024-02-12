@@ -4,13 +4,18 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
+from __future__ import annotations
 import logging
 import uuid
+from typing import TYPE_CHECKING
 
 from gattlib import *
-from .exception import handle_return, DeviceError
+from .exception import handle_return, DeviceError, InvalidParameter
 from .gatt import GattService, GattCharacteristic
 from .uuid import gattlib_uuid_to_int
+
+if TYPE_CHECKING:
+    from .adapter import Adapter
 
 CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC = (1 << 0)
 CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM = (1 << 1)
@@ -26,7 +31,7 @@ CONNECTION_OPTIONS_LEGACY_DEFAULT = \
 
 class Device:
 
-    def __init__(self, adapter, addr, name=None):
+    def __init__(self, adapter: Adapter, addr: str, name: str = None):
         self._adapter = adapter
         if type(addr) == str:
             self._addr = addr.encode("utf-8")
@@ -34,6 +39,7 @@ class Device:
             self._addr = addr
         self._name = name
         self._connection = None
+        self.on_connection_callback = None
 
         # Keep track if notification handler has been initialized
         self._is_notification_init = False
@@ -58,14 +64,23 @@ class Device:
         return (self._connection is not None)
 
     def connect(self, options=CONNECTION_OPTIONS_LEGACY_DEFAULT):
-        if self._adapter:
-            adapter_name = self._adapter.name
-        else:
-            adapter_name = None
+        def _on_connection(adapter: c_void_p, mac_address: c_char_p, connection: c_void_p, error: c_int, user_data: py_object):
+            self._connection = connection
+            self.on_connection(user_data)
 
-        self._connection = gattlib_connect(adapter_name, self._addr, options)
-        if self._connection is None:
-            raise DeviceError(adapter=adapter_name, mac_address=self._addr)
+        if self._adapter is None:
+            adapter = None
+        else:
+            adapter = self._adapter._adapter
+
+        ret = gattlib_connect(adapter, self._addr, options,
+                              gattlib_connected_device_python_callback,
+                              gattlib_python_callback_args(_on_connection, self))
+        handle_return(ret)
+
+    def on_connection(self, user_data: py_object):
+        if self.on_connection_callback:
+            self.on_connection_callback(self, user_data)
 
     @property
     def rssi(self):
@@ -87,7 +102,9 @@ class Device:
         self.disconnection_callback = callback
         self.disconnection_user_data = user_data
 
-        gattlib_register_on_disconnect(self.connection, Device.on_disconnection, self)
+        gattlib_register_on_disconnect(self.connection,
+                                       gattlib_disconnected_device_python_callback,
+                                       gattlib_python_callback_args(Device.on_disconnection, user_data))
 
     def disconnect(self):
         if self._connection:
@@ -220,9 +237,14 @@ class Device:
 
         self._is_notification_init = True
 
-        gattlib_register_notification(self._connection, Device.notification_callback, self)
+        gattlib_register_notification(self._connection,
+                                      gattlib_notification_device_python_callback,
+                                      gattlib_python_callback_args(Device.notification_callback, self))
 
     def _notification_add_gatt_characteristic_callback(self, gatt_characteristic, callback, user_data):
+        if not callable(callback):
+            raise InvalidParameter("Notification callback is not callable.")
+
         if not self._is_notification_init:
             self._notification_init()
 

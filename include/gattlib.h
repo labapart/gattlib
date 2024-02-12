@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-or-later
  *
- * Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
  */
 
 #ifndef __GATTLIB_H__
@@ -147,7 +147,7 @@ typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data,
  * @param connection Connection that is disconnecting
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
-typedef void (*gattlib_disconnection_handler_t)(void* user_data);
+typedef void (*gattlib_disconnection_handler_t)(gatt_connection_t* connection, void* user_data);
 
 /**
  * @brief Handler called on new discovered BLE device
@@ -178,12 +178,15 @@ typedef void (*gattlib_discovered_device_with_data_t)(void *adapter, const char*
 		void *user_data);
 
 /**
- * @brief Handler called on asynchronous connection when connection is ready
+ * @brief Handler called on asynchronous connection when connection is ready or on connection error
  *
+ * @param adapter    Local Adaptater interface. When passing NULL, we use default adapter.
+ * @param dst        Remote Bluetooth address
  * @param connection Connection that is disconnecting
+ * @param error      Connection error code
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
-typedef void (*gatt_connect_cb_t)(gatt_connection_t* connection, void* user_data);
+typedef void (*gatt_connect_cb_t)(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data);
 
 /**
  * @brief Callback called when GATT characteristic read value has been received
@@ -707,6 +710,13 @@ int gattlib_string_to_uuid(const char *str, size_t size, uuid_t *uuid);
  */
 int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2);
 
+/**
+ * @brief Logging function used by Gattlib
+ *
+ * @param level is the logging level of the message
+ * @param format is the message format
+ *
+ */
 void gattlib_log(int level, const char *format, ...);
 
 #ifdef __cplusplus

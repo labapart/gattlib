@@ -9,115 +9,18 @@
 #include "gattlib_internal.h"
 
 void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
-	connection->notification.type = NATIVE_NOTIFICATION;
-	connection->notification.notification_handler = notification_handler;
+	connection->notification.callback.notification_handler = notification_handler;
 	connection->notification.user_data = user_data;
 }
 
 void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
-	connection->indication.type = NATIVE_NOTIFICATION;
-	connection->indication.notification_handler = indication_handler;
+	connection->indication.callback.notification_handler = indication_handler;
 	connection->indication.user_data = user_data;
 }
 
 void gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
-	connection->disconnection.type = NATIVE_DISCONNECTION;
-	connection->disconnection.disconnection_handler = handler;
-	connection->disconnection.user_data = user_data;
-}
-
-#if defined(WITH_PYTHON)
-void gattlib_register_notification_python(gatt_connection_t* connection, PyObject *notification_handler, PyObject *user_data) {
-	connection->notification.type = PYTHON;
-	connection->notification.python_handler = notification_handler;
-	connection->notification.user_data = user_data;
-}
-
-void gattlib_register_indication_python(gatt_connection_t* connection, PyObject *indication_handler, PyObject *user_data) {
-	connection->indication.type = PYTHON;
-	connection->indication.python_handler = indication_handler;
-	connection->indication.user_data = user_data;
-}
-
-void gattlib_register_on_disconnect_python(gatt_connection_t *connection, PyObject *handler, PyObject *user_data) {
-	connection->disconnection.type = PYTHON;
-	connection->disconnection.python_handler = handler;
-	connection->disconnection.user_data = user_data;
-}
-#endif
-
-bool gattlib_has_valid_handler(struct gattlib_handler *handler) {
-	return ((handler->type != UNKNOWN) && (handler->notification_handler != NULL));
-}
-
-void gattlib_call_notification_handler(struct gattlib_handler *handler, const uuid_t* uuid, const uint8_t* data, size_t data_length) {
-	if (handler->type == NATIVE_NOTIFICATION) {
-		handler->notification_handler(uuid, data, data_length, handler->user_data);
-	}
-#if defined(WITH_PYTHON)
-	else if (handler->type == PYTHON) {
-		char uuid_str[MAX_LEN_UUID_STR + 1];
-		PyGILState_STATE d_gstate;
-		PyObject *result;
-
-		gattlib_uuid_to_string(uuid, uuid_str, sizeof(uuid_str));
-
-		d_gstate = PyGILState_Ensure();
-
-		const char* argument_string;
-		if (sizeof(void*) == 8) {
-			argument_string = "(sLIO)";
-		} else {
-			argument_string = "(sIIO)";
-		}
-		PyObject *arglist = Py_BuildValue(argument_string, uuid_str, data, data_length, handler->user_data);
-#if PYTHON_VERSION >= PYTHON_VERSIONS(3, 9)
-		result = PyObject_Call((PyObject *)handler->notification_handler, arglist, NULL);
-#else
-	    result = PyEval_CallObject((PyObject *)handler->notification_handler, arglist);
-#endif
-		Py_DECREF(arglist);
-
-		if (result == NULL) {
-			GATTLIB_LOG(GATTLIB_ERROR, "Python notification handler has raised an exception.");
-		}
-
-		PyGILState_Release(d_gstate);
-	}
-#endif
-	else {
-		GATTLIB_LOG(GATTLIB_ERROR, "Invalid notification handler.");
-	}
-}
-
-void gattlib_call_disconnection_handler(struct gattlib_handler *handler) {
-	if (handler->type == NATIVE_DISCONNECTION) {
-		handler->disconnection_handler(handler->user_data);
-	}
-#if defined(WITH_PYTHON)
-	else if (handler->type == PYTHON) {
-		PyObject *result;
-	    PyGILState_STATE d_gstate;
-	    d_gstate = PyGILState_Ensure();
-
-	    PyObject *arglist = Py_BuildValue("(O)", handler->user_data);
-#if PYTHON_VERSION >= PYTHON_VERSIONS(3, 9)
-		result = PyObject_Call((PyObject *)handler->disconnection_handler, arglist, NULL);
-#else
-	    result = PyEval_CallObject((PyObject *)handler->disconnection_handler, arglist);
-#endif
-	    Py_DECREF(arglist);
-
-		if (result == NULL) {
-			GATTLIB_LOG(GATTLIB_ERROR, "Python handler has raised an exception.");
-		}
-
-	    PyGILState_Release(d_gstate);
-	}
-#endif
-	else {
-		GATTLIB_LOG(GATTLIB_ERROR, "Invalid disconnection handler.");
-	}
+	connection->on_disconnection.callback.disconnection_handler = handler;
+	connection->on_disconnection.user_data = user_data;
 }
 
 void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid) {
@@ -197,5 +100,53 @@ int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2) {
 		}
 	} else {
 		return 3;
+	}
+}
+
+void gattlib_handler_free(struct gattlib_handler* handler) {
+	// Reset callback to stop calling it after we stopped
+	handler->callback.callback = NULL;
+
+	if (handler->python_args == NULL) {
+		return;
+	}
+
+	struct gattlib_python_args* args = handler->python_args;
+	Py_DECREF(args->callback);
+	Py_DECREF(args->args);
+	free(args);
+
+	handler->python_args = NULL;
+}
+
+bool gattlib_has_valid_handler(struct gattlib_handler* handler) {
+	return (handler->callback.callback != NULL);
+}
+
+void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*python_callback)(),
+		GThreadFunc thread_func, const char* thread_name, void* (*thread_args_allocator)(va_list args), ...) {
+	GError *error = NULL;
+
+	if (handler->callback.callback == NULL) {
+		// We do not have (anymore) a callback, nothing to do
+		return;
+	}
+
+	// Check if we are using the Python callback, in case of Python argument we keep track of the argument to free them
+	// once we are done with the handler.
+	if (handler->callback.callback == python_callback) {
+		handler->python_args = handler->user_data;
+	}
+
+	// We create a thread to ensure the callback is not blocking the mainloop
+	va_list args;
+	va_start(args, thread_args_allocator);
+	void* thread_args = thread_args_allocator(args);
+	va_end(args);
+
+	handler->thread = g_thread_try_new(thread_name, thread_func, thread_args, &error);
+	if (handler->thread == NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create thread '%s': %s", thread_name, error->message);
+		return;
 	}
 }

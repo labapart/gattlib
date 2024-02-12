@@ -74,26 +74,45 @@ class GattlibAdvertisementData(Structure):
 gattlib_adapter_open = gattlib.gattlib_adapter_open
 gattlib_adapter_open.argtypes = [c_char_p, POINTER(c_void_p)]
 
-# typedef void (*gattlib_discovered_device_t)(void *adapter, const char* addr, const char* name, void *user_data)
-gattlib_discovered_device_type = CFUNCTYPE(None, c_void_p, c_char_p, c_char_p, py_object)
+# const char *gattlib_adapter_get_name(void* adapter)
+gattlib_adapter_get_name = gattlib.gattlib_adapter_get_name
+gattlib_adapter_get_name.argtypes = [c_void_p]
+gattlib_adapter_get_name.restype = c_char_p
 
-# typedef void (*gattlib_discovered_device_with_data_t)(void *adapter, const char* addr, const char* name,
-#        gattlib_advertisement_data_t *advertisement_data, size_t advertisement_data_count,
-#        uint16_t manufacturer_id, uint8_t *manufacturer_data, size_t manufacturer_data_size,
-#        void *user_data);
-gattlib_discovered_device_with_data_type = CFUNCTYPE(None, c_void_p, c_char_p, c_char_p,
-                                                     POINTER(GattlibAdvertisementData), c_size_t, c_uint16, c_void_p, c_size_t,
-                                                     py_object)
+# void gattlib_discovered_device_python_callback(void *adapter, const char* addr, const char* name, void *user_data)
+gattlib_discovered_device_python_callback = gattlib.gattlib_discovered_device_python_callback
+gattlib_discovered_device_python_callback.argtypes = [c_void_p, c_char_p, c_char_p, py_object]
+gattlib_discovered_device_python_callback.restype = c_void_p
+
+# void gattlib_connected_device_python_callback(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data);
+gattlib_connected_device_python_callback = gattlib.gattlib_connected_device_python_callback
+gattlib_connected_device_python_callback.argtypes = [c_void_p, c_char_p, c_void_p, c_int, py_object]
+gattlib_connected_device_python_callback.restype = c_void_p
+
+# void gattlib_disconnected_device_python_callback(void *user_data)
+gattlib_disconnected_device_python_callback = gattlib.gattlib_disconnected_device_python_callback
+gattlib_disconnected_device_python_callback.argtypes = [py_object]
+gattlib_disconnected_device_python_callback.restype = c_void_p
+
+# void gattlib_notification_device_python_callback(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data);
+gattlib_notification_device_python_callback = gattlib.gattlib_notification_device_python_callback
+gattlib_notification_device_python_callback.argtypes = [c_void_p, c_void_p, c_int, c_void_p]
+gattlib_notification_device_python_callback.restype = c_void_p
+
+# void* gattlib_python_callback_args(PyObject* python_callback, PyObject* python_args) {
+gattlib_python_callback_args = gattlib.gattlib_python_callback_args
+gattlib_python_callback_args.argtypes = [py_object, py_object]
+gattlib_python_callback_args.restype = c_void_p
 
 # int gattlib_adapter_scan_enable_with_filter_non_blocking(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 #        gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
 gattlib_adapter_scan_enable_with_filter_non_blocking = gattlib.gattlib_adapter_scan_enable_with_filter_non_blocking
-gattlib_adapter_scan_enable_with_filter_non_blocking.argtypes = [c_void_p, POINTER(POINTER(GattlibUuid)), c_int16, c_uint32, gattlib_discovered_device_type, c_size_t, py_object]
+gattlib_adapter_scan_enable_with_filter_non_blocking.argtypes = [c_void_p, POINTER(POINTER(GattlibUuid)), c_int16, c_uint32, c_void_p, c_size_t, c_void_p]
 
 # int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddsytone_types,
 #        gattlib_discovered_device_with_data_t discovered_device_cb, size_t timeout, void *user_data)
 gattlib_adapter_scan_eddystone = gattlib.gattlib_adapter_scan_eddystone
-gattlib_adapter_scan_eddystone.argtypes = [c_void_p, c_int16, c_uint32, gattlib_discovered_device_with_data_type, c_size_t, py_object]
+gattlib_adapter_scan_eddystone.argtypes = [c_void_p, c_int16, c_uint32, c_void_p, c_size_t, c_void_p]
 
 # gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned long options);
 gattlib_connect = gattlib.gattlib_connect
@@ -140,13 +159,13 @@ gattlib_notification_start.argtypes = [c_void_p, POINTER(GattlibUuid)]
 gattlib_notification_stop = gattlib.gattlib_notification_stop
 gattlib_notification_stop.argtypes = [c_void_p, POINTER(GattlibUuid)]
 
-# void gattlib_register_notification_python(gatt_connection_t* connection, PyObject *notification_handler, PyObject *user_data)
-gattlib_register_notification = gattlib.gattlib_register_notification_python
-gattlib_register_notification.argtypes = [c_void_p, py_object, py_object]
+# void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data);
+gattlib_register_notification = gattlib.gattlib_register_notification
+gattlib_register_notification.argtypes = [c_void_p, c_void_p, c_void_p]
 
-# void gattlib_register_on_disconnect_python(gatt_connection_t *connection, PyObject *handler, PyObject *user_data)
-gattlib_register_on_disconnect = gattlib.gattlib_register_on_disconnect_python
-gattlib_register_on_disconnect.argtypes = [c_void_p, py_object, py_object]
+# void gattlib_register_on_disconnect(gatt_connection_t *connection, PyObject *handler, PyObject *user_data)
+gattlib_register_on_disconnect = gattlib.gattlib_register_on_disconnect
+gattlib_register_on_disconnect.argtypes = [c_void_p, c_void_p, c_void_p]
 
 # int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
 gattlib_get_rssi = gattlib.gattlib_get_rssi

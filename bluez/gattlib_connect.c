@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2021 Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2024 Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -69,12 +69,12 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 	switch (pdu[0]) {
 	case ATT_OP_HANDLE_NOTIFY:
 		if (gattlib_has_valid_handler(&conn->notification)) {
-			gattlib_call_notification_handler(&conn->notification, &uuid, &pdu[3], len - 3);
+			gattlib_on_gatt_notification(&conn, &uuid, &pdu[3], len - 3);
 		}
 		break;
 	case ATT_OP_HANDLE_IND:
 		if (gattlib_has_valid_handler(&conn->indication)) {
-			gattlib_call_notification_handler(&conn->notification, &uuid, &pdu[3], len - 3);
+			gattlib_on_gatt_notification(&conn, &uuid, &pdu[3], len - 3);
 		}
 		break;
 	default:
@@ -417,7 +417,7 @@ static gatt_connection_t *gattlib_connect_with_options(const char *src, const ch
 	while ((io_connect_arg.connected == FALSE) && (io_connect_arg.timeout == FALSE)) {
 		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
 	}
-	
+
 	// Disconnect the timeout source if connection success
 	if (io_connect_arg.connected) g_source_destroy(timeout);
 
