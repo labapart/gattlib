@@ -74,6 +74,11 @@ set(gattlib_SRCS gattlib.c
                  bluez5/lib/uuid.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_common.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_eddystone.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_connected_device.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_disconnected_device.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_discovered_device.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_notification_device.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_python.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/logging_backend/${GATTLIB_LOG_BACKEND}/gattlib_logging.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-device1.c

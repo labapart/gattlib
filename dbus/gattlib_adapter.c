@@ -134,22 +134,7 @@ static void device_manager_on_device1_signal(const char* device1_path, struct ga
 		g_mutex_unlock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
 
 		if ((item == NULL) || (gattlib_adapter->ble_scan.enabled_filters & GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE)) {
-#if defined(WITH_PYTHON)
-			// In case of Python support, we ensure we acquire the GIL (Global Intepreter Lock) to have
-			// a thread-safe Python execution.
-			PyGILState_STATE d_gstate;
-			d_gstate = PyGILState_Ensure();
-#endif
-
-			gattlib_adapter->ble_scan.discovered_device_callback(
-				gattlib_adapter,
-				org_bluez_device1_get_address(device1),
-				org_bluez_device1_get_name(device1),
-				gattlib_adapter->ble_scan.discovered_device_user_data);
-
-#if defined(WITH_PYTHON)
-			PyGILState_Release(d_gstate);
-#endif
+			gattlib_on_discovered_device(gattlib_adapter, device1);
 		}
 		g_object_unref(device1);
 	}
@@ -217,7 +202,7 @@ static gboolean _stop_scan_func(gpointer data) {
 
 	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
 
-	GATTLIB_LOG(GATTLIB_DEBUG, "BLE scan is stopped after sacnning time has expired.");
+	GATTLIB_LOG(GATTLIB_DEBUG, "BLE scan is stopped after scanning time has expired.");
 	return FALSE;
 }
 
@@ -314,8 +299,8 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 	memset(&gattlib_adapter->ble_scan, 0, sizeof(gattlib_adapter->ble_scan));
 	gattlib_adapter->ble_scan.enabled_filters = enabled_filters;
 	gattlib_adapter->ble_scan.ble_scan_timeout = timeout;
-	gattlib_adapter->ble_scan.discovered_device_callback = discovered_device_cb;
-	gattlib_adapter->ble_scan.discovered_device_user_data = user_data;
+	gattlib_adapter->ble_scan.discovered_device_callback.callback.discovered_device = discovered_device_cb;
+	gattlib_adapter->ble_scan.discovered_device_callback.user_data = user_data;
 
 	gattlib_adapter->ble_scan.added_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
 	                    "object-added",
@@ -388,15 +373,18 @@ int gattlib_adapter_scan_disable(void* adapter) {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 	GError *error = NULL;
 
+	org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
+	// Ignore the error
+
+	// Free and reset callback to stop calling it after we stopped
+	gattlib_handler_free(&gattlib_adapter->ble_scan.discovered_device_callback);
+
 	if (gattlib_adapter->ble_scan.is_scanning) {
 		g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
 		gattlib_adapter->ble_scan.is_scanning = false;
 		g_cond_broadcast(&gattlib_adapter->ble_scan.scan_loop_cond);
 		g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
 	}
-
-	org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
-	// Ignore the error
 
 	// Remove timeout
 	if (gattlib_adapter->ble_scan.ble_scan_timeout_id) {

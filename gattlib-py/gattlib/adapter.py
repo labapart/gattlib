@@ -135,8 +135,9 @@ class Adapter:
 
         ret = gattlib_adapter_scan_enable_with_filter_non_blocking(self._adapter,
                                                       uuid_list, rssi, enabled_filters,
-                                                      self.on_discovered_device_callback,
-                                                      timeout, user_data)
+                                                      gattlib_discovered_device_python_callback,
+                                                      timeout,
+                                                      gattlib_python_callback_args(self.on_discovered_device_callback, user_data))
         handle_return(ret)
 
     @staticmethod

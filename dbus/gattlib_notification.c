@@ -45,7 +45,7 @@ gboolean on_handle_battery_level_property_change(
 					//      GATT connection notifiying to Battery level
 					percentage = g_variant_get_byte(value);
 
-					gattlib_call_notification_handler(&connection->notification,
+					gattlib_on_gatt_notification(connection,
 							&m_battery_level_uuid,
 							(const uint8_t*)&percentage, sizeof(percentage));
 					break;
@@ -88,8 +88,7 @@ static gboolean on_handle_characteristic_property_change(
 							MAX_LEN_UUID_STR + 1,
 							&uuid);
 
-					gattlib_call_notification_handler(&connection->notification,
-							&uuid, data, data_length);
+					gattlib_on_gatt_notification(connection, &uuid, data, data_length);
 
 					// As per https://developer.gnome.org/glib/stable/glib-GVariant.html#g-variant-iter-loop, clean up `key` and `value`.
 					g_variant_unref(value);
@@ -135,8 +134,7 @@ static gboolean on_handle_characteristic_indication(
 							MAX_LEN_UUID_STR + 1,
 							&uuid);
 
-					gattlib_call_notification_handler(&connection->indication,
-							&uuid, data, data_length);
+					gattlib_on_gatt_notification(connection, &uuid, data, data_length);
 					break;
 				}
 			}
