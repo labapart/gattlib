@@ -6,7 +6,7 @@
 
 from gattlib import *
 from .uuid import gattlib_uuid_to_uuid, gattlib_uuid_to_int
-from .exception import handle_return
+from .exception import handle_return, InvalidParameter
 
 
 class GattStream():
@@ -115,6 +115,9 @@ class GattCharacteristic():
         return GattStream(_stream, _mtu.value)
 
     def register_notification(self, callback, user_data=None):
+        if not callable(callback):
+            raise InvalidParameter("Notification callback is not callable.")
+
         self._device._notification_add_gatt_characteristic_callback(self, callback, user_data)
 
     def unregister_notification(self):

@@ -220,6 +220,15 @@ extern const char *gattlib_eddystone_url_scheme_prefix[];
 int gattlib_adapter_open(const char* adapter_name, void** adapter);
 
 /**
+ * @brief Get adapter name
+ *
+ * @param adapter is the context of the newly opened adapter
+ *
+ * @return Adapter name
+ */
+const char *gattlib_adapter_get_name(void* adapter);
+
+/**
  * @brief Enable Bluetooth scanning on a given adapter
  *
  * @param adapter is the context of the newly opened adapter
