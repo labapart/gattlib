@@ -54,6 +54,11 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	return GATTLIB_SUCCESS;
 }
 
+const char *gattlib_adapter_get_name(void* adapter) {
+	struct gattlib_adapter *gattlib_adapter = adapter;
+	return gattlib_adapter->adapter_name;
+}
+
 struct gattlib_adapter *init_default_adapter(void) {
 	struct gattlib_adapter *gattlib_adapter;
 	int ret;

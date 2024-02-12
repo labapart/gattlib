@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
  */
 
 #include <glib.h>
@@ -149,6 +149,8 @@ static gboolean on_handle_characteristic_indication(
 static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, const uuid_t* uuid, void *callback) {
 	gattlib_context_t* conn_context = connection->context;
 
+	assert(callback != NULL);
+
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
 		char uuid_str[MAX_LEN_UUID_STR + 1];
@@ -194,7 +196,6 @@ static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, 
 
 	GError *error = NULL;
 	org_bluez_gatt_characteristic1_call_start_notify_sync(dbus_characteristic.gatt, NULL, &error);
-
 	if (error) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to start DBus GATT notification: %s", error->message);
 		g_error_free(error);

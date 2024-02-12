@@ -4,6 +4,7 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
+import logging
 import re
 from uuid import UUID
 
@@ -40,7 +41,7 @@ def gattlib_uuid_to_int(gattlib_uuid):
         return ValueError("Gattlib UUID not recognized (type:0x%x)" % gattlib_uuid.type)
 
 
-def gattlib_uuid_str_to_int(uuid_str):
+def gattlib_uuid_str_to_int(uuid_str: str) -> int:
     # Check if the string could already encode a UUID16 or UUID32
     if len(uuid_str) <= 8:
         return int(uuid_str, 16)
@@ -50,4 +51,8 @@ def gattlib_uuid_str_to_int(uuid_str):
     if match:
         return int(match.group(1), 16)
     else:
-        return UUID(uuid_str).int
+        try:
+            return UUID(uuid_str).int
+        except ValueError:
+            logging.error("Could not convert %s to a UUID", uuid_str)
+            raise

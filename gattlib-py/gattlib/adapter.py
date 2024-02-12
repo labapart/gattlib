@@ -43,6 +43,12 @@ class Adapter:
         self._adapter = c_void_p(None)
         self._is_opened = False  # Note: 'self._adapter != c_void_p(None)' does not seem to return the expected result
 
+    def __str__(self) -> str:
+        if self._name:
+            return self._name
+        else:
+            return f"adapter@{self._adapter}"
+
     @property
     def name(self):
         return self._name
@@ -56,6 +62,8 @@ class Adapter:
         ret = gattlib_adapter_open(self._name, byref(self._adapter))
         if ret == 0:
             self._is_opened = True
+            if self._name is None:
+                self._name = gattlib_adapter_get_name(self._adapter)
         return ret
 
     def close(self):
