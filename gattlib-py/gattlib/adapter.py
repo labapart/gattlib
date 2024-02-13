@@ -67,8 +67,11 @@ class Adapter:
         return ret
 
     def close(self):
-        ret = gattlib.gattlib_adapter_close(self._adapter)
+        ret = 0
+        if self._adapter:
+            ret = gattlib.gattlib_adapter_close(self._adapter)
         self._is_opened = False
+        self._adapter = None
         return ret
 
     # Use a closure to return a method that can be called by the C-library (see: https://stackoverflow.com/a/7261524/6267288)
@@ -196,7 +199,7 @@ class Adapter:
         }
 
         ret = gattlib_adapter_scan_eddystone(self._adapter, rssi, eddystone_filters,
-                                             gattlib_discovered_device_with_data_type(Adapter.on_discovered_ble_device_with_details),
+                                             Adapter.on_discovered_ble_device_with_details,
                                              timeout, args)
         handle_return(ret)
 

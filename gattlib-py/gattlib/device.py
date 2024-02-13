@@ -40,6 +40,7 @@ class Device:
         self._name = name
         self._connection = None
         self.on_connection_callback = None
+        self.on_connection_error_callback = None
 
         # Keep track if notification handler has been initialized
         self._is_notification_init = False
@@ -65,8 +66,12 @@ class Device:
 
     def connect(self, options=CONNECTION_OPTIONS_LEGACY_DEFAULT):
         def _on_connection(adapter: c_void_p, mac_address: c_char_p, connection: c_void_p, error: c_int, user_data: py_object):
-            self._connection = connection
-            self.on_connection(user_data)
+            if error:
+                self._connection = None
+                self.on_connection_error(error, user_data)
+            else:
+                self._connection = connection
+                self.on_connection(user_data)
 
         if self._adapter is None:
             adapter = None
@@ -82,6 +87,11 @@ class Device:
         if self.on_connection_callback:
             self.on_connection_callback(self, user_data)
 
+    def on_connection_error(self, error: c_int, user_data: py_object):
+        logging.error("Failed to connect due to error '%s'", error)
+        if self.on_connection_error_callback:
+            self.on_connection_error_callback(self, error, user_data)
+
     @property
     def rssi(self):
         _rssi = c_int16(0)
@@ -92,19 +102,16 @@ class Device:
         else:
             return self._adapter.get_rssi_from_mac(self._addr)
 
-    @staticmethod
-    def on_disconnection(user_data):
-        this = user_data
-
-        this.disconnection_callback(this.disconnection_user_data)
-
-    def register_on_disconnect(self, callback, user_data):
+    def register_on_disconnect(self, callback, user_data=None):
         self.disconnection_callback = callback
-        self.disconnection_user_data = user_data
+
+        def on_disconnection(user_data):
+            if self.disconnection_callback:
+                self.disconnection_callback()
 
         gattlib_register_on_disconnect(self.connection,
                                        gattlib_disconnected_device_python_callback,
-                                       gattlib_python_callback_args(Device.on_disconnection, user_data))
+                                       gattlib_python_callback_args(on_disconnection, user_data))
 
     def disconnect(self):
         if self._connection:
