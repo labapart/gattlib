@@ -173,6 +173,13 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
                                        const gchar *const       *invalidated_properties,
                                        gpointer                  user_data)
 {
+	const char* proxy_object_path = g_dbus_proxy_get_object_path(interface_proxy);
+	struct gattlib_adapter* gattlib_adapter = user_data;
+
+	if (gattlib_adapter->device_manager == NULL) {
+		return;
+	}
+
 	// Count number of invalidated properties
 	size_t invalidated_properties_count = 0;
 	if (invalidated_properties != NULL) {
@@ -183,7 +190,8 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 		}
 	}
 
-	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_interface_proxy_properties_changed: interface:%s changed_properties:%s invalidated_properties:%d",
+	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_interface_proxy_properties_changed(%s): interface:%s changed_properties:%s invalidated_properties:%d",
+			proxy_object_path,
 			g_dbus_proxy_get_interface_name(interface_proxy),
 			g_variant_print(changed_properties, TRUE),
 			invalidated_properties_count);
