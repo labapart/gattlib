@@ -8,19 +8,31 @@
 
 #include "gattlib_internal.h"
 
-void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
+int gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
+	if (connection == NULL) {
+		return GATTLIB_INVALID_PARAMETER;
+	}
 	connection->notification.callback.notification_handler = notification_handler;
 	connection->notification.user_data = user_data;
+	return GATTLIB_SUCCESS;
 }
 
-void gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
+int gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
+	if (connection == NULL) {
+		return GATTLIB_INVALID_PARAMETER;
+	}
 	connection->indication.callback.notification_handler = indication_handler;
 	connection->indication.user_data = user_data;
+	return GATTLIB_SUCCESS;
 }
 
-void gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
+int gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
+	if (connection == NULL) {
+		return GATTLIB_INVALID_PARAMETER;
+	}
 	connection->on_disconnection.callback.disconnection_handler = handler;
 	connection->on_disconnection.user_data = user_data;
+	return GATTLIB_SUCCESS;
 }
 
 void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid) {
