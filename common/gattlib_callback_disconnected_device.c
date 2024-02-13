@@ -28,24 +28,19 @@ void gattlib_disconnected_device_python_callback(gatt_connection_t* connection, 
 	PyGILState_Release(d_gstate);
 }
 
-static gpointer _gattlib_disconnected_device_thread(gpointer data) {
-	gatt_connection_t* connection = data;
-
-	connection->on_disconnection.callback.disconnection_handler(connection, connection->on_disconnection.user_data);
-	return NULL;
-}
-
-static void* _disconnected_device_thread_args_allocator(va_list args) {
-	gatt_connection_t* connection = va_arg(args, gatt_connection_t*);
-	return connection;
-}
-
 void gattlib_on_disconnected_device(gatt_connection_t* connection) {
-	gattlib_handler_dispatch_to_thread(
-		&connection->on_disconnection,
-		gattlib_disconnected_device_python_callback /* python_callback */,
-		_gattlib_disconnected_device_thread /* thread_func */,
-		"gattlib_disconnected_device" /* thread_name */,
-		_disconnected_device_thread_args_allocator /* thread_args_allocator */,
-		connection);
+	if (connection->on_disconnection.callback.callback == NULL) {
+		// We do not have (anymore) a callback, nothing to do
+		GATTLIB_LOG(GATTLIB_DEBUG, "No callback for GATT disconnection.");
+		return;
+	}
+
+	// Check if we are using the Python callback, in case of Python argument we keep track of the argument to free them
+	// once we are done with the handler.
+	if ((gattlib_disconnection_handler_t)connection->on_disconnection.callback.callback == gattlib_disconnected_device_python_callback) {
+		connection->on_disconnection.python_args = connection->on_disconnection.user_data;
+	}
+
+	// For GATT disconnection we do not use thread to ensure the callback is synchronous.
+	connection->on_disconnection.callback.disconnection_handler(connection, connection->on_disconnection.user_data);
 }
