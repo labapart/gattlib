@@ -159,11 +159,11 @@ gattlib_notification_start.argtypes = [c_void_p, POINTER(GattlibUuid)]
 gattlib_notification_stop = gattlib.gattlib_notification_stop
 gattlib_notification_stop.argtypes = [c_void_p, POINTER(GattlibUuid)]
 
-# void gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data);
+# int gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data);
 gattlib_register_notification = gattlib.gattlib_register_notification
 gattlib_register_notification.argtypes = [c_void_p, c_void_p, c_void_p]
 
-# void gattlib_register_on_disconnect(gatt_connection_t *connection, PyObject *handler, PyObject *user_data)
+# int gattlib_register_on_disconnect(gatt_connection_t *connection, PyObject *handler, PyObject *user_data)
 gattlib_register_on_disconnect = gattlib.gattlib_register_on_disconnect
 gattlib_register_on_disconnect.argtypes = [c_void_p, c_void_p, c_void_p]
 
