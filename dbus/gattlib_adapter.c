@@ -202,18 +202,22 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 	}
 }
 
+static void _stop_scan_loop_thread(struct gattlib_adapter *gattlib_adapter) {
+	if (gattlib_adapter->ble_scan.is_scanning) {
+		g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+		gattlib_adapter->ble_scan.is_scanning = false;
+		g_cond_broadcast(&gattlib_adapter->ble_scan.scan_loop_cond);
+		g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	}
+}
+
 static gboolean _stop_scan_func(gpointer data) {
 	struct gattlib_adapter *gattlib_adapter = data;
 
-	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
-
-	gattlib_adapter->ble_scan.is_scanning = false;
-	g_cond_signal(&gattlib_adapter->ble_scan.scan_loop_cond);
+	_stop_scan_loop_thread(gattlib_adapter);
 
 	// Unset timeout ID to not try removing it
 	gattlib_adapter->ble_scan.ble_scan_timeout_id = 0;
-
-	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
 
 	GATTLIB_LOG(GATTLIB_DEBUG, "BLE scan is stopped after scanning time has expired.");
 	return FALSE;
@@ -392,12 +396,8 @@ int gattlib_adapter_scan_disable(void* adapter) {
 	// Free and reset callback to stop calling it after we stopped
 	gattlib_handler_free(&gattlib_adapter->ble_scan.discovered_device_callback);
 
-	if (gattlib_adapter->ble_scan.is_scanning) {
-		g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
-		gattlib_adapter->ble_scan.is_scanning = false;
-		g_cond_broadcast(&gattlib_adapter->ble_scan.scan_loop_cond);
-		g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
-	}
+	// Stop BLE scan loop thread
+	_stop_scan_loop_thread(gattlib_adapter);
 
 	// Remove timeout
 	if (gattlib_adapter->ble_scan.ble_scan_timeout_id) {
@@ -419,13 +419,20 @@ int gattlib_adapter_close(void* adapter)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
+	if (!gattlib_adapter->ble_scan.is_scanning) {
+		// Ensure the thread is freed on adapter closing
+		if (gattlib_adapter->ble_scan.scan_loop_thread) {
+			//TODO: Fix memory leak here
+			//g_object_unref(gattlib_adapter->ble_scan.scan_loop_thread);
+			gattlib_adapter->ble_scan.scan_loop_thread = NULL;
+		}
+	} else {
+		gattlib_adapter_scan_disable(gattlib_adapter);
+	}
+
 	if (gattlib_adapter->device_manager) {
 		g_object_unref(gattlib_adapter->device_manager);
 		gattlib_adapter->device_manager = NULL;
-	}
-	if (gattlib_adapter->ble_scan.scan_loop_thread) {
-		g_object_unref(gattlib_adapter->ble_scan.scan_loop_thread);
-		gattlib_adapter->ble_scan.scan_loop_thread = NULL;
 	}
 
 	g_object_unref(gattlib_adapter->adapter_proxy);
