@@ -295,11 +295,17 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 		return GATTLIB_NOT_SUPPORTED;
 	}
 
+	// Remove signal
+	g_signal_handler_disconnect(conn_context->device, conn_context->on_handle_device_property_change_id);
+
 	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
 	if (error) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to disconnect DBus Bluez Device: %s", error->message);
 		g_error_free(error);
 	}
+
+	// Call disconnection callack. It should be called by signal but signal has been removed above
+	gattlib_on_disconnected_device(connection);
 
 	free(conn_context->device_object_path);
 	g_object_unref(conn_context->device);
@@ -309,8 +315,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	g_main_loop_unref(conn_context->connection_loop);
 	disconnect_all_notifications(conn_context);
 
-	free(conn_context->adapter->adapter_name);
-	free(conn_context->adapter);
+	// Note: We do not free adapter as it might still be used by other devices
 
 	free(connection->context);
 	free(connection);
