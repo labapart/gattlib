@@ -33,6 +33,8 @@ struct gattlib_handler {
 	void* user_data;
 	// We create a thread to ensure the callback is not blocking the mainloop
 	GThread *thread;
+	// Thread pool
+	GThreadPool *thread_pool;
 	// In case of Python callback and argument, we keep track to free it when we stopped to discover BLE devices
 	void* python_args;
 };
@@ -51,6 +53,8 @@ void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*
 		GThreadFunc thread_func, const char* thread_name, void* (*thread_args_allocator)(va_list args), ...);
 void gattlib_handler_free(struct gattlib_handler* handler);
 bool gattlib_has_valid_handler(struct gattlib_handler* handler);
+
+void gattlib_notification_device_thread(gpointer data, gpointer user_data);
 
 #if defined(WITH_PYTHON)
 // Callback used by Python to create arguments used by native callback
