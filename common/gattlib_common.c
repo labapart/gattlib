@@ -9,21 +9,47 @@
 #include "gattlib_internal.h"
 
 int gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
+	GError *error = NULL;
+
 	if (connection == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
+
 	connection->notification.callback.notification_handler = notification_handler;
 	connection->notification.user_data = user_data;
-	return GATTLIB_SUCCESS;
+
+	connection->notification.thread_pool = g_thread_pool_new(
+		gattlib_notification_device_thread,
+		&connection->notification,
+		1 /* max_threads */, FALSE /* exclusive */, &error);
+	if (error != NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_register_notification: Failed to create thread pool: %s", error->message);
+		return GATTLIB_ERROR_INTERNAL;
+	} else {
+		assert(connection->notification.thread_pool != NULL);
+		return GATTLIB_SUCCESS;
+	}
 }
 
 int gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
+	GError *error = NULL;
+
 	if (connection == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 	connection->indication.callback.notification_handler = indication_handler;
 	connection->indication.user_data = user_data;
-	return GATTLIB_SUCCESS;
+
+	connection->indication.thread_pool = g_thread_pool_new(
+		gattlib_notification_device_thread,
+		&connection->indication,
+		1 /* max_threads */, FALSE /* exclusive */, &error);
+	if (error != NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_register_indication: Failed to create thread pool: %s", error->message);
+		return GATTLIB_ERROR_INTERNAL;
+	} else {
+		return GATTLIB_SUCCESS;
+	}
 }
 
 int gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
@@ -119,16 +145,18 @@ void gattlib_handler_free(struct gattlib_handler* handler) {
 	// Reset callback to stop calling it after we stopped
 	handler->callback.callback = NULL;
 
-	if (handler->python_args == NULL) {
-		return;
+	if (handler->python_args != NULL) {
+		struct gattlib_python_args* args = handler->python_args;
+		Py_DECREF(args->callback);
+		Py_DECREF(args->args);
+		handler->python_args = NULL;
+		free(handler->python_args);
 	}
 
-	struct gattlib_python_args* args = handler->python_args;
-	Py_DECREF(args->callback);
-	Py_DECREF(args->args);
-	free(args);
-
-	handler->python_args = NULL;
+	if (handler->thread_pool != NULL) {
+		g_thread_pool_free(handler->thread_pool, FALSE /* immediate */, TRUE /* wait */);
+		handler->thread_pool = NULL;
+	}
 }
 
 bool gattlib_has_valid_handler(struct gattlib_handler* handler) {

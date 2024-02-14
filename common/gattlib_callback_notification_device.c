@@ -48,12 +48,13 @@ struct gattlib_notification_device_thread_args {
 	size_t data_length;
 };
 
-static gpointer _gattlib_notification_device_thread(gpointer data) {
+void gattlib_notification_device_thread(gpointer data, gpointer user_data) {
 	struct gattlib_notification_device_thread_args* args = data;
+	struct gattlib_handler* handler = user_data;
 
-	args->connection->notification.callback.notification_handler(
+	handler->callback.notification_handler(
 		args->uuid, args->data, args->data_length,
-		args->connection->notification.user_data
+		handler->user_data
 	);
 
 	if (args->uuid != NULL) {
@@ -62,15 +63,9 @@ static gpointer _gattlib_notification_device_thread(gpointer data) {
 	if (args->data != NULL) {
 		free(args->data);
 	}
-	return NULL;
 }
 
-static void* _notification_device_thread_args_allocator(va_list args) {
-	gatt_connection_t* connection = va_arg(args, gatt_connection_t*);
-	const uuid_t* uuid = va_arg(args, const uuid_t*);
-	const uint8_t* data = va_arg(args, const uint8_t*);
-	size_t data_length = va_arg(args, size_t);
-
+static void* _notification_device_thread_args_allocator(gatt_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length) {
 	struct gattlib_notification_device_thread_args* thread_args = malloc(sizeof(struct gattlib_notification_device_thread_args));
 	thread_args->connection = connection;
 	thread_args->uuid = malloc(sizeof(uuid_t));
@@ -87,11 +82,17 @@ static void* _notification_device_thread_args_allocator(va_list args) {
 }
 
 void gattlib_on_gatt_notification(gatt_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length) {
-	gattlib_handler_dispatch_to_thread(
-		&connection->on_connection,
-		gattlib_notification_device_python_callback /* python_callback */,
-		_gattlib_notification_device_thread /* thread_func */,
-		"gattlib_notification_device" /* thread_name */,
-		_notification_device_thread_args_allocator /* thread_args_allocator */,
-		connection, uuid, data, data_length);
+	GError *error = NULL;
+
+	assert(connection->notification.thread_pool != NULL);
+
+	void* arg = _notification_device_thread_args_allocator(connection, uuid, data, data_length);
+	if (arg == NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_on_gatt_notification: Failed to allocate arguments for thread");
+		return;
+	}
+	g_thread_pool_push(connection->notification.thread_pool, arg, &error);
+	if (error != NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_on_gatt_notification: Failed to push thread in pool: %s", error->message);
+	}
 }
