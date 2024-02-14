@@ -121,7 +121,7 @@ static gboolean on_handle_characteristic_indication(
 
 			g_variant_get (arg_changed_properties, "a{sv}", &iter);
 			while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
-				GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_indication_property_change: %s:%s",
+				GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_characteristic_indication: %s:%s",
 						key, g_variant_print(value, TRUE));
 
 				if (strcmp(key, "Value") == 0) {
@@ -141,7 +141,7 @@ static gboolean on_handle_characteristic_indication(
 			g_variant_iter_free(iter);
 		}
 	} else {
-		GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_indication_property_change: Not a valid indication handler");
+		GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_characteristic_indication: Not a valid indication handler");
 	}
 	return TRUE;
 }
