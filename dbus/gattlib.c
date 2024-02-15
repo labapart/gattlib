@@ -60,13 +60,16 @@ gboolean on_handle_device_property_change(
 
 		g_variant_get (arg_changed_properties, "a{sv}", &iter);
 		while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
-			GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change: %s: %s", key, g_variant_print(value, TRUE));
 			if (strcmp(key, "Connected") == 0) {
 				if (!g_variant_get_boolean(value)) {
+					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change: Disconnection");
 					gattlib_on_disconnected_device(connection);
+				} else {
+					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change: Connection");
 				}
 			} else if (strcmp(key, "ServicesResolved") == 0) {
 				if (g_variant_get_boolean(value)) {
+					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change: Service Resolved");
 					_on_device_connect(connection);
 				}
 			}
