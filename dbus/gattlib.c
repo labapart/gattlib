@@ -281,6 +281,7 @@ gatt_connection_t *gattlib_connect_async(void *adapter, const char *dst,
 
 int gattlib_disconnect(gatt_connection_t* connection) {
 	gattlib_context_t* conn_context;
+	int ret = GATTLIB_SUCCESS;
 	GError *error = NULL;
 
 	if (connection == NULL) {
@@ -288,15 +289,14 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
+	g_mutex_lock(&connection->connection_mutex);
 	conn_context = connection->context;
 
 	if (conn_context == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection context is not valid.");
-		return GATTLIB_NOT_SUPPORTED;
+		ret = GATTLIB_NOT_SUPPORTED;
+		goto EXIT;
 	}
-
-	// Remove signal
-	g_signal_handler_disconnect(conn_context->device, conn_context->on_handle_device_property_change_id);
 
 	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
 	if (error) {
@@ -308,7 +308,10 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	gattlib_on_disconnected_device(connection);
 
 	free(conn_context->device_object_path);
-	g_object_unref(conn_context->device);
+	if (conn_context->device != NULL) {
+		g_object_unref(conn_context->device);
+		conn_context->device = NULL;
+	}
 	g_list_free_full(conn_context->dbus_objects, g_object_unref);
 	g_main_loop_quit(conn_context->connection_loop);
 	pthread_join(conn_context->event_thread, NULL);
@@ -318,8 +321,12 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 	// Note: We do not free adapter as it might still be used by other devices
 
 	free(connection->context);
+	connection->context = NULL;
 	free(connection);
-	return GATTLIB_SUCCESS;
+
+EXIT:
+	g_mutex_unlock(&connection->connection_mutex);
+	return ret;
 }
 
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services

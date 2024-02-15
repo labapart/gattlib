@@ -42,6 +42,8 @@ struct gattlib_handler {
 struct _gatt_connection_t {
 	void* context;
 
+	GMutex connection_mutex;
+
 	struct gattlib_handler on_connection;
 	struct gattlib_handler on_connection_error;
 	struct gattlib_handler notification;
