@@ -11,9 +11,12 @@ GATTLIB_ERROR_TIMEOUT = 3
 GATTLIB_OUT_OF_MEMORY = 4
 GATTLIB_NOT_SUPPORTED = 5
 GATTLIB_DEVICE_ERROR = 6
-GATTLIB_ERROR_DBUS = 7
-GATTLIB_ERROR_BLUEZ = 8
-GATTLIB_ERROR_INTERNAL = 9
+GATTLIB_DEVICE_NOT_CONNECTED = 7
+
+GATTLIB_ERROR_MODULE_MASK      = 0xF0000000
+GATTLIB_ERROR_DBUS             = 0x10000000
+GATTLIB_ERROR_BLUEZ            = 0x20000000
+GATTLIB_ERROR_INTERNAL         = 0x80000000
 
 
 class GattlibException(Exception):
@@ -39,6 +42,8 @@ class OutOfMemory(GattlibException):
 class NotSupported(GattlibException):
     pass
 
+class NotConnected(GattlibException):
+    pass
 
 class DeviceError(GattlibException):
     def __init__(self, adapter: str = None, mac_address: str = None) -> None:
@@ -49,7 +54,12 @@ class DeviceError(GattlibException):
         return f"Error with device {self.mac_address} on adapter {self.adapter}"
 
 class DBusError(GattlibException):
-    pass
+    def __init__(self, domain: int, code: int) -> None:
+        self.domain = domain
+        self.code = code
+
+    def __str__(self) -> str:
+        return f"DBus Error domain={self.domain},code={self.code}"
 
 
 def handle_return(ret):
@@ -65,8 +75,10 @@ def handle_return(ret):
         raise NotSupported()
     elif ret == GATTLIB_DEVICE_ERROR:
         raise DeviceError()
-    elif ret == GATTLIB_ERROR_DBUS:
-        raise DBusError()
+    elif ret == GATTLIB_DEVICE_NOT_CONNECTED:
+        raise NotConnected()
+    elif (ret & GATTLIB_ERROR_MODULE_MASK) == GATTLIB_ERROR_DBUS:
+        raise DBusError((ret >> 8) & 0xFFF, ret & 0xFFFF)
     elif ret == -22: # From '-EINVAL'
         raise ValueError("Gattlib value error")
     elif ret != 0:

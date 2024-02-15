@@ -148,6 +148,7 @@ static gboolean on_handle_characteristic_indication(
 
 static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, const uuid_t* uuid, void *callback) {
 	gattlib_context_t* conn_context = connection->context;
+	int ret;
 
 	assert(callback != NULL);
 
@@ -197,9 +198,10 @@ static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, 
 	GError *error = NULL;
 	org_bluez_gatt_characteristic1_call_start_notify_sync(dbus_characteristic.gatt, NULL, &error);
 	if (error) {
+		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to start DBus GATT notification: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		return ret;
 	} else {
 		return GATTLIB_SUCCESS;
 	}

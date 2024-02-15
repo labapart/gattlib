@@ -29,13 +29,15 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 			object_path,
 			NULL, &error);
 	if (adapter_proxy == NULL) {
+		int ret = GATTLIB_ERROR_DBUS;
 		if (error) {
 			GATTLIB_LOG(GATTLIB_ERROR, "Failed to get adapter %s: %s", object_path, error->message);
+			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 			g_error_free(error);
 		} else {
 			GATTLIB_LOG(GATTLIB_ERROR, "Failed to get adapter %s", object_path);
 		}
-		return GATTLIB_ERROR_DBUS;
+		return ret;
 	}
 
 	// Ensure the adapter is powered on
@@ -71,9 +73,7 @@ struct gattlib_adapter *init_default_adapter(void) {
 	}
 }
 
-GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gattlib_adapter) {
-	GError *error = NULL;
-
+GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gattlib_adapter, GError **error) {
 	if (gattlib_adapter->device_manager) {
 		return gattlib_adapter->device_manager;
 	}
@@ -89,14 +89,8 @@ GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gatt
 			"org.bluez",
 			"/",
 			NULL, NULL, NULL, NULL,
-			&error);
+			error);
 	if (gattlib_adapter->device_manager == NULL) {
-		if (error) {
-			GATTLIB_LOG(GATTLIB_ERROR, "Failed to get Bluez Device Manager: %s", error->message);
-			g_error_free(error);
-		} else {
-			GATTLIB_LOG(GATTLIB_ERROR, "Failed to get Bluez Device Manager.");
-		}
 		return NULL;
 	}
 
@@ -266,6 +260,7 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 	GError *error = NULL;
 	GVariantBuilder arg_properties_builder;
 	GVariant *rssi_variant = NULL;
+	int ret;
 
 	g_variant_builder_init(&arg_properties_builder, G_VARIANT_TYPE("a{sv}"));
 
@@ -296,10 +291,11 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 	}
 
 	if (error) {
+		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to set discovery filter: %s (%d.%d)",
 				error->message, error->domain, error->code);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		return ret;
 	}
 
 	//
@@ -307,9 +303,15 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 	// We should get notified when the connection is lost with the target to allow
 	// us to advertise us again
 	//
-	device_manager = get_device_manager_from_adapter(gattlib_adapter);
+	device_manager = get_device_manager_from_adapter(gattlib_adapter, &error);
 	if (device_manager == NULL) {
-		return GATTLIB_ERROR_DBUS;
+		if (error != NULL) {
+			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
+			g_error_free(error);
+		} else {
+			ret = GATTLIB_ERROR_DBUS;
+		}
+		return ret;
 	}
 
 	// Clear BLE scan structure
@@ -333,9 +335,10 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 	// Now, start BLE discovery
 	org_bluez_adapter1_call_start_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 	if (error) {
+		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to start discovery: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		return ret;
 	}
 
 	return GATTLIB_SUCCESS;

@@ -35,16 +35,23 @@ extern "C" {
  * @name Gattlib errors
  */
 //@{
-#define GATTLIB_SUCCESS             0
-#define GATTLIB_INVALID_PARAMETER   1
-#define GATTLIB_NOT_FOUND           2
-#define GATTLIB_ERROR_TIMEOUT       3
-#define GATTLIB_OUT_OF_MEMORY       4
-#define GATTLIB_NOT_SUPPORTED       5
-#define GATTLIB_DEVICE_ERROR        6
-#define GATTLIB_ERROR_DBUS          7
-#define GATTLIB_ERROR_BLUEZ         8
-#define GATTLIB_ERROR_INTERNAL      9
+#define GATTLIB_SUCCESS                0
+#define GATTLIB_INVALID_PARAMETER      1
+#define GATTLIB_NOT_FOUND              2
+#define GATTLIB_ERROR_TIMEOUT          3
+#define GATTLIB_OUT_OF_MEMORY          4
+#define GATTLIB_NOT_SUPPORTED          5
+#define GATTLIB_DEVICE_ERROR           6
+#define GATTLIB_DEVICE_NOT_CONNECTED   7
+#define GATTLIB_ERROR_MODULE_MASK      0xF0000000
+#define GATTLIB_ERROR_DBUS             0x10000000
+#define GATTLIB_ERROR_BLUEZ            0x20000000
+#define GATTLIB_ERROR_INTERNAL         0x80000000
+
+#define GATTLIB_ERROR_DBUS_WITH_ERROR(error) \
+	(GATTLIB_ERROR_DBUS | (error->domain << 8) | (error->code))
+#define GATTLIB_ERROR_BLUEZ_WITH_ERROR(ret) \
+	(GATTLIB_ERROR_BLUEZ | (ret))
 //@}
 
 /**

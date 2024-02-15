@@ -103,7 +103,7 @@ struct dbus_characteristic {
 extern const uuid_t m_battery_level_uuid;
 
 struct gattlib_adapter *init_default_adapter(void);
-GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gattlib_adapter);
+GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gattlib_adapter, GError **error);
 
 void get_device_path_from_mac_with_adapter(OrgBluezAdapter1* adapter, const char *mac_address, char *object_path, size_t object_path_len);
 void get_device_path_from_mac(const char *adapter_name, const char *mac_address, char *object_path, size_t object_path_len);

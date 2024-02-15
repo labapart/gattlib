@@ -24,6 +24,7 @@ static void* glib_event_thread(void* main_loop_p) {
 static void _on_device_connect(gatt_connection_t* connection) {
 	gattlib_context_t* conn_context = connection->context;
 	GDBusObjectManager *device_manager;
+	GError *error = NULL;
 
 	// Stop the timeout for connection
 	if (conn_context->connection_timeout) {
@@ -32,10 +33,14 @@ static void _on_device_connect(gatt_connection_t* connection) {
 	}
 
 	// Get list of objects belonging to Device Manager
-	device_manager = get_device_manager_from_adapter(conn_context->adapter);
+	device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
 	if (device_manager == NULL) {
-		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Failed to get device manager from adapter");
-
+		if (error != NULL) {
+			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to get device manager from adapter (%d, %d).", error->domain, error->code);
+			g_error_free(error);
+		} else {
+			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to get device manager from adapter");
+		}
 		//TODO: Free device
 		return;
 	}
@@ -237,9 +242,14 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	conn_context->connection_loop = NULL;
 
 	// Get list of objects belonging to Device Manager
-	device_manager = get_device_manager_from_adapter(conn_context->adapter);
+	device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
     if (device_manager == NULL) {
-        GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Failed to get device manager from adapter");
+		if (error != NULL) {
+			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to get device manager from adapter (%d, %d).", error->domain, error->code);
+			g_error_free(error);
+		} else {
+			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to get device manager from adapter.");
+		}
         goto FREE_DEVICE;
     }
 	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
@@ -417,17 +427,24 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	}
 
 	gattlib_context_t* conn_context = connection->context;
-	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
+	GError *error = NULL;
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
 	OrgBluezDevice1* device = conn_context->device;
 	const gchar* const* service_str;
-	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
 
 	const gchar* const* service_strs = org_bluez_device1_get_uuids(device);
 
 	if (device_manager == NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib context not initialized.");
-		return GATTLIB_INVALID_PARAMETER;
+		if (error != NULL) {
+			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
+			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized (%d, %d).", error->domain, error->code);
+			g_error_free(error);
+		} else {
+			ret = GATTLIB_ERROR_DBUS;
+			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized.");
+		}
+		return ret;
 	}
 
 	if (service_strs == NULL) {
@@ -802,13 +819,21 @@ static void add_characteristics_from_service(gattlib_context_t* conn_context, GD
 
 int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	gattlib_context_t* conn_context = connection->context;
-	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	GError *error = NULL;
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
 	GList *l;
+	int ret;
 
 	if (device_manager == NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib context not initialized.");
-		return GATTLIB_INVALID_PARAMETER;
+		if (error != NULL) {
+			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
+			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized (%d, %d).", error->domain, error->code);
+			g_error_free(error);
+		} else {
+			ret = GATTLIB_ERROR_DBUS;
+			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized.");
+		}
+		return ret;
 	}
 
 	// Count the maximum number of characteristic to allocate the array (we count all the characterstic for all devices)
@@ -917,6 +942,7 @@ int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_a
 {
 	GError *error = NULL;
 	char object_path[100];
+	int ret;
 
 	if (adapter != NULL) {
 		get_device_path_from_mac_with_adapter(adapter->adapter_proxy, mac_address, object_path, sizeof(object_path));
@@ -932,9 +958,10 @@ int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_a
 			NULL,
 			&error);
 	if (error) {
+		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to connection to new DBus Bluez Device: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		return ret;
 	}
 
 	return GATTLIB_SUCCESS;
