@@ -7,6 +7,7 @@
 from __future__ import annotations
 import logging
 import uuid
+import threading
 from typing import TYPE_CHECKING
 
 from gattlib import *
@@ -39,6 +40,8 @@ class Device:
             self._addr = addr
         self._name = name
         self._connection = None
+        self._connection_lock = threading.Lock()
+
         self.on_connection_callback = None
         self.on_connection_error_callback = None
 
@@ -114,10 +117,14 @@ class Device:
                                        gattlib_python_callback_args(on_disconnection, user_data))
 
     def disconnect(self):
-        if self._connection:
-            ret = gattlib_disconnect(self.connection)
-            handle_return(ret)
-        self._connection = None
+        self._connection_lock.acquire()
+        try:
+            if self._connection:
+                ret = gattlib_disconnect(self.connection)
+                handle_return(ret)
+            self._connection = None
+        finally:
+            self._connection_lock.release()
 
     def discover(self):
         #
