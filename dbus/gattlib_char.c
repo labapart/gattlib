@@ -103,8 +103,8 @@ static bool handle_dbus_battery_from_uuid(gattlib_context_t* conn_context, const
 
 struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* connection, const uuid_t* uuid) {
 	gattlib_context_t* conn_context = connection->context;
-	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	GError *error = NULL;
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
 	bool is_battery_level_uuid = false;
 
 	struct dbus_characteristic dbus_characteristic = {
@@ -112,7 +112,12 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 	};
 
 	if (device_manager == NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized.");
+		if (error != NULL) {
+			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized (%d, %d).", error->domain, error->code);
+			g_error_free(error);
+		} else {
+			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized.");
+		}
 		return dbus_characteristic; // Return characteristic of type TYPE_NONE
 	}
 
@@ -163,8 +168,8 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 
 static struct dbus_characteristic get_characteristic_from_handle(gatt_connection_t* connection, int handle) {
 	gattlib_context_t* conn_context = connection->context;
-	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	GError *error = NULL;
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
 	int char_handle;
 
 	struct dbus_characteristic dbus_characteristic = {
@@ -172,7 +177,12 @@ static struct dbus_characteristic get_characteristic_from_handle(gatt_connection
 	};
 
 	if (device_manager == NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib context not initialized.");
+		if (error != NULL) {
+			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized (%d, %d).", error->domain, error->code);
+			g_error_free(error);
+		} else {
+			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized.");
+		}
 		return dbus_characteristic;
 	}
 
@@ -219,9 +229,10 @@ static int read_gatt_characteristic(struct dbus_characteristic *dbus_characteris
 	g_variant_builder_unref(options);
 #endif
 	if (error != NULL) {
+		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to read DBus GATT characteristic: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		return ret;
 	}
 
 	gsize n_elements = 0;
@@ -320,9 +331,9 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	g_variant_builder_unref(options);
 #endif
 	if (error != NULL) {
+		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to read DBus GATT characteristic: %s", error->message);
 		g_error_free(error);
-		ret = GATTLIB_ERROR_DBUS;
 		goto EXIT;
 	}
 
@@ -359,9 +370,15 @@ static int write_char(struct dbus_characteristic *dbus_characteristic, const voi
 #endif
 
 	if (error != NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Failed to write DBus GATT characteristic: %s", error->message);
+		if ((error->domain == 238) && (error->code == 36)) {
+			ret = GATTLIB_DEVICE_NOT_CONNECTED;
+		} else {
+			GATTLIB_LOG(GATTLIB_ERROR, "Failed to write DBus GATT characteristic: %s (%d,%d)",
+				error->message, error->domain, error->code);
+			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
+		}
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		return ret;
 	}
 
 	//

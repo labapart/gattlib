@@ -33,6 +33,7 @@ int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t
 	GError *error = NULL;
 	GUnixFDList *fd_list;
 	GVariant *out_fd;
+	int ret;
 	int fd;
 
 	GVariantBuilder *variant_options = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
@@ -48,17 +49,19 @@ int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t
 	g_variant_builder_unref(variant_options);
 
 	if (error != NULL) {
+		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to acquired write DBus GATT characteristic: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		return ret;
 	}
 
 	error = NULL;
 	fd = g_unix_fd_list_get(fd_list, g_variant_get_handle(out_fd), &error);
 	if (error != NULL) {
+		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to retrieve Unix File Descriptor: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_DBUS;
+		return ret;
 	}
 
 	// We abuse the pointer 'stream' to pass the 'File Descriptor'

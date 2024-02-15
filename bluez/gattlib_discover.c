@@ -85,7 +85,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	ret = gatt_discover_primary(conn_context->attrib, NULL, primary_all_cb, &user_data);
 	if (ret == 0) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Fail to discover primary services.");
-		return GATTLIB_ERROR_BLUEZ;
+		return GATTLIB_ERROR_BLUEZ_WITH_ERROR(ret);
 	}
 
 	// Wait for completion
@@ -157,11 +157,11 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 	ret = gatt_discover_char(conn_context->attrib, start, end, NULL, characteristic_cb, &user_data);
 	if (ret == 0) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Fail to discover characteristics.");
-		return GATTLIB_ERROR_BLUEZ;
+		return GATTLIB_ERROR_BLUEZ_WITH_ERROR(ret);
 	}
 
 	// Wait for completion
-	while(user_data.discovered == FALSE) {		
+	while(user_data.discovered == FALSE) {
 		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
 	}
 	*characteristics       = user_data.characteristics;
@@ -278,7 +278,7 @@ int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int en
 #endif
 	if (ret == 0) {
 		fprintf(stderr, "Fail to discover descriptors.\n");
-		return GATTLIB_ERROR_BLUEZ;
+		return GATTLIB_ERROR_BLUEZ_WITH_ERROR(ret);
 	}
 
 	// Wait for completion
