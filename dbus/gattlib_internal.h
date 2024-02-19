@@ -47,7 +47,10 @@ typedef struct {
 	pthread_t event_thread;
 	GMainLoop *connection_loop;
 	// ID of the timeout to know if we managed to connect to the device
-	guint connection_timeout;
+	guint connection_timeout_id;
+
+	// ID of the device property change signal
+	guint on_handle_device_property_change_id;
 
 	// List of DBUS Object managed by 'adapter->device_manager'
 	GList *dbus_objects;

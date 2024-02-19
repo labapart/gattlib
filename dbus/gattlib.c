@@ -27,9 +27,9 @@ static void _on_device_connect(gatt_connection_t* connection) {
 	GError *error = NULL;
 
 	// Stop the timeout for connection
-	if (conn_context->connection_timeout) {
-		g_source_remove(conn_context->connection_timeout);
-		conn_context->connection_timeout = 0;
+	if (conn_context->connection_timeout_id) {
+		g_source_remove(conn_context->connection_timeout_id);
+		conn_context->connection_timeout_id = 0;
 	}
 
 	// Get list of objects belonging to Device Manager
@@ -135,7 +135,7 @@ static gboolean _stop_connect_func(gpointer data) {
 	gattlib_context_t *conn_context = data;
 
 	// Reset the connection timeout
-	conn_context->connection_timeout = 0;
+	conn_context->connection_timeout_id = 0;
 
 	// We return FALSE when it is a one-off event
 	return FALSE;
@@ -208,7 +208,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	}
 
 	// Register a handle for notification
-	g_signal_connect(device,
+	conn_context->on_handle_device_property_change_id = g_signal_connect(device,
 		"g-properties-changed",
 		G_CALLBACK (on_handle_device_property_change),
 		connection);
@@ -234,7 +234,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
 	conn_context->connection_loop = g_main_loop_new(NULL, 0);
 
-	conn_context->connection_timeout = g_timeout_add_seconds(CONNECT_TIMEOUT, _stop_connect_func,
+	conn_context->connection_timeout_id = g_timeout_add_seconds(CONNECT_TIMEOUT, _stop_connect_func,
 								 conn_context->connection_loop);
 	g_main_loop_run(conn_context->connection_loop);
 	g_main_loop_unref(conn_context->connection_loop);
@@ -309,6 +309,12 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection context is not valid.");
 		ret = GATTLIB_NOT_SUPPORTED;
 		goto EXIT;
+	}
+
+	// Remove signal
+	if (conn_context->on_handle_device_property_change_id != 0) {
+		g_signal_handler_disconnect(conn_context->device, conn_context->on_handle_device_property_change_id);
+		conn_context->on_handle_device_property_change_id = 0;
 	}
 
 	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
