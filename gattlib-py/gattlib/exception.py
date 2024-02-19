@@ -59,8 +59,10 @@ class DBusError(GattlibException):
         self.code = code
 
     def __str__(self) -> str:
-        return f"DBus Error domain={self.domain},code={self.code}"
-
+        if self.domain == 238 and self.code == 60964:
+            return f"DBus Error: le-connection-abort-by-local"
+        else:
+            return f"DBus Error domain={self.domain},code={self.code}"
 
 def handle_return(ret):
     if ret == GATTLIB_INVALID_PARAMETER:
