@@ -191,8 +191,59 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 			invalidated_properties_count);
 
 	// Check if the object is a 'org.bluez.Device1'
-	if (strcmp(g_dbus_proxy_get_interface_name(interface_proxy), "org.bluez.Device1") != 0) {
-		return;
+	if (strcmp(g_dbus_proxy_get_interface_name(interface_proxy), "org.bluez.Device1") == 0) {
+		// It is a 'org.bluez.Device1'
+		GError *error = NULL;
+
+		OrgBluezDevice1* device1 = org_bluez_device1_proxy_new_for_bus_sync(
+				G_BUS_TYPE_SYSTEM,
+				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+				"org.bluez",
+				proxy_object_path, NULL, &error);
+		if (error) {
+			GATTLIB_LOG(GATTLIB_ERROR, "Failed to connection to new DBus Bluez Device: %s", error->message);
+			g_error_free(error);
+			return;
+		} else if (device1 == NULL) {
+			GATTLIB_LOG(GATTLIB_ERROR, "Unexpected NULL device");
+			return;
+		}
+
+		const char* device_mac_address = org_bluez_device1_get_address(device1);
+
+		// Check if the device has been disconnected
+		GVariantDict dict;
+		g_variant_dict_init(&dict, changed_properties);
+		GVariant* connected = g_variant_dict_lookup_value(&dict, "Connected", NULL);
+		GVariant* rssi = g_variant_dict_lookup_value(&dict, "RSSI", NULL);
+
+		g_mutex_lock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
+
+		// Check if the device is already part of the list
+		GSList *found_device = g_slist_find_custom(gattlib_adapter->ble_scan.discovered_devices, device_mac_address, (GCompareFunc)g_ascii_strcasecmp);
+
+		if (connected && !g_variant_get_boolean(connected)) {
+			// The device has been disconnected. We will remove it from the list of discovered device.
+			// In case the device has been found again, it will be seen as a new device
+
+			GATTLIB_LOG(GATTLIB_INFO, "Device %s has been disconnected", device_mac_address);
+
+			if (found_device) {
+				gattlib_adapter->ble_scan.discovered_devices = g_slist_remove(gattlib_adapter->ble_scan.discovered_devices, found_device);
+			}
+		} else if (rssi) {
+			// First time this device is in the list
+			if (found_device == NULL) {
+				// Add the device to the list
+				gattlib_adapter->ble_scan.discovered_devices = g_slist_append(gattlib_adapter->ble_scan.discovered_devices, g_strdup(device_mac_address));
+				gattlib_on_discovered_device(gattlib_adapter, device1);
+			}
+		}
+		g_mutex_unlock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
+
+		g_variant_dict_end(&dict);
+
+		g_object_unref(device1);
 	}
 }
 
