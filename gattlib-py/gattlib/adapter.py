@@ -59,6 +59,7 @@ class Adapter:
         return []
 
     def open(self):
+        self._adapter = c_void_p(None)
         ret = gattlib_adapter_open(self._name, byref(self._adapter))
         if ret == 0:
             self._is_opened = True
@@ -82,7 +83,7 @@ class Adapter:
                 self.on_discovered_device_user_callback(device, user_data)
             except Exception as e:
                 logger.exception(e)
-        return gattlib_discovered_device_type(on_discovered_device)
+        return on_discovered_device
 
     def scan_enable(self, on_discovered_device_callback, timeout, notify_change=False, uuids=None, rssi_threshold=None, user_data=None):
         """
@@ -106,8 +107,9 @@ class Adapter:
         # comment: https://stackoverflow.com/questions/7259794/how-can-i-get-methods-to-work-as-callbacks-with-python-ctypes#comment38658391_7261524
         self.on_discovered_device_callback = self.get_on_discovered_device_callback()
 
+        # Ensure BLE adapter it opened
         if not self._is_opened:
-            raise AdapterNotOpened()
+            self.open()
 
         enabled_filters = 0
         uuid_list = None
@@ -183,8 +185,9 @@ class Adapter:
         user_data["callback"](device, advertisement_data, manufacturer_id, manufacturer_data, user_data["user_data"])
 
     def scan_eddystone_enable(self, on_discovered_device_callback, eddystone_filters, timeout, rssi_threshold=None, user_data=None):
+        # Ensure BLE adapter it opened
         if not self._is_opened:
-            raise AdapterNotOpened()
+            self.open()
 
         rssi = 0
 
