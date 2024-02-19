@@ -91,7 +91,7 @@ class Device:
             self.on_connection_callback(self, user_data)
 
     def on_connection_error(self, error: c_int, user_data: py_object):
-        logging.error("Failed to connect due to error '%s'", error)
+        logging.error("Failed to connect due to error '0x%x'", error)
         if self.on_connection_error_callback:
             self.on_connection_error_callback(self, error, user_data)
 
