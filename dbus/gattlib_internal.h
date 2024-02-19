@@ -43,9 +43,6 @@ typedef struct {
 	char* device_object_path;
 	OrgBluezDevice1* device;
 
-	// These attributes are needed to handle incoming events from GLib
-	pthread_t event_thread;
-	GMainLoop *connection_loop;
 	// ID of the timeout to know if we managed to connect to the device
 	guint connection_timeout_id;
 
