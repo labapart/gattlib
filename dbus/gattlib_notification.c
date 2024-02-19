@@ -67,37 +67,32 @@ static gboolean on_handle_characteristic_property_change(
 	gatt_connection_t* connection = user_data;
 
 	if (gattlib_has_valid_handler(&connection->notification)) {
+		GVariantDict dict;
+		g_variant_dict_init(&dict, arg_changed_properties);
+
 		// Retrieve 'Value' from 'arg_changed_properties'
-		if (g_variant_n_children (arg_changed_properties) > 0) {
-			GVariantIter *iter;
-			const gchar *key = NULL;
-			GVariant *value = NULL;
+		GVariant* value = g_variant_dict_lookup_value(&dict, "Value", NULL);
+		if (value != NULL) {
+			uuid_t uuid;
+			size_t data_length;
+			const uint8_t* data = g_variant_get_fixed_array(value, &data_length, sizeof(guchar));
 
-			g_variant_get (arg_changed_properties, "a{sv}", &iter);
-			while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
-				GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_characteristic_property_change: %s:%s",
-						key, g_variant_print(value, TRUE));
+			// Dump the content of the notification
+			//GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_characteristic_property_change: %s: %s", key, g_variant_print(value, TRUE));
+			GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_characteristic_property_change: Value: Received %d bytes", data_length);
 
-				if (strcmp(key, "Value") == 0) {
-					uuid_t uuid;
-					size_t data_length;
-					const uint8_t* data = g_variant_get_fixed_array(value, &data_length, sizeof(guchar));
+			gattlib_string_to_uuid(
+					org_bluez_gatt_characteristic1_get_uuid(object),
+					MAX_LEN_UUID_STR + 1,
+					&uuid);
 
-					gattlib_string_to_uuid(
-							org_bluez_gatt_characteristic1_get_uuid(object),
-							MAX_LEN_UUID_STR + 1,
-							&uuid);
+			gattlib_on_gatt_notification(connection, &uuid, data, data_length);
 
-					gattlib_on_gatt_notification(connection, &uuid, data, data_length);
-
-					// As per https://developer.gnome.org/glib/stable/glib-GVariant.html#g-variant-iter-loop, clean up `key` and `value`.
-					g_variant_unref(value);
-					break;
-				}
-			}
-
-			g_variant_iter_free(iter);
+			// As per https://developer.gnome.org/glib/stable/glib-GVariant.html#g-variant-iter-loop, clean up `key` and `value`.
+			g_variant_unref(value);
 		}
+
+		g_variant_dict_end(&dict);
 	} else {
 		GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_characteristic_property_change: not a notification handler");
 	}
