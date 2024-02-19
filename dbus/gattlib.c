@@ -11,15 +11,9 @@
 
 #include "gattlib_internal.h"
 
-#define CONNECT_TIMEOUT  4
+#define CONNECT_TIMEOUT_SEC  10
 
 static const char *m_dbus_error_unknown_object = "GDBus.Error:org.freedesktop.DBus.Error.UnknownObject";
-
-static void* glib_event_thread(void* main_loop_p) {
-	GMainLoop** main_loop = (GMainLoop**) main_loop_p;
-	g_main_loop_run(*main_loop);
-	return NULL;
-}
 
 static void _on_device_connect(gatt_connection_t* connection) {
 	gattlib_context_t* conn_context = connection->context;
@@ -230,17 +224,6 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 		goto FREE_DEVICE;
 	}
 
-	// Wait for the property 'UUIDs' to be changed. We assume 'org.bluez.GattService1
-	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
-	conn_context->connection_loop = g_main_loop_new(NULL, 0);
-
-	conn_context->connection_timeout_id = g_timeout_add_seconds(CONNECT_TIMEOUT, _stop_connect_func,
-								 conn_context->connection_loop);
-	g_main_loop_run(conn_context->connection_loop);
-	g_main_loop_unref(conn_context->connection_loop);
-	// Set the attribute to NULL even if not required
-	conn_context->connection_loop = NULL;
-
 	// Get list of objects belonging to Device Manager
 	device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
     if (device_manager == NULL) {
@@ -254,9 +237,9 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
     }
 	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
 
-	// Set up a new GMainLoop to handle notification/indication events.
-	conn_context->connection_loop = g_main_loop_new(NULL, 0);
-	pthread_create(&conn_context->event_thread, NULL, glib_event_thread, &conn_context->connection_loop);
+	// Wait for the property 'UUIDs' to be changed. We assume 'org.bluez.GattService1
+	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
+	conn_context->connection_timeout_id = g_timeout_add_seconds(CONNECT_TIMEOUT_SEC, _stop_connect_func, conn_context);
 
 	return connection;
 
@@ -332,9 +315,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 		conn_context->device = NULL;
 	}
 	g_list_free_full(conn_context->dbus_objects, g_object_unref);
-	g_main_loop_quit(conn_context->connection_loop);
-	pthread_join(conn_context->event_thread, NULL);
-	g_main_loop_unref(conn_context->connection_loop);
+
 	disconnect_all_notifications(conn_context);
 
 	// Note: We do not free adapter as it might still be used by other devices
