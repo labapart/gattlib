@@ -84,7 +84,7 @@ void get_device_path_from_mac_with_adapter(OrgBluezAdapter1* adapter, const char
 	const char* adapter_path = g_dbus_proxy_get_object_path((GDBusProxy *)ORG_BLUEZ_ADAPTER1_PROXY(adapter));
 
 	// Transform string from 'DA:94:40:95:E0:87' to 'dev_DA_94_40_95_E0_87'
-	strncpy(device_address_str, mac_address, sizeof(device_address_str));
+	strncpy(device_address_str, mac_address, sizeof(device_address_str) - 1);
 	for (int i = 0; i < strlen(device_address_str); i++) {
 		if (device_address_str[i] == ':') {
 			device_address_str[i] = '_';
@@ -111,7 +111,7 @@ void get_device_path_from_mac(const char *adapter_name, const char *mac_address,
 	}
 
 	// Transform string from 'DA:94:40:95:E0:87' to 'dev_DA_94_40_95_E0_87'
-	strncpy(device_address_str, mac_address, sizeof(device_address_str));
+	strncpy(device_address_str, mac_address, sizeof(device_address_str) - 1);
 	for (int i = 0; i < strlen(device_address_str); i++) {
 		if (device_address_str[i] == ':') {
 			device_address_str[i] = '_';

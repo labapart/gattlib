@@ -1,8 +1,10 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
  */
+
+#include <errno.h>
 
 #include <gio/gunixfdlist.h>
 
@@ -72,8 +74,12 @@ int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t
 
 int gattlib_write_char_stream_write(gatt_stream_t *stream, const void *buffer, size_t buffer_len)
 {
-	write((unsigned long)stream, buffer, buffer_len);
-	return GATTLIB_SUCCESS;
+	ssize_t ret = write((unsigned long)stream, buffer, buffer_len);
+	if (ret < 0) {
+		return GATTLIB_ERROR_UNIX_WITH_ERROR(errno);
+	} else {
+		return GATTLIB_SUCCESS;
+	}
 }
 
 int gattlib_write_char_stream_close(gatt_stream_t *stream)
