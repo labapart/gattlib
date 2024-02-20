@@ -91,7 +91,7 @@ class Device:
             self.on_connection_callback(self, user_data)
 
     def on_connection_error(self, error: c_int, user_data: py_object):
-        logging.error("Failed to connect due to error '0x%x'", error)
+        logger.error("Failed to connect due to error '0x%x'", error)
         if self.on_connection_error_callback:
             self.on_connection_error_callback(self, error, user_data)
 
@@ -140,7 +140,7 @@ class Device:
             service = GattService(self, _services[i])
             self._services[service.short_uuid] = service
 
-            logging.debug("Service UUID:0x%x" % service.short_uuid)
+            logger.debug("Service UUID:0x%x" % service.short_uuid)
 
         #
         # Discover GATT Characteristics
@@ -155,7 +155,7 @@ class Device:
             characteristic = GattCharacteristic(self, _characteristics[i])
             self._characteristics[characteristic.short_uuid] = characteristic
 
-            logging.debug("Characteristic UUID:0x%x" % characteristic.short_uuid)
+            logger.debug("Characteristic UUID:0x%x" % characteristic.short_uuid)
 
     def get_advertisement_data(self):
         _advertisement_data = POINTER(GattlibAdvertisementData)()
@@ -206,7 +206,7 @@ class Device:
     @property
     def services(self):
         if not hasattr(self, '_services'):
-            logging.warning("Start GATT discovery implicitly")
+            logger.warning("Start GATT discovery implicitly")
             self.discover()
 
         return self._services
@@ -214,7 +214,7 @@ class Device:
     @property
     def characteristics(self):
         if not hasattr(self, '_characteristics'):
-            logging.warning("Start GATT discovery implicitly")
+            logger.warning("Start GATT discovery implicitly")
             self.discover()
 
         return self._characteristics

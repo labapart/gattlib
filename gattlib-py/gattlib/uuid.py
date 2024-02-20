@@ -4,7 +4,6 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
-import logging
 import re
 from uuid import UUID
 
@@ -54,5 +53,5 @@ def gattlib_uuid_str_to_int(uuid_str: str) -> int:
         try:
             return UUID(uuid_str).int
         except ValueError:
-            logging.error("Could not convert %s to a UUID", uuid_str)
+            logger.error("Could not convert %s to a UUID", uuid_str)
             raise

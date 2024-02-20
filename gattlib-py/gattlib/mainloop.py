@@ -4,13 +4,14 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
-import logging
 import threading
 import time
 import traceback
 
 #import dbus.mainloop.glib
 from gi.repository import GObject
+
+from . import logger
 
 gobject_mainloop: GObject.MainLoop = None
 task_returned_code: int = -1
@@ -32,7 +33,7 @@ def _user_thread_main(task):
         # Run user's code.
         task_returned_code = task()
     except Exception as ex:
-        logging.error("Exception in %s: %s: %s", task, type(ex), str(ex))
+        logger.error("Exception in %s: %s: %s", task, type(ex), str(ex))
         traceback.print_exception(type(ex), ex, ex.__traceback__)
         task_exception = ex
     finally:
