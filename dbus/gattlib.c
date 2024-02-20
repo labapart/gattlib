@@ -931,6 +931,10 @@ int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_a
 	char object_path[100];
 	int ret;
 
+	if (adapter->adapter_proxy == NULL) {
+		return GATTLIB_NO_ADAPTER;
+	}
+
 	if (adapter != NULL) {
 		get_device_path_from_mac_with_adapter(adapter->adapter_proxy, mac_address, object_path, sizeof(object_path));
 	} else {

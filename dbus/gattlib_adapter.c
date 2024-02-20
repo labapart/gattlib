@@ -313,6 +313,10 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 	GVariant *rssi_variant = NULL;
 	int ret;
 
+	if ((gattlib_adapter == NULL) || (gattlib_adapter->adapter_proxy == NULL)) {
+		return GATTLIB_NO_ADAPTER;
+	}
+
 	g_variant_builder_init(&arg_properties_builder, G_VARIANT_TYPE("a{sv}"));
 
 	if (enabled_filters & GATTLIB_DISCOVER_FILTER_USE_UUID) {
@@ -443,6 +447,10 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 int gattlib_adapter_scan_disable(void* adapter) {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 	GError *error = NULL;
+
+	if (gattlib_adapter->adapter_proxy == NULL) {
+		return GATTLIB_NO_ADAPTER;
+	}
 
 	org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 	// Ignore the error
