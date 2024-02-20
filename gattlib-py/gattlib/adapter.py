@@ -4,6 +4,7 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
+import threading
 from uuid import UUID
 
 from gattlib import *
@@ -42,6 +43,7 @@ class Adapter:
         self._name = name
         self._adapter = c_void_p(None)
         self._is_opened = False  # Note: 'self._adapter != c_void_p(None)' does not seem to return the expected result
+        self._lock = threading.Lock()
 
     def __str__(self) -> str:
         if self._name:
@@ -59,20 +61,28 @@ class Adapter:
         return []
 
     def open(self):
+        self._lock.acquire()
+        if self._is_opened:
+            self._lock.release()
+            return 0
+
         self._adapter = c_void_p(None)
         ret = gattlib_adapter_open(self._name, byref(self._adapter))
         if ret == 0:
             self._is_opened = True
             if self._name is None:
                 self._name = gattlib_adapter_get_name(self._adapter)
+        self._lock.release()
         return ret
 
     def close(self):
+        self._lock.acquire()
         ret = 0
         if self._adapter:
             ret = gattlib.gattlib_adapter_close(self._adapter)
         self._is_opened = False
         self._adapter = None
+        self._lock.release()
         return ret
 
     # Use a closure to return a method that can be called by the C-library (see: https://stackoverflow.com/a/7261524/6267288)

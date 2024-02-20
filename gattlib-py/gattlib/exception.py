@@ -12,6 +12,7 @@ GATTLIB_OUT_OF_MEMORY = 4
 GATTLIB_NOT_SUPPORTED = 5
 GATTLIB_DEVICE_ERROR = 6
 GATTLIB_DEVICE_NOT_CONNECTED = 7
+GATTLIB_NO_ADAPTER = 8
 
 GATTLIB_ERROR_MODULE_MASK      = 0xF0000000
 GATTLIB_ERROR_DBUS             = 0x10000000
@@ -22,22 +23,20 @@ GATTLIB_ERROR_INTERNAL         = 0x80000000
 class GattlibException(Exception):
     pass
 
+class NoAdapter(GattlibException):
+    pass
 
 class AdapterNotOpened(GattlibException):
     pass
 
-
 class InvalidParameter(GattlibException):
     pass
-
 
 class NotFound(GattlibException):
     pass
 
-
 class OutOfMemory(GattlibException):
     pass
-
 
 class NotSupported(GattlibException):
     pass
@@ -61,6 +60,8 @@ class DBusError(GattlibException):
     def __str__(self) -> str:
         if self.domain == 238 and self.code == 60964:
             return f"DBus Error: le-connection-abort-by-local"
+        elif self.domain == 238 and self.code == 60964:
+            return f"DBus Error: Timeout was reached"
         else:
             return f"DBus Error domain={self.domain},code={self.code}"
 
@@ -79,6 +80,8 @@ def handle_return(ret):
         raise DeviceError()
     elif ret == GATTLIB_DEVICE_NOT_CONNECTED:
         raise NotConnected()
+    elif ret == GATTLIB_NO_ADAPTER:
+        raise NoAdapter()
     elif (ret & GATTLIB_ERROR_MODULE_MASK) == GATTLIB_ERROR_DBUS:
         raise DBusError((ret >> 8) & 0xFFF, ret & 0xFFFF)
     elif ret == -22: # From '-EINVAL'
