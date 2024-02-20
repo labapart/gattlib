@@ -46,12 +46,15 @@ extern "C" {
 #define GATTLIB_ERROR_MODULE_MASK      0xF0000000
 #define GATTLIB_ERROR_DBUS             0x10000000
 #define GATTLIB_ERROR_BLUEZ            0x20000000
+#define GATTLIB_ERROR_UNIX             0x30000000
 #define GATTLIB_ERROR_INTERNAL         0x80000000
 
 #define GATTLIB_ERROR_DBUS_WITH_ERROR(error) \
 	(GATTLIB_ERROR_DBUS | (error->domain << 8) | (error->code))
 #define GATTLIB_ERROR_BLUEZ_WITH_ERROR(ret) \
 	(GATTLIB_ERROR_BLUEZ | (ret))
+#define GATTLIB_ERROR_UNIX_WITH_ERROR(ret) \
+	(GATTLIB_ERROR_UNIX | (ret))
 //@}
 
 /**

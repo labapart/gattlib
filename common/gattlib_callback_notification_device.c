@@ -14,7 +14,9 @@ void gattlib_notification_device_python_callback(const uuid_t* uuid, const uint8
 	int ret;
 
 	ret = gattlib_uuid_to_string(uuid, uuid_str, sizeof(uuid_str));
-	assert(ret == 0);
+	if (ret != 0) {
+		return;
+	}
 
 	d_gstate = PyGILState_Ensure();
 
