@@ -11,6 +11,28 @@ logger = logging.getLogger(__name__)
 
 gattlib = CDLL("libgattlib.so")
 
+def native_logging(level: int, string: str):
+    if level == 3:
+        logger.debug(string)
+    elif level == 2:
+        logger.info(string)
+    elif level == 1:
+        logger.warning(string)
+    elif level == 0:
+        logger.error(string)
+    else:
+        logger.debug(string)
+
+try:
+    # void gattlib_log_init(PyObject* logging_func)
+    gattlib_log_init = gattlib.gattlib_log_init
+    gattlib_log_init.argtypes = [py_object]
+
+    # Declare Python function for logging native string
+    gattlib_log_init(native_logging)
+except AttributeError:
+    # Excepted when using a Gattlib logging backend without 'gattlib_log_init'
+    pass
 
 # typedef struct {
 #    uint8_t data[16];

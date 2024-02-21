@@ -61,7 +61,7 @@ endif()
 # With 'syslog' backend, we enable all logs (ie: up to level debug) and we leave the
 # application to set the level using 'setlogmask()'
 set(GATTLIB_LOG_LEVEL 3 CACHE STRING "Define the minimum logging level for Gattlib (0=error, 1=warning, 2=info, 3=debug)")
-set(GATTLIB_LOG_BACKEND syslog CACHE STRING "Define logging backend: syslog, printf (default: syslog)")
+set(GATTLIB_LOG_BACKEND syslog CACHE STRING "Define logging backend: syslog, printf, python (default: syslog)")
 
 if (GATTLIB_DBUS)
   # Build dbus-based gattlib
