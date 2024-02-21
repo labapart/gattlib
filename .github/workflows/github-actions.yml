@@ -21,3 +21,50 @@ jobs:
       - uses: actions/checkout@v2
       - run: sudo apt install libbluetooth-dev
       - run: mkdir build && pushd build && cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release .. && make
+
+  generate-python-binary-packages:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo apt install -y libbluetooth-dev
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: ./ci/generate-python-package.sh
+      - name: Archive Python packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-${{ matrix.python-version }}-binary-package
+          path: dist/*
+
+  # publish-python-packages:
+  #   needs:
+  #     - generate-python-binary-packages
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/download-artifact@master
+  #     - run: ls *
+
+  publish-to-pypi:
+    name: >-
+      Publish Python 🐍 distribution 📦 to PyPI
+    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
+    needs:
+    - generate-python-binary-packages
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/gattlib-py  # Replace <package-name> with your PyPI project name
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+      - uses: actions/download-artifact@master
+      - run: ls *
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
