@@ -41,12 +41,13 @@ pushd ${gattlib_py_package_dir}
 
 # Binary package
 python3 setup.py bdist_wheel
+
 # Source package
 python setup.py sdist
 
 # Move generated artifact to project root path
 ls dist/*
-mv dist/* ${ROOT_PATH}
+mv dist ${ROOT_PATH}
 
 popd
 
