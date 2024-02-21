@@ -102,15 +102,18 @@ if(GATTLIB_PYTHON_INTERFACE)
   else()
     set(Python_USE_STATIC_LIBS TRUE)
   endif()
-  find_package(Python COMPONENTS Development.Module)
-  if (Python_Development.Module_FOUND)
-    include_directories(${Python_INCLUDE_DIRS})
-	  list(APPEND gattlib_LIBS ${Python_LIBRARIES})
-
-    add_definitions(-DWITH_PYTHON -DPYTHON_VERSION_MAJOR=${Python_VERSION_MAJOR} -DPYTHON_VERSION_MINOR=${Python_VERSION_MINOR})
-  else()
-    message(FATAL_ERROR "Could not find Python developer package")
+  find_package(Python COMPONENTS Interpreter Development)
+  if (NOT Python_Development_FOUND)
+    find_package(Python COMPONENTS Development.Module)
+    if (NOT Python_Development.Module_FOUND)
+      message(FATAL_ERROR "Could not find Python developer package")
+    endif()
   endif()
+
+  include_directories(${Python_INCLUDE_DIRS})
+  list(APPEND gattlib_LIBS ${Python_LIBRARIES})
+
+  add_definitions(-DWITH_PYTHON -DPYTHON_VERSION_MAJOR=${Python_VERSION_MAJOR} -DPYTHON_VERSION_MINOR=${Python_VERSION_MINOR})
 endif()
 
 # Gattlib
