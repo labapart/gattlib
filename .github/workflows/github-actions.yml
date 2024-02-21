@@ -63,7 +63,12 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
     steps:
       - uses: actions/download-artifact@master
-      - run: ls *
+      - run: |
+          ls *
+          mkdir dist/
+          mv python-3.10-binary-package/*.tar.gz dist/
+          mv python-*-binary-package/*.whl dist/
+          ls dist/*
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
