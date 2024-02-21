@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: sudo apt install libbluetooth-dev
       - run: ./ci/generate-python-package.sh
       - name: Archive Python packages
         uses: actions/upload-artifact@v4
