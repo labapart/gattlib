@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2016-2021  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2016-2024  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -19,14 +19,14 @@
 #  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.25.1)
 
 find_package(PkgConfig REQUIRED)
 
 message("Build gattlib for Bluez v${BLUEZ_VERSION_MAJOR}.${BLUEZ_VERSION_MINOR}")
 
 set(bluez4_DIR bluez4)
-set(bluez5_DIR bluez5) 
+set(bluez5_DIR bluez5)
 
 # Bluez specific files
 set(bluez4_SRCS ${bluez4_DIR}/attrib/att.c
@@ -109,12 +109,12 @@ include(GNUInstallDirs)
 if(GATTLIB_SHARED_LIB)
   add_library(gattlib SHARED ${gattlib_SRCS})
   target_link_libraries(gattlib ${gattlib_LIBS})
-  
+
   install(TARGETS gattlib LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 else()
   add_library(gattlib ${gattlib_SRCS})
   target_include_directories(gattlib INTERFACE ../include)
   target_link_libraries(gattlib ${gattlib_LIBS})
-  
+
   install(TARGETS gattlib LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
