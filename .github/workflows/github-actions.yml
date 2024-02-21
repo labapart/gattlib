@@ -22,23 +22,33 @@ jobs:
       - run: sudo apt install libbluetooth-dev
       - run: mkdir build && pushd build && cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release .. && make
 
-  generate-python-binary-packages:
+  generate-python-source-package:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt install -y libbluetooth-dev
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
       - run: ./ci/generate-python-package.sh
       - name: Archive Python packages
         uses: actions/upload-artifact@v4
         with:
-          name: python-${{ matrix.python-version }}-binary-package
+          name: python-source-package
+          path: dist/*.tar.gz
+
+  generate-python-binary-packages:
+    runs-on: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Binary package with git version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: ./ci/generate-python-mainlinux-package.sh
+      - name: Generate Binary package with FAKE version
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
+        run: ./ci/generate-python-mainlinux-package.sh
+        env:
+          GATTLIB_PY_VERSION: '0.0.1'
+      - name: Archive Python packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-binary-packages
           path: dist/*
 
   # publish-python-packages:

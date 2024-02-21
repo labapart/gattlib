@@ -47,7 +47,6 @@ python setup.py sdist
 
 # Move generated artifact to project root path
 ls dist/*
-mv dist ${ROOT_PATH}
 
 popd
 
