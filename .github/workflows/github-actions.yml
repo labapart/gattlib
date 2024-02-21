@@ -4,21 +4,21 @@ jobs:
   build-debug:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: sudo apt install libbluetooth-dev
       - run: mkdir build && pushd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make
 
   build-release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: sudo apt install libbluetooth-dev doxygen
       - run: mkdir build && pushd build && cmake -DCMAKE_BUILD_TYPE=Release -DGATTLIB_BUILD_DOCS=ON .. && make
 
   build-release-force-dbus:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: sudo apt install libbluetooth-dev
       - run: mkdir build && pushd build && cmake -DGATTLIB_FORCE_DBUS=TRUE -DCMAKE_BUILD_TYPE=Release .. && make
 
@@ -28,7 +28,7 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: sudo apt install -y libbluetooth-dev
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
