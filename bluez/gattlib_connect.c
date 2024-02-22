@@ -325,9 +325,10 @@ static void get_connection_options(unsigned long options, BtIOSecLevel *bt_io_se
 	*mtu = GATTLIB_CONNECTION_OPTIONS_LEGACY_GET_MTU(options);
 }
 
-gatt_connection_t *gattlib_connect_async(void *adapter, const char *dst,
-				unsigned long options,
-				gatt_connect_cb_t connect_cb, void* data)
+int gattlib_connect(void *adapter, const char *dst,
+		unsigned long options,
+		gatt_connect_cb_t connect_cb,
+		void* user_data)
 {
 	const char *adapter_mac_address;
 	gatt_connection_t *conn;
@@ -346,7 +347,7 @@ gatt_connection_t *gattlib_connect_async(void *adapter, const char *dst,
 	if ((options & (GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC | GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM)) == 0) {
 		// Please, set GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC or
 		// GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDMON
-		fprintf(stderr, "gattlib_connect_async() expects address type.\n");
+		fprintf(stderr, "gattlib_connect() expects address type.\n");
 		return NULL;
 	}
 

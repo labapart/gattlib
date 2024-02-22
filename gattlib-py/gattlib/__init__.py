@@ -136,10 +136,9 @@ gattlib_adapter_scan_enable_with_filter_non_blocking.argtypes = [c_void_p, POINT
 gattlib_adapter_scan_eddystone = gattlib.gattlib_adapter_scan_eddystone
 gattlib_adapter_scan_eddystone.argtypes = [c_void_p, c_int16, c_uint32, c_void_p, c_size_t, c_void_p]
 
-# gatt_connection_t *gattlib_connect(const char *src, const char *dst, unsigned long options);
+# int gattlib_connect(void *adapter, const char *dst, unsigned long options, gatt_connect_cb_t connect_cb, void* user_data)
 gattlib_connect = gattlib.gattlib_connect
-gattlib_connect.restype = c_void_p
-gattlib_connect.argtypes = [c_char_p, c_char_p, c_ulong]
+gattlib_connect.argtypes = [c_void_p, c_char_p, c_ulong, c_void_p, c_void_p]
 
 # int gattlib_disconnect(gatt_connection_t* connection);
 gattlib_disconnect = gattlib.gattlib_disconnect

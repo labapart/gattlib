@@ -136,20 +136,28 @@ static gboolean _stop_connect_func(gpointer data) {
 }
 
 /**
- * @param src		Local Adaptater interface
+ * @brief Function to asynchronously connect to a BLE device
+ *
+ * @note This function is mainly used before Bluez v5.42 (prior to D-BUS support)
+ *
+ * @param adapter	Local Adaptater interface. When passing NULL, we use default adapter.
  * @param dst		Remote Bluetooth address
- * @param dst_type	Set LE address type (either BDADDR_LE_PUBLIC or BDADDR_LE_RANDOM)
- * @param sec_level	Set security level (either BT_IO_SEC_LOW, BT_IO_SEC_MEDIUM, BT_IO_SEC_HIGH)
- * @param psm       Specify the PSM for GATT/ATT over BR/EDR
- * @param mtu       Specify the MTU size
+ * @param options	Options to connect to BLE device. See `GATTLIB_CONNECTION_OPTIONS_*`
+ * @param connect_cb is the callback to call when the connection is established
+ * @param user_data is the user specific data to pass to the callback
+ *
+ * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long options)
+int gattlib_connect(void *adapter, const char *dst,
+		unsigned long options,
+		gatt_connect_cb_t connect_cb,
+		void* user_data)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 	const char* adapter_name = NULL;
-	GDBusObjectManager *device_manager;
 	GError *error = NULL;
 	char object_path[100];
+	int ret = GATTLIB_SUCCESS;
 
 	// In case NULL is passed, we initialized default adapter
 	if (gattlib_adapter == NULL) {
@@ -161,7 +169,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
     // even after init_default_adapter() - the adapter can be NULL
     if (gattlib_adapter == NULL) {
         GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: No adapter");
-        return NULL;
+        return GATTLIB_NOT_FOUND;
     }
 
 	get_device_path_from_mac(adapter_name, dst, object_path, sizeof(object_path));
@@ -169,17 +177,20 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	gattlib_context_t* conn_context = calloc(sizeof(gattlib_context_t), 1);
 	if (conn_context == NULL) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot allocate context");
-		return NULL;
+		return GATTLIB_OUT_OF_MEMORY;
 	}
 	conn_context->adapter = gattlib_adapter;
 
 	gatt_connection_t* connection = calloc(sizeof(gatt_connection_t), 1);
 	if (connection == NULL) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot allocate connection");
+		ret = GATTLIB_OUT_OF_MEMORY;
 		goto FREE_CONN_CONTEXT;
 	}
 
 	connection->context = conn_context;
+	connection->on_connection.callback.connection_handler = connect_cb;
+	connection->on_connection.user_data = user_data;
 
 	OrgBluezDevice1* device = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
@@ -189,11 +200,13 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 			NULL,
 			&error);
 	if (device == NULL) {
+		ret = GATTLIB_ERROR_DBUS;
 		if (error) {
+			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);;
 			GATTLIB_LOG(GATTLIB_ERROR, "Failed to connect to DBus Bluez Device: %s", error->message);
 			g_error_free(error);
 		} else {
-			GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Failed to connect to DBus Bluez Device");
+			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to connect to DBus Bluez Device");
 		}
 		goto FREE_CONNECTION;
 	} else {
@@ -213,35 +226,24 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 		if (strncmp(error->message, m_dbus_error_unknown_object, strlen(m_dbus_error_unknown_object)) == 0) {
 			// You might have this error if the computer has not scanned or has not already had
 			// pairing information about the targetted device.
-			GATTLIB_LOG(GATTLIB_ERROR, "Device '%s' cannot be found", dst);
+			GATTLIB_LOG(GATTLIB_ERROR, "Device '%s' cannot be found (%d, %d)", dst, error->domain, error->code);
+			ret = GATTLIB_NOT_FOUND;
 		}  else {
 			GATTLIB_LOG(GATTLIB_ERROR, "Device connected error (device:%s): %s",
 				conn_context->device_object_path,
 				error->message);
+			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);;
 		}
 
 		g_error_free(error);
 		goto FREE_DEVICE;
 	}
 
-	// Get list of objects belonging to Device Manager
-	device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
-    if (device_manager == NULL) {
-		if (error != NULL) {
-			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to get device manager from adapter (%d, %d).", error->domain, error->code);
-			g_error_free(error);
-		} else {
-			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to get device manager from adapter.");
-		}
-        goto FREE_DEVICE;
-    }
-	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
-
 	// Wait for the property 'UUIDs' to be changed. We assume 'org.bluez.GattService1
 	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
 	conn_context->connection_timeout_id = g_timeout_add_seconds(CONNECT_TIMEOUT_SEC, _stop_connect_func, conn_context);
 
-	return connection;
+	return GATTLIB_SUCCESS;
 
 FREE_DEVICE:
 	free(conn_context->device_object_path);
@@ -258,21 +260,11 @@ FREE_CONN_CONTEXT:
 		gattlib_adapter_close(gattlib_adapter);
 	}
 
-	return NULL;
-}
-
-gatt_connection_t *gattlib_connect_async(void *adapter, const char *dst,
-				unsigned long options,
-				gatt_connect_cb_t connect_cb, void* data)
-{
-	gatt_connection_t *connection;
-
-	connection = gattlib_connect(adapter, dst, options);
-	if ((connection != NULL) && (connect_cb != NULL)) {
-		connect_cb(adapter, dst, connection, 0 /* error */, data);
+	if (ret != GATTLIB_SUCCESS) {
+		connect_cb(adapter, dst, NULL, ret /* error */, user_data);
 	}
 
-	return connection;
+	return ret;
 }
 
 int gattlib_disconnect(gatt_connection_t* connection) {
