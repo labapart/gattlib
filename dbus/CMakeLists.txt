@@ -102,18 +102,24 @@ if(GATTLIB_PYTHON_INTERFACE)
   else()
     set(Python_USE_STATIC_LIBS TRUE)
   endif()
-  find_package(Python COMPONENTS Interpreter Development)
-  if (NOT Python_Development_FOUND)
-    find_package(Python COMPONENTS Development.Module)
-    if (NOT Python_Development.Module_FOUND)
+
+  find_package(Python3 COMPONENTS Interpreter Development)
+  if (NOT Python3_Development_FOUND)
+    find_package(Python3 COMPONENTS Development.Module)
+    if (NOT Python3_Development.Module_FOUND)
       message(FATAL_ERROR "Could not find Python developer package")
+    endif()
+
+    # Case of mainlinux container to build Wheel Python package
+    if (NOT Python3_LIBRARIES)
+      set(Python3_LIBRARIES "")
     endif()
   endif()
 
-  include_directories(${Python_INCLUDE_DIRS})
-  list(APPEND gattlib_LIBS ${Python_LIBRARIES})
+  include_directories(${Python3_INCLUDE_DIRS})
+  list(APPEND gattlib_LIBS ${Python3_LIBRARIES})
 
-  add_definitions(-DWITH_PYTHON -DPYTHON_VERSION_MAJOR=${Python_VERSION_MAJOR} -DPYTHON_VERSION_MINOR=${Python_VERSION_MINOR})
+  add_definitions(-DWITH_PYTHON -DPYTHON_VERSION_MAJOR=${Python3_VERSION_MAJOR} -DPYTHON_VERSION_MINOR=${Python3_VERSION_MINOR})
 endif()
 
 # Gattlib
