@@ -256,6 +256,17 @@ static void _stop_scan_loop_thread(struct gattlib_adapter *gattlib_adapter) {
 	}
 }
 
+static void _wait_scan_loop_stop_scanning(struct gattlib_adapter *gattlib_adapter) {
+	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	while (gattlib_adapter->ble_scan.is_scanning) {
+		g_cond_wait(&gattlib_adapter->ble_scan.scan_loop_cond, &gattlib_adapter->ble_scan.scan_loop_mutex);
+	}
+	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+}
+
+/**
+ * Function called when the BLE scan duration has timeout
+ */
 static gboolean _stop_scan_func(gpointer data) {
 	struct gattlib_adapter *gattlib_adapter = data;
 
@@ -285,12 +296,7 @@ static void* _ble_scan_loop(void* args) {
 	}
 
 	// Wait for the BLE scan to be explicitely stopped by 'gattlib_adapter_scan_disable()' or timeout.
-
-	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
-	while (gattlib_adapter->ble_scan.is_scanning) {
-		g_cond_wait(&gattlib_adapter->ble_scan.scan_loop_cond, &gattlib_adapter->ble_scan.scan_loop_mutex);
-	}
-	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	_wait_scan_loop_stop_scanning(gattlib_adapter);
 
 	// Note: The function only resumes when loop timeout as expired or g_main_loop_quit has been called.
 
