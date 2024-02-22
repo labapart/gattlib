@@ -408,6 +408,8 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
 {
+	struct gattlib_adapter *gattlib_adapter = adapter;
+	GError *error = NULL;
 	int ret;
 
 	ret = _gattlib_adapter_scan_enable_with_filter(adapter, uuid_list, rssi_threshold, enabled_filters,
@@ -416,7 +418,21 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 		return ret;
 	}
 
-	_ble_scan_loop(adapter);
+	gattlib_adapter->ble_scan.scan_loop_thread = g_thread_try_new("gattlib_ble_scan", _ble_scan_loop, gattlib_adapter, &error);
+	if (gattlib_adapter->ble_scan.scan_loop_thread == NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create BLE scan thread: %s", error->message);
+		return GATTLIB_ERROR_INTERNAL;
+	}
+
+	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	while (gattlib_adapter->ble_scan.is_scanning) {
+		g_cond_wait(&gattlib_adapter->ble_scan.scan_loop_cond, &gattlib_adapter->ble_scan.scan_loop_mutex);
+	}
+	// Free thread
+	g_object_unref(gattlib_adapter->ble_scan.scan_loop_thread);
+	gattlib_adapter->ble_scan.scan_loop_thread = NULL;
+	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+
 	return 0;
 }
 
@@ -458,14 +474,31 @@ int gattlib_adapter_scan_disable(void* adapter) {
 		return GATTLIB_NO_ADAPTER;
 	}
 
+	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+
+	if (!org_bluez_adapter1_get_discovering(gattlib_adapter->adapter_proxy)) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "No discovery in progress. We skip discovery stopping.");
+		goto EXIT;
+	}
+
 	org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
-	// Ignore the error
+	if (error != NULL) {
+		if ((error->domain == 238) && (error->code == 36)) {
+			// Correspond to error: GDBus.Error:org.bluez.Error.Failed: No discovery started
+			goto EXIT;
+		} else {
+			GATTLIB_LOG(GATTLIB_WARNING, "Error while stopping BLE discovery: %s (%d,%d)", error->message, error->domain, error->code);
+		}
+	}
 
 	// Free and reset callback to stop calling it after we stopped
 	gattlib_handler_free(&gattlib_adapter->ble_scan.discovered_device_callback);
 
 	// Stop BLE scan loop thread
-	_stop_scan_loop_thread(gattlib_adapter);
+	if (gattlib_adapter->ble_scan.is_scanning) {
+		gattlib_adapter->ble_scan.is_scanning = false;
+		g_cond_broadcast(&gattlib_adapter->ble_scan.scan_loop_cond);
+	}
 
 	// Remove timeout
 	if (gattlib_adapter->ble_scan.ble_scan_timeout_id) {
@@ -480,6 +513,8 @@ int gattlib_adapter_scan_disable(void* adapter) {
 	gattlib_adapter->ble_scan.discovered_devices = NULL;
 	g_mutex_unlock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
 
+EXIT:
+	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
 	return GATTLIB_SUCCESS;
 }
 
@@ -487,15 +522,16 @@ int gattlib_adapter_close(void* adapter)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
-	if (!gattlib_adapter->ble_scan.is_scanning) {
-		// Ensure the thread is freed on adapter closing
-		if (gattlib_adapter->ble_scan.scan_loop_thread) {
-			//TODO: Fix memory leak here
-			//g_object_unref(gattlib_adapter->ble_scan.scan_loop_thread);
-			gattlib_adapter->ble_scan.scan_loop_thread = NULL;
-		}
-	} else {
-		gattlib_adapter_scan_disable(gattlib_adapter);
+	if (gattlib_adapter->ble_scan.is_scanning) {
+		_wait_scan_loop_stop_scanning(gattlib_adapter);
+		g_thread_join(gattlib_adapter->ble_scan.scan_loop_thread);
+	}
+
+	// Ensure the thread is freed on adapter closing
+	if (gattlib_adapter->ble_scan.scan_loop_thread) {
+		//TODO: Fix memory leak here
+		//g_object_unref(gattlib_adapter->ble_scan.scan_loop_thread);
+		gattlib_adapter->ble_scan.scan_loop_thread = NULL;
 	}
 
 	if (gattlib_adapter->device_manager) {
@@ -503,8 +539,10 @@ int gattlib_adapter_close(void* adapter)
 		gattlib_adapter->device_manager = NULL;
 	}
 
-	g_object_unref(gattlib_adapter->adapter_proxy);
-	gattlib_adapter->adapter_proxy = NULL;
+	if (gattlib_adapter->adapter_proxy != NULL) {
+		g_object_unref(gattlib_adapter->adapter_proxy);
+		gattlib_adapter->adapter_proxy = NULL;
+	}
 	free(gattlib_adapter->adapter_name);
 	gattlib_adapter->adapter_name = NULL;
 	free(gattlib_adapter);
