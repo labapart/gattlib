@@ -24,21 +24,29 @@ jobs:
 
   generate-python-binary-packages:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt install -y libbluetooth-dev
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
       - run: ./ci/generate-python-package.sh
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          CIBW_BEFORE_BUILD_LINUX: "sh ci/install-bluez.sh"
+          #TODO: To support 'musllinux', we need to replace 'yum install' by 'apk install' - and detect which platform we are
+          CIBW_SKIP: "*-musllinux_*"
+      - run: ./ci/generate-python-package.sh
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
+        env:
+          CIBW_BEFORE_BUILD_LINUX: "sh ci/install-bluez.sh"
+          GATTLIB_PY_VERSION: '0.0.1'
+          CIBW_ENVIRONMENT_PASS_LINUX: "GATTLIB_PY_VERSION"
+          #TODO: To support 'musllinux', we need to replace 'yum install' by 'apk install' - and detect which platform we are
+          CIBW_SKIP: "*-musllinux_*"
       - name: Archive Python packages
         uses: actions/upload-artifact@v4
         with:
-          name: python-${{ matrix.python-version }}-binary-package
+          name: python-binary-packages
           path: dist/*
 
   # publish-python-packages:
