@@ -33,6 +33,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         env:
           CIBW_BEFORE_BUILD_LINUX: "sh ci/install-bluez.sh"
+          GATTLIB_PY_VERSION: '${{github.ref_name}}'
+          CIBW_ENVIRONMENT_PASS_LINUX: "GATTLIB_PY_VERSION"
           #TODO: To support 'musllinux', we need to replace 'yum install' by 'apk install' - and detect which platform we are
           CIBW_SKIP: "*-musllinux_*"
       - run: ./ci/generate-python-package.sh
@@ -72,10 +74,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@master
       - run: |
-          ls *
           mkdir dist/
-          mv python-3.10-binary-package/*.tar.gz dist/
-          mv python-*-binary-package/*.whl dist/
+          mv python-binary-packages/*.tar.gz dist/
+          mv python-binary-packages/*.whl dist/
           ls dist/*
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
