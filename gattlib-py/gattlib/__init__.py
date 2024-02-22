@@ -6,10 +6,11 @@
 
 from ctypes import *
 import logging
+import pathlib
 
 logger = logging.getLogger(__name__)
 
-gattlib = CDLL("libgattlib.so")
+gattlib = cdll.LoadLibrary(str(pathlib.Path(__file__).with_name('libgattlib.so')))
 
 def native_logging(level: int, string: str):
     if level == 3:
