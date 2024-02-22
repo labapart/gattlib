@@ -67,8 +67,8 @@ jobs:
     - generate-python-binary-packages
     runs-on: ubuntu-latest
     environment:
-      name: testpypi
-      url: https://test.pypi.org/p/gattlib-py  # Replace <package-name> with your PyPI project name
+      name: pypi
+      url: https://pypi.org/p/gattlib-py  # Replace <package-name> with your PyPI project name
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
     steps:
@@ -80,5 +80,3 @@ jobs:
           ls dist/*
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
