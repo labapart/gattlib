@@ -12,7 +12,8 @@ include(CrossCompilation.cmake)
 
 project(gattlib)
 
-option(GATTLIB_BUILD_EXAMPLES "Build GattLib examples" YES)
+#TODO: Gattlib examples must be ported to new gattlib_connect()
+option(GATTLIB_BUILD_EXAMPLES "Build GattLib examples" NO)
 option(GATTLIB_SHARED_LIB "Build GattLib as a shared library" YES)
 option(GATTLIB_BUILD_DOCS "Build GattLib docs" NO)
 option(GATTLIB_PYTHON_INTERFACE "Build GattLib Python Interface" YES)
