@@ -157,7 +157,10 @@ setup(
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     packages=find_packages(),
-    install_requires=['setuptools'],
+    install_requires=[
+        'setuptools',
+        'PyGObject>=3.44.0'
+    ],
     ext_modules=[CMakeExtension(python_module_name, sourcedir=native_source_dir)],
     cmdclass={'build_ext': CMakeBuild},
 )
