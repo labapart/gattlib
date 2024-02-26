@@ -471,6 +471,7 @@ int gattlib_adapter_scan_disable(void* adapter) {
 	GError *error = NULL;
 
 	if (gattlib_adapter->adapter_proxy == NULL) {
+		GATTLIB_LOG(GATTLIB_INFO, "Could not disable BLE scan. No BLE adapter setup.");
 		return GATTLIB_NO_ADAPTER;
 	}
 
@@ -523,6 +524,8 @@ int gattlib_adapter_close(void* adapter)
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
 	if (gattlib_adapter->ble_scan.is_scanning) {
+		gattlib_adapter_scan_disable(gattlib_adapter);
+
 		_wait_scan_loop_stop_scanning(gattlib_adapter);
 		g_thread_join(gattlib_adapter->ble_scan.scan_loop_thread);
 	}
