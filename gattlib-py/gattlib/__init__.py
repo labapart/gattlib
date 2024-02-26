@@ -10,7 +10,12 @@ import pathlib
 
 logger = logging.getLogger(__name__)
 
-gattlib = cdll.LoadLibrary(str(pathlib.Path(__file__).with_name('libgattlib.so')))
+try:
+    gattlib = cdll.LoadLibrary(str(pathlib.Path(__file__).with_name('libgattlib.so')))
+except OSError:
+    # While in development, we might not have 'libgattlib.so' into the python directory
+    # We can define 'libgattlib.so' location using LD_LIBRARY_PATH
+    gattlib = CDLL('libgattlib.so')
 
 def native_logging(level: int, string: str):
     if level == 3:
