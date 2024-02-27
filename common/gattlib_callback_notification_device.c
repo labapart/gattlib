@@ -61,9 +61,11 @@ void gattlib_notification_device_thread(gpointer data, gpointer user_data) {
 
 	if (args->uuid != NULL) {
 		free(args->uuid);
+		args->uuid = NULL;
 	}
 	if (args->data != NULL) {
 		free(args->data);
+		args->data = NULL;
 	}
 }
 

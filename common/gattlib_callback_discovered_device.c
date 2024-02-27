@@ -62,6 +62,7 @@ static gpointer _gattlib_discovered_device_thread(gpointer data) {
 	free(args->mac_address);
 	if (args->name != NULL) {
 		free(args->name);
+		args->name = NULL;
 	}
 	free(args);
 	return NULL;

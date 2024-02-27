@@ -151,6 +151,7 @@ void gattlib_handler_free(struct gattlib_handler* handler) {
 		Py_DECREF(args->args);
 		handler->python_args = NULL;
 		free(handler->python_args);
+		handler->python_args = NULL;
 	}
 
 	if (handler->thread_pool != NULL) {
