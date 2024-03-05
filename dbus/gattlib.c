@@ -228,11 +228,14 @@ int gattlib_connect(void *adapter, const char *dst,
 			// pairing information about the targetted device.
 			GATTLIB_LOG(GATTLIB_ERROR, "Device '%s' cannot be found (%d, %d)", dst, error->domain, error->code);
 			ret = GATTLIB_NOT_FOUND;
-		}  else {
+		} else if ((error->domain == 238) && (error->code == 60952)) {
+			GATTLIB_LOG(GATTLIB_ERROR, "Device '%s': %s", dst, error->message);
+			ret = GATTLIB_ERROR_TIMEOUT;
+		} else {
 			GATTLIB_LOG(GATTLIB_ERROR, "Device connected error (device:%s): %s",
 				conn_context->device_object_path,
 				error->message);
-			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);;
+			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		}
 
 		g_error_free(error);

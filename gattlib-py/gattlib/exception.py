@@ -60,6 +60,8 @@ class DBusError(GattlibException):
     def __str__(self) -> str:
         if self.domain == 238 and self.code == 60964:
             return f"DBus Error: le-connection-abort-by-local"
+        elif self.domain == 238 and self.code == 60952:
+            return f"DBus Error: Timeout was reached"
         elif self.domain == 238 and self.code == 60964:
             return f"DBus Error: Timeout was reached"
         else:
