@@ -6,6 +6,11 @@
 
 #include "gattlib_internal.h"
 
+// Keep track of the allocated adapters to avoid an adapter to be freed twice.
+// It could happen when using Python wrapper.
+static GSList *m_adapter_list;
+static GMutex m_adapter_list_mutex;
+
 
 int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	char object_path[20];
@@ -51,6 +56,10 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 	// Initialize stucture
 	gattlib_adapter->adapter_name = strdup(adapter_name);
 	gattlib_adapter->adapter_proxy = adapter_proxy;
+
+	g_mutex_lock(&m_adapter_list_mutex);
+	m_adapter_list = g_slist_append(m_adapter_list, gattlib_adapter);
+	g_mutex_unlock(&m_adapter_list_mutex);
 
 	*adapter = gattlib_adapter;
 	return GATTLIB_SUCCESS;
@@ -523,6 +532,13 @@ int gattlib_adapter_close(void* adapter)
 {
 	struct gattlib_adapter *gattlib_adapter = adapter;
 
+	g_mutex_lock(&m_adapter_list_mutex);
+	GSList *adapter_entry = g_slist_find(m_adapter_list, adapter);
+	if (adapter_entry == NULL) {
+		GATTLIB_LOG(GATTLIB_WARNING, "Adapter has already been closed");
+		goto EXIT;
+	}
+
 	if (gattlib_adapter->ble_scan.is_scanning) {
 		gattlib_adapter_scan_disable(gattlib_adapter);
 
@@ -546,10 +562,20 @@ int gattlib_adapter_close(void* adapter)
 		g_object_unref(gattlib_adapter->adapter_proxy);
 		gattlib_adapter->adapter_proxy = NULL;
 	}
-	free(gattlib_adapter->adapter_name);
-	gattlib_adapter->adapter_name = NULL;
+
+	if (gattlib_adapter->adapter_name != NULL) {
+		free(gattlib_adapter->adapter_name);
+		gattlib_adapter->adapter_name = NULL;
+	}
+
 	free(gattlib_adapter);
+
+	// Remove adapter from the global list
+	m_adapter_list = g_slist_remove(m_adapter_list, gattlib_adapter);
+
 	gattlib_adapter = NULL;
 
+EXIT:
+	g_mutex_unlock(&m_adapter_list_mutex);
 	return GATTLIB_SUCCESS;
 }
