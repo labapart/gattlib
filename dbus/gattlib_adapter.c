@@ -493,7 +493,7 @@ int gattlib_adapter_scan_disable(void* adapter) {
 
 	org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 	if (error != NULL) {
-		if ((error->domain == 238) && (error->code == 36)) {
+		if (((error->domain == 238) || (error->domain == 239)) && (error->code == 36)) {
 			// Correspond to error: GDBus.Error:org.bluez.Error.Failed: No discovery started
 			goto EXIT;
 		} else {
