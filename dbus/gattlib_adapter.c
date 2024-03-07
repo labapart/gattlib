@@ -26,6 +26,8 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter) {
 		adapter_name = GATTLIB_DEFAULT_ADAPTER;
 	}
 
+	GATTLIB_LOG(GATTLIB_DEBUG, "Open bluetooth adapter %s", adapter_name);
+
 	snprintf(object_path, sizeof(object_path), "/org/bluez/%s", adapter_name);
 
 	adapter_proxy = org_bluez_adapter1_proxy_new_for_bus_sync(
@@ -329,6 +331,7 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 	int ret;
 
 	if ((gattlib_adapter == NULL) || (gattlib_adapter->adapter_proxy == NULL)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Could not start BLE scan. No opened bluetooth adapter");
 		return GATTLIB_NO_ADAPTER;
 	}
 
@@ -337,6 +340,8 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 	if (enabled_filters & GATTLIB_DISCOVER_FILTER_USE_UUID) {
 		char uuid_str[MAX_LEN_UUID_STR + 1];
 		GVariantBuilder list_uuid_builder;
+
+		GATTLIB_LOG(GATTLIB_DEBUG, "Configure bluetooth scan with UUID");
 
 		g_variant_builder_init(&list_uuid_builder, G_VARIANT_TYPE ("as"));
 
@@ -349,6 +354,7 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 	}
 
 	if (enabled_filters & GATTLIB_DISCOVER_FILTER_USE_RSSI) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "Configure bluetooth scan with RSSI");
 		GVariant *rssi_variant = g_variant_new_int16(rssi_threshold);
 		g_variant_builder_add(&arg_properties_builder, "{sv}", "RSSI", rssi_variant);
 	}
@@ -411,6 +417,7 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 		return ret;
 	}
 
+	GATTLIB_LOG(GATTLIB_DEBUG, "Bluetooth scan started");
 	return GATTLIB_SUCCESS;
 }
 
@@ -491,6 +498,8 @@ int gattlib_adapter_scan_disable(void* adapter) {
 		goto EXIT;
 	}
 
+	GATTLIB_LOG(GATTLIB_DEBUG, "Stop bluetooth scan.");
+
 	org_bluez_adapter1_call_stop_discovery_sync(gattlib_adapter->adapter_proxy, NULL, &error);
 	if (error != NULL) {
 		if (((error->domain == 238) || (error->domain == 239)) && (error->code == 36)) {
@@ -538,6 +547,8 @@ int gattlib_adapter_close(void* adapter)
 		GATTLIB_LOG(GATTLIB_WARNING, "Adapter has already been closed");
 		goto EXIT;
 	}
+
+	GATTLIB_LOG(GATTLIB_DEBUG, "Close bluetooth adapter %s", gattlib_adapter->adapter_name);
 
 	if (gattlib_adapter->ble_scan.is_scanning) {
 		gattlib_adapter_scan_disable(gattlib_adapter);

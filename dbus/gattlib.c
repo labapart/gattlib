@@ -192,6 +192,8 @@ int gattlib_connect(void *adapter, const char *dst,
 	connection->on_connection.callback.connection_handler = connect_cb;
 	connection->on_connection.user_data = user_data;
 
+	GATTLIB_LOG(GATTLIB_DEBUG, "Connect bluetooth device %s", dst);
+
 	OrgBluezDevice1* device = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
 			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
@@ -288,6 +290,8 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 		ret = GATTLIB_NOT_SUPPORTED;
 		goto EXIT;
 	}
+
+	GATTLIB_LOG(GATTLIB_DEBUG, "Disconnect bluetooth device %s", conn_context->device_object_path);
 
 	// Remove signal
 	if (conn_context->on_handle_device_property_change_id != 0) {
