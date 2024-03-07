@@ -146,7 +146,7 @@ done:
 	data->discovered = TRUE;
 }
 
-int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
+int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	struct characteristic_cb_t user_data;
 	guint ret;
 

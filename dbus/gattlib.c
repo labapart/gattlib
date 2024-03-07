@@ -499,7 +499,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		if (org_bluez_gatt_service1_get_primary(service_proxy)) {
 			// Object path is in the form '/org/bluez/hci0/dev_DE_79_A2_A1_E9_FA/service0024
 			// We convert the last 4 hex characters into the handle
-			int service_handle = 0xFFFF; // Initialize with an invalid value.
+			unsigned int service_handle = 0xFFFF; // Initialize with an invalid value.
 			sscanf(object_path + strlen(object_path) - 4, "%x", &service_handle);
 			primary_services[count].attr_handle_start = service_handle;
 			primary_services[count].attr_handle_end   = service_handle;
@@ -522,7 +522,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 
 					// Object path is in the form '/org/bluez/hci0/dev_DE_79_A2_A1_E9_FA/service0024/char0029'.
 					// We convert the last 4 hex characters into the handle
-					int char_handle = primary_services[count].attr_handle_end; // Initialize with existing good value for safety.
+					unsigned int char_handle = primary_services[count].attr_handle_end; // Initialize with existing good value for safety.
 					sscanf(characteristic_path + strlen(characteristic_path) - 4, "%x", &char_handle);
 
 					// Once here, update the end handle of the service
@@ -556,7 +556,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 38)
-int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
+int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	gattlib_context_t* conn_context = connection->context;
 	OrgBluezDevice1* device = conn_context->device;
 	GError *error = NULL;
@@ -710,7 +710,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 #else
 static void add_characteristics_from_service(gattlib_context_t* conn_context, GDBusObjectManager *device_manager,
 			const char* service_object_path,
-			int start, int end,
+			unsigned int start, unsigned int end,
 			gattlib_characteristic_t* characteristic_list, int* count)
 {
 	GError *error = NULL;
@@ -756,7 +756,7 @@ static void add_characteristics_from_service(gattlib_context_t* conn_context, GD
 			g_object_unref(characteristic);
 			continue;
 		} else {
-			int handle;
+			unsigned int handle;
 
 			// Object path is in the form '/org/bluez/hci0/dev_DE_79_A2_A1_E9_FA/service0024/char0029'.
 			// We convert the last 4 hex characters into the handle
@@ -799,7 +799,7 @@ static void add_characteristics_from_service(gattlib_context_t* conn_context, GD
 	}
 }
 
-int gattlib_discover_char_range(gatt_connection_t* connection, int start, int end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
+int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	gattlib_context_t* conn_context = connection->context;
 	GError *error = NULL;
 	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);

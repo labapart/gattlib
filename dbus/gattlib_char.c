@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2016-2021, Olivier Martin <olivier@labapart.org>
+ * Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
  */
 
 #include <stdlib.h>
@@ -166,11 +166,11 @@ struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* conne
 	return dbus_characteristic;
 }
 
-static struct dbus_characteristic get_characteristic_from_handle(gatt_connection_t* connection, int handle) {
+static struct dbus_characteristic get_characteristic_from_handle(gatt_connection_t* connection, unsigned int handle) {
 	gattlib_context_t* conn_context = connection->context;
 	GError *error = NULL;
 	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
-	int char_handle;
+	unsigned int char_handle;
 
 	struct dbus_characteristic dbus_characteristic = {
 			.type = TYPE_NONE
