@@ -17,6 +17,7 @@ option(GATTLIB_BUILD_EXAMPLES "Build GattLib examples" NO)
 option(GATTLIB_SHARED_LIB "Build GattLib as a shared library" YES)
 option(GATTLIB_BUILD_DOCS "Build GattLib docs" NO)
 option(GATTLIB_PYTHON_INTERFACE "Build GattLib Python Interface" YES)
+option(GATTLIB_ENABLE_ADDRESS_SANITIZER "Enable address sanitizer" NO)
 
 find_package(PkgConfig REQUIRED)
 find_package(Doxygen)
@@ -27,7 +28,21 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Show all the warnings
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+if (MSVC)
+  # warning level 4
+  add_compile_options(/W4)
+else()
+  # additional warnings
+  add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-variadic-macros)
+endif()
+# Add stack protector
+add_compile_options(-fstack-protector-strong)
+
+if (GATTLIB_ENABLE_ADDRESS_SANITIZER)
+  add_compile_options(-fsanitize=address -fsanitize=bounds -fsanitize=undefined -fsanitize-recover=address)
+  add_link_options(-fsanitize=address -fsanitize=bounds -fsanitize=undefined -fsanitize-recover=address -static-libasan)
+endif()
+
 # Expose 'gattlib.h' to all sub-directories
 include_directories(include)
 
