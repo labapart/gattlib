@@ -26,7 +26,7 @@ static bool handle_dbus_gattcharacteristic_from_path(gattlib_context_t* conn_con
 	*error = NULL;
 	characteristic = org_bluez_gatt_characteristic1_proxy_new_for_bus_sync (
 			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+			G_DBUS_PROXY_FLAGS_NONE,
 			"org.bluez",
 			object_path,
 			NULL,
@@ -54,7 +54,7 @@ static bool handle_dbus_gattcharacteristic_from_path(gattlib_context_t* conn_con
 		*error = NULL;
 		OrgBluezGattService1* service = org_bluez_gatt_service1_proxy_new_for_bus_sync (
 			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+			G_DBUS_PROXY_FLAGS_NONE,
 			"org.bluez",
 			org_bluez_gatt_characteristic1_get_service(characteristic),
 			NULL,
@@ -87,7 +87,7 @@ static bool handle_dbus_battery_from_uuid(gattlib_context_t* conn_context, const
 	*error = NULL;
 	battery = org_bluez_battery1_proxy_new_for_bus_sync (
 			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+			G_DBUS_PROXY_FLAGS_NONE,
 			"org.bluez",
 			object_path,
 			NULL,

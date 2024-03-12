@@ -196,7 +196,7 @@ int gattlib_connect(void *adapter, const char *dst,
 
 	OrgBluezDevice1* device = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+			G_DBUS_PROXY_FLAGS_NONE,
 			"org.bluez",
 			object_path,
 			NULL,
@@ -368,7 +368,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		error = NULL;
 		OrgBluezGattService1* service_proxy = org_bluez_gatt_service1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM,
-				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+				G_DBUS_PROXY_FLAGS_NONE,
 				"org.bluez",
 				*service_str,
 				NULL,
@@ -469,7 +469,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		error = NULL;
 		OrgBluezGattService1* service_proxy = org_bluez_gatt_service1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM,
-				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+				G_DBUS_PROXY_FLAGS_NONE,
 				"org.bluez",
 				object_path,
 				NULL,
@@ -581,7 +581,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 		error = NULL;
 		OrgBluezGattService1* service_proxy = org_bluez_gatt_service1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM,
-				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+				G_DBUS_PROXY_FLAGS_NONE,
 				"org.bluez",
 				*service_str,
 				NULL,
@@ -628,7 +628,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 		error = NULL;
 		OrgBluezGattService1* service_proxy = org_bluez_gatt_service1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM,
-				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+				G_DBUS_PROXY_FLAGS_NONE,
 				"org.bluez",
 				*service_str,
 				NULL,
@@ -661,7 +661,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 
 			OrgBluezGattCharacteristic1 *characteristic_proxy = org_bluez_gatt_characteristic1_proxy_new_for_bus_sync(
 					G_BUS_TYPE_SYSTEM,
-					G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+					G_DBUS_PROXY_FLAGS_NONE,
 					"org.bluez",
 					characteristic_str,
 					NULL,
@@ -731,7 +731,7 @@ static void add_characteristics_from_service(gattlib_context_t* conn_context, GD
 
 		OrgBluezGattCharacteristic1* characteristic = org_bluez_gatt_characteristic1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM,
-				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+				G_DBUS_PROXY_FLAGS_NONE,
 				"org.bluez",
 				object_path,
 				NULL,
@@ -878,7 +878,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 		error = NULL;
 		OrgBluezGattService1* service_proxy = org_bluez_gatt_service1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM,
-				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+				G_DBUS_PROXY_FLAGS_NONE,
 				"org.bluez",
 				object_path,
 				NULL,
@@ -942,7 +942,7 @@ int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_a
 
 	*bluez_device1 = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+			G_DBUS_PROXY_FLAGS_NONE,
 			"org.bluez",
 			object_path,
 			NULL,

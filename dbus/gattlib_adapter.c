@@ -113,7 +113,7 @@ static void device_manager_on_device1_signal(const char* device1_path, struct ga
 	GError *error = NULL;
 	OrgBluezDevice1* device1 = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
-			G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+			G_DBUS_PROXY_FLAGS_NONE,
 			"org.bluez",
 			device1_path,
 			NULL,
@@ -208,7 +208,7 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 
 		OrgBluezDevice1* device1 = org_bluez_device1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM,
-				G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+				G_DBUS_PROXY_FLAGS_NONE,
 				"org.bluez",
 				proxy_object_path, NULL, &error);
 		if (error) {
