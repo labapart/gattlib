@@ -58,6 +58,14 @@ bool gattlib_has_valid_handler(struct gattlib_handler* handler);
 
 void gattlib_notification_device_thread(gpointer data, gpointer user_data);
 
+/**
+ * Clean GATTLIB connection on disconnection
+ *
+ * This function is called by the disconnection callback to always be called on explicit
+ * and implicit disconnection.
+ */
+void gattlib_connection_free(gatt_connection_t* connection);
+
 #if defined(WITH_PYTHON)
 // Callback used by Python to create arguments used by native callback
 void* gattlib_python_callback_args(PyObject* python_callback, PyObject* python_args);

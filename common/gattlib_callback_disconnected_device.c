@@ -43,4 +43,7 @@ void gattlib_on_disconnected_device(gatt_connection_t* connection) {
 
 	// For GATT disconnection we do not use thread to ensure the callback is synchronous.
 	connection->on_disconnection.callback.disconnection_handler(connection, connection->on_disconnection.user_data);
+
+	// Clean GATTLIB connection on disconnection
+	gattlib_connection_free(connection);
 }

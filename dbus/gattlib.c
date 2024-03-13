@@ -276,6 +276,44 @@ FREE_CONN_CONTEXT:
 	return ret;
 }
 
+/**
+ * Clean GATTLIB connection on disconnection
+ *
+ * This function is called by the disconnection callback to always be called on explicit
+ * and implicit disconnection.
+ */
+void gattlib_connection_free(gatt_connection_t* connection) {
+	gattlib_context_t* conn_context;
+
+	g_mutex_lock(&connection->connection_mutex);
+	conn_context = connection->context;
+
+	// Remove signal
+	if (conn_context->on_handle_device_property_change_id != 0) {
+		g_signal_handler_disconnect(conn_context->device, conn_context->on_handle_device_property_change_id);
+		conn_context->on_handle_device_property_change_id = 0;
+	}
+
+	free(conn_context->device_object_path);
+	if (conn_context->device != NULL) {
+		g_object_unref(conn_context->device);
+		conn_context->device = NULL;
+	}
+	g_list_free_full(conn_context->dbus_objects, g_object_unref);
+
+	disconnect_all_notifications(conn_context);
+
+	// Note: We do not free adapter as it might still be used by other devices
+
+	free(connection->context);
+	connection->context = NULL;
+
+	g_mutex_unlock(&connection->connection_mutex);
+
+	// And finally free the connection
+	free(connection);
+}
+
 int gattlib_disconnect(gatt_connection_t* connection) {
 	gattlib_context_t* conn_context;
 	int ret = GATTLIB_SUCCESS;
@@ -297,35 +335,14 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 
 	GATTLIB_LOG(GATTLIB_DEBUG, "Disconnect bluetooth device %s", conn_context->device_object_path);
 
-	// Remove signal
-	if (conn_context->on_handle_device_property_change_id != 0) {
-		g_signal_handler_disconnect(conn_context->device, conn_context->on_handle_device_property_change_id);
-		conn_context->on_handle_device_property_change_id = 0;
-	}
-
 	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
 	if (error) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to disconnect DBus Bluez Device: %s", error->message);
 		g_error_free(error);
 	}
 
-	// Call disconnection callack. It should be called by signal but signal has been removed above
-	gattlib_on_disconnected_device(connection);
-
-	free(conn_context->device_object_path);
-	if (conn_context->device != NULL) {
-		g_object_unref(conn_context->device);
-		conn_context->device = NULL;
-	}
-	g_list_free_full(conn_context->dbus_objects, g_object_unref);
-
-	disconnect_all_notifications(conn_context);
-
-	// Note: We do not free adapter as it might still be used by other devices
-
-	free(connection->context);
-	connection->context = NULL;
-	free(connection);
+	//Note: Signals and memory will be removed/clean on disconnction callback
+	//      See _gattlib_clean_on_disconnection()
 
 EXIT:
 	g_mutex_unlock(&connection->connection_mutex);
