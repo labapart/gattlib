@@ -42,6 +42,9 @@ def _user_thread_main(task):
 def run_mainloop_with(task):
     global gobject_mainloop, task_returned_code, task_exception
 
+    if gobject_mainloop:
+        raise RuntimeError("A mainloop is already running")
+
     # Ensure GLib's threading is initialized to support python threads, and
     # make a default mainloop that all DBus objects will inherit.  These
     # commands MUST execute before any other DBus commands!
@@ -70,3 +73,5 @@ def run_mainloop_with(task):
         # We assume that if we exit with keyboard interrupt than it is not the expected
         # behaviour and we return -1
         return -2
+    finally:
+        gobject_mainloop = None
