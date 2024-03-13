@@ -50,6 +50,7 @@ gboolean on_handle_device_property_change(
 	    gpointer user_data)
 {
 	gatt_connection_t* connection = user_data;
+	gattlib_context_t* conn_context = connection->context;
 
 	// Retrieve 'Value' from 'arg_changed_properties'
 	if (g_variant_n_children (arg_changed_properties) > 0) {
@@ -61,14 +62,17 @@ gboolean on_handle_device_property_change(
 		while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
 			if (strcmp(key, "Connected") == 0) {
 				if (!g_variant_get_boolean(value)) {
-					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change: Disconnection");
+					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Disconnection",
+						conn_context->device_object_path);
 					gattlib_on_disconnected_device(connection);
 				} else {
-					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change: Connection");
+					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Connection",
+						conn_context->device_object_path);
 				}
 			} else if (strcmp(key, "ServicesResolved") == 0) {
 				if (g_variant_get_boolean(value)) {
-					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change: Service Resolved");
+					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Service Resolved",
+						conn_context->device_object_path);
 					_on_device_connect(connection);
 				}
 			}
