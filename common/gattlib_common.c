@@ -191,3 +191,10 @@ void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*
 		return;
 	}
 }
+
+// Helper function to free memory from Python frontend
+void gattlib_free_mem(void *ptr) {
+	if (ptr != NULL) {
+		free(ptr);
+	}
+}

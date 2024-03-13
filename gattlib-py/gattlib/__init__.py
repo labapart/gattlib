@@ -217,3 +217,7 @@ gattlib_get_advertisement_data_from_mac.argtypes = [c_void_p, c_char_p, POINTER(
 # int gattlib_mainloop_python(PyObject *handler, PyObject *user_data)
 gattlib_mainloop = gattlib.gattlib_mainloop_python
 gattlib_mainloop.argtypes = [py_object, py_object]
+
+# void gattlib_free_mem(void *ptr])
+gattlib_free_mem = gattlib.gattlib_free_mem
+gattlib_free_mem.argtypes = [c_void_p]

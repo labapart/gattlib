@@ -28,10 +28,10 @@ struct on_eddystone_discovered_device_arg {
 static void on_eddystone_discovered_device(void *adapter, const char* addr, const char* name, void *user_data)
 {
 	struct on_eddystone_discovered_device_arg *callback_data = user_data;
-	gattlib_advertisement_data_t *advertisement_data;
+	gattlib_advertisement_data_t *advertisement_data = NULL;
 	size_t advertisement_data_count;
 	uint16_t manufacturer_id;
-	uint8_t *manufacturer_data;
+	uint8_t *manufacturer_data = NULL;
 	size_t manufacturer_data_size;
 	int ret;
 
@@ -46,6 +46,13 @@ static void on_eddystone_discovered_device(void *adapter, const char* addr, cons
 			advertisement_data, advertisement_data_count,
 			manufacturer_id, manufacturer_data, manufacturer_data_size,
 			callback_data->user_data);
+
+	if (advertisement_data != NULL) {
+		free(advertisement_data);
+	}
+	if (manufacturer_data != NULL) {
+		free(manufacturer_data);
+	}
 }
 
 int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddystone_types,

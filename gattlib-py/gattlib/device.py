@@ -40,7 +40,10 @@ class Device:
             self._addr = addr
         self._name = name
         self._connection = None
+        # We use a lock because on disconnection, we will set self._connection to None
         self._connection_lock = threading.Lock()
+        # We use a lock on disconnection to ensure the memory is safely freed
+        self._disconnection_lock = threading.Lock()
 
         self.on_connection_callback = None
         self.on_connection_error_callback = None
@@ -50,6 +53,10 @@ class Device:
 
         # Dictionnary for GATT characteristic callback
         self._gatt_characteristic_callbacks = {}
+
+        # Memory that could be allocated by native gattlib
+        self._services_ptr = None
+        self._characteristics_ptr = None
 
     @property
     def mac_address(self) -> str:
@@ -109,8 +116,23 @@ class Device:
         self.disconnection_callback = callback
 
         def on_disconnection(user_data):
+            self._disconnection_lock.acquire()
+
             if self.disconnection_callback:
                 self.disconnection_callback()
+
+            # On disconnection, we do not need the list of GATT services and GATT characteristics
+            if self._services_ptr:
+                gattlib_free_mem(self._services_ptr)
+                self._services_ptr = None
+            if self._characteristics_ptr:
+                gattlib_free_mem(self._characteristics_ptr)
+                self._characteristics_ptr = None
+
+            # Reset the connection handler
+            self._connection = None
+
+            self._disconnection_lock.release()
 
         gattlib_register_on_disconnect(self.connection,
                                        gattlib_disconnected_device_python_callback,
@@ -130,14 +152,14 @@ class Device:
         #
         # Discover GATT Services
         #
-        _services = POINTER(GattlibPrimaryService)()
+        self._services_ptr = POINTER(GattlibPrimaryService)()
         _services_count = c_int(0)
-        ret = gattlib_discover_primary(self.connection, byref(_services), byref(_services_count))
+        ret = gattlib_discover_primary(self.connection, byref(self._services_ptr), byref(_services_count))
         handle_return(ret)
 
         self._services = {}
         for i in range(0, _services_count.value):
-            service = GattService(self, _services[i])
+            service = GattService(self, self._services_ptr[i])
             self._services[service.short_uuid] = service
 
             logger.debug("Service UUID:0x%x" % service.short_uuid)
@@ -145,14 +167,14 @@ class Device:
         #
         # Discover GATT Characteristics
         #
-        _characteristics = POINTER(GattlibCharacteristic)()
+        self._characteristics_ptr = POINTER(GattlibCharacteristic)()
         _characteristics_count = c_int(0)
-        ret = gattlib_discover_char(self.connection, byref(_characteristics), byref(_characteristics_count))
+        ret = gattlib_discover_char(self.connection, byref(self._characteristics_ptr), byref(_characteristics_count))
         handle_return(ret)
 
         self._characteristics = {}
         for i in range(0, _characteristics_count.value):
-            characteristic = GattCharacteristic(self, _characteristics[i])
+            characteristic = GattCharacteristic(self, self._characteristics_ptr[i])
             self._characteristics[characteristic.short_uuid] = characteristic
 
             logger.debug("Characteristic UUID:0x%x" % characteristic.short_uuid)
@@ -200,6 +222,9 @@ class Device:
             manufacturer_data = bytearray(_manufacturer_data_len.value)
             for i in range(_manufacturer_data_len.value):
                 manufacturer_data[i] = c_bytearray.contents[i] & 0xFF
+
+        gattlib_free_mem(_advertisement_data)
+        gattlib_free_mem(_manufacturer_data)
 
         return advertisement_data, _manufacturer_id.value, manufacturer_data
 

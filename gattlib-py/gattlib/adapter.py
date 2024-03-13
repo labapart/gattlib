@@ -268,4 +268,7 @@ class Adapter:
             for i in range(_manufacturer_data_len.value):
                 manufacturer_data[i] = c_bytearray.contents[i] & 0xFF
 
+        gattlib_free_mem(_advertisement_data)
+        gattlib_free_mem(_manufacturer_data)
+
         return advertisement_data, _manufacturer_id.value, manufacturer_data
