@@ -2,8 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2021  Olivier Martin <olivier@labapart.org>
- *
+ *  Copyright (C) 2021-2024  Olivier Martin <olivier@labapart.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,6 +27,8 @@
 #include "gattlib.h"
 
 #define BLE_SCAN_EDDYSTONE_TIMEOUT   20
+
+const char* m_adapter_name;
 
 /**
  * @brief Handler called on new discovered BLE device
@@ -79,15 +80,39 @@ void on_eddystone_found(void *adapter, const char* addr, const char* name,
 	gattlib_adapter_scan_disable(adapter);
 }
 
+static void* ble_task(void* arg) {
+	void* adapter = NULL;
+	int ret;
+
+	ret = gattlib_adapter_open(m_adapter_name, &adapter);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to open adapter.");
+		return NULL;
+	}
+
+	ret = gattlib_adapter_scan_eddystone(adapter,
+			0, /* rssi_threshold. The value is not relevant as we do not pass GATTLIB_EDDYSTONE_LIMIT_RSSI */
+			GATTLIB_EDDYSTONE_TYPE_URL,
+			on_eddystone_found, BLE_SCAN_EDDYSTONE_TIMEOUT, NULL);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to scan.");
+		goto EXIT;
+	}
+
+	puts("Scan completed");
+
+EXIT:
+	gattlib_adapter_close(adapter);
+	return NULL;
+}
+
 int main(int argc, const char *argv[]) {
-	const char* adapter_name;
-	void* adapter;
 	int ret;
 
 	if (argc == 1) {
-		adapter_name = NULL;
+		m_adapter_name = NULL;
 	} else if (argc == 2) {
-		adapter_name = argv[1];
+		m_adapter_name = argv[1];
 	} else {
 		printf("%s [<bluetooth-adapter>]\n", argv[0]);
 		return 1;
@@ -98,24 +123,10 @@ int main(int argc, const char *argv[]) {
 	setlogmask(LOG_UPTO(LOG_INFO));
 #endif
 
-	ret = gattlib_adapter_open(adapter_name, &adapter);
-	if (ret) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Failed to open adapter.");
-		return 1;
+	ret = gattlib_mainloop(ble_task, NULL);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create gattlib mainloop");
 	}
 
-	ret = gattlib_adapter_scan_eddystone(adapter,
-			0, /* rssi_threshold. The value is not relevant as we do not pass GATTLIB_EDDYSTONE_LIMIT_RSSI */
-			GATTLIB_EDDYSTONE_TYPE_URL,
-			on_eddystone_found, BLE_SCAN_EDDYSTONE_TIMEOUT, NULL);
-	if (ret) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Failed to scan.");
-		goto EXIT;
-	}
-
-	puts("Scan completed");
-
-EXIT:
-	gattlib_adapter_close(adapter);
 	return ret;
 }

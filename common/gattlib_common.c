@@ -24,6 +24,7 @@ int gattlib_register_notification(gatt_connection_t* connection, gattlib_event_h
 		1 /* max_threads */, FALSE /* exclusive */, &error);
 	if (error != NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_register_notification: Failed to create thread pool: %s", error->message);
+		g_error_free(error);
 		return GATTLIB_ERROR_INTERNAL;
 	} else {
 		assert(connection->notification.thread_pool != NULL);
@@ -46,6 +47,7 @@ int gattlib_register_indication(gatt_connection_t* connection, gattlib_event_han
 		1 /* max_threads */, FALSE /* exclusive */, &error);
 	if (error != NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_register_indication: Failed to create thread pool: %s", error->message);
+		g_error_free(error);
 		return GATTLIB_ERROR_INTERNAL;
 	} else {
 		return GATTLIB_SUCCESS;
@@ -188,6 +190,7 @@ void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*
 	handler->thread = g_thread_try_new(thread_name, thread_func, thread_args, &error);
 	if (handler->thread == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create thread '%s': %s", thread_name, error->message);
+		g_error_free(error);
 		return;
 	}
 }

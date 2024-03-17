@@ -14,8 +14,32 @@
 // We make this variable global to be able to exit the main loop
 static GMainLoop *m_main_loop;
 
+struct _execute_task_arg {
+    void* (*task)(void* arg);
+    void* arg;
+};
+
+static void* _execute_task(void* arg) {
+    struct _execute_task_arg *execute_task_arg = arg;
+    execute_task_arg->task(execute_task_arg->arg);
+    g_main_loop_quit(m_main_loop);
+    return NULL;
+}
+
 int gattlib_mainloop(void* (*task)(void* arg), void *arg) {
-    GThread *task_thread = g_thread_new("gattlib_task", task, arg);
+    struct _execute_task_arg execute_task_arg = {
+        .task = task,
+        .arg = arg
+    };
+    GError* error;
+
+    GThread *task_thread = g_thread_try_new("gattlib_task", _execute_task, &execute_task_arg, &error);
+
+    if (m_main_loop != NULL) {
+        GATTLIB_LOG(GATTLIB_ERROR, "Main loop is already running: %s", error->message);
+        g_error_free(error);
+        return GATTLIB_BUSY;
+    }
 
     m_main_loop = g_main_loop_new(NULL, FALSE);
 
@@ -23,7 +47,9 @@ int gattlib_mainloop(void* (*task)(void* arg), void *arg) {
     g_main_loop_unref(m_main_loop);
 
     g_thread_join(task_thread);
+    g_thread_unref(task_thread);
 
+    m_main_loop = NULL;
     return GATTLIB_SUCCESS;
 }
 

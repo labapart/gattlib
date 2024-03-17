@@ -341,6 +341,11 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 		char uuid_str[MAX_LEN_UUID_STR + 1];
 		GVariantBuilder list_uuid_builder;
 
+		if (uuid_list == NULL) {
+			GATTLIB_LOG(GATTLIB_ERROR, "Could not start BLE scan. Missing list of UUIDs");
+			return GATTLIB_INVALID_PARAMETER;
+		}
+
 		GATTLIB_LOG(GATTLIB_DEBUG, "Configure bluetooth scan with UUID");
 
 		g_variant_builder_init(&list_uuid_builder, G_VARIANT_TYPE ("as"));
@@ -434,9 +439,12 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 		return ret;
 	}
 
+	gattlib_adapter->ble_scan.is_scanning = true;
+
 	gattlib_adapter->ble_scan.scan_loop_thread = g_thread_try_new("gattlib_ble_scan", _ble_scan_loop, gattlib_adapter, &error);
 	if (gattlib_adapter->ble_scan.scan_loop_thread == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create BLE scan thread: %s", error->message);
+		g_error_free(error);
 		return GATTLIB_ERROR_INTERNAL;
 	}
 
@@ -444,8 +452,9 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 	while (gattlib_adapter->ble_scan.is_scanning) {
 		g_cond_wait(&gattlib_adapter->ble_scan.scan_loop_cond, &gattlib_adapter->ble_scan.scan_loop_mutex);
 	}
+
 	// Free thread
-	g_object_unref(gattlib_adapter->ble_scan.scan_loop_thread);
+	g_thread_unref(gattlib_adapter->ble_scan.scan_loop_thread);
 	gattlib_adapter->ble_scan.scan_loop_thread = NULL;
 	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
 
@@ -468,6 +477,7 @@ int gattlib_adapter_scan_enable_with_filter_non_blocking(void *adapter, uuid_t *
 	gattlib_adapter->ble_scan.scan_loop_thread = g_thread_try_new("gattlib_ble_scan", _ble_scan_loop, gattlib_adapter, &error);
 	if (gattlib_adapter->ble_scan.scan_loop_thread == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create BLE scan thread: %s", error->message);
+		g_error_free(error);
 		return GATTLIB_ERROR_INTERNAL;
 	}
 
@@ -559,8 +569,7 @@ int gattlib_adapter_close(void* adapter)
 
 	// Ensure the thread is freed on adapter closing
 	if (gattlib_adapter->ble_scan.scan_loop_thread) {
-		//TODO: Fix memory leak here
-		//g_object_unref(gattlib_adapter->ble_scan.scan_loop_thread);
+		g_thread_unref(gattlib_adapter->ble_scan.scan_loop_thread);
 		gattlib_adapter->ble_scan.scan_loop_thread = NULL;
 	}
 

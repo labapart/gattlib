@@ -405,6 +405,7 @@ static gatt_connection_t *gattlib_connect_with_options(const char *src, const ch
 	if (conn == NULL) {
 		if (io_connect_arg.error) {
 			fprintf(stderr, "Error: gattlib_connect - initialization error:%s\n", io_connect_arg.error->message);
+			g_error_free(io_connect_arg.error);
 		} else {
 			fprintf(stderr, "Error: gattlib_connect - initialization\n");
 		}
@@ -428,6 +429,7 @@ static gatt_connection_t *gattlib_connect_with_options(const char *src, const ch
 
 	if (io_connect_arg.error) {
 		fprintf(stderr, "gattlib_connect - connection error:%s\n", io_connect_arg.error->message);
+		g_error_free(io_connect_arg.error);
 		return NULL;
 	} else {
 		return conn;

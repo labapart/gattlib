@@ -2,8 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2021  Olivier Martin <olivier@labapart.org>
- *
+ *  Copyright (C) 2021-2024  Olivier Martin <olivier@labapart.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,7 +32,9 @@
 
 #include "gattlib.h"
 
-#define BLE_SCAN_TIMEOUT   4
+#define BLE_SCAN_TIMEOUT   10
+
+static const char* adapter_name;
 
 typedef void (*ble_discovered_device_t)(const char* addr, const char* name);
 
@@ -43,33 +44,19 @@ static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIST_HEAD(listhead, connection_t) g_ble_connections;
 struct connection_t {
 	pthread_t thread;
+	void *adapter;
 	char* addr;
 	LIST_ENTRY(connection_t) entries;
 };
 
-static void *ble_connect_device(void *arg) {
-	struct connection_t *connection = arg;
-	char* addr = connection->addr;
-	gatt_connection_t* gatt_connection;
+static void on_device_connect(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data) {
 	gattlib_primary_service_t* services;
 	gattlib_characteristic_t* characteristics;
 	int services_count, characteristics_count;
 	char uuid_str[MAX_LEN_UUID_STR + 1];
 	int ret, i;
 
-	pthread_mutex_lock(&g_mutex);
-
-	printf("------------START %s ---------------\n", addr);
-
-	gatt_connection = gattlib_connect(NULL, addr, GATTLIB_CONNECTION_OPTIONS_LEGACY_DEFAULT);
-	if (gatt_connection == NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Fail to connect to the bluetooth device.");
-		goto connection_exit;
-	} else {
-		puts("Succeeded to connect to the bluetooth device.");
-	}
-
-	ret = gattlib_discover_primary(gatt_connection, &services, &services_count);
+	ret = gattlib_discover_primary(connection, &services, &services_count);
 	if (ret != 0) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Fail to discover primary services.");
 		goto disconnect_exit;
@@ -84,7 +71,7 @@ static void *ble_connect_device(void *arg) {
 	}
 	free(services);
 
-	ret = gattlib_discover_char(gatt_connection, &characteristics, &characteristics_count);
+	ret = gattlib_discover_char(connection, &characteristics, &characteristics_count);
 	if (ret != 0) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Fail to discover characteristics.");
 		goto disconnect_exit;
@@ -99,9 +86,22 @@ static void *ble_connect_device(void *arg) {
 	free(characteristics);
 
 disconnect_exit:
-	gattlib_disconnect(gatt_connection);
+	gattlib_disconnect(connection);
+}
 
-connection_exit:
+static void *ble_connect_device(void *arg) {
+	struct connection_t *connection = arg;
+	char* addr = connection->addr;
+	int ret;
+
+	pthread_mutex_lock(&g_mutex);
+	printf("------------START %s ---------------\n", addr);
+
+	ret = gattlib_connect(connection->adapter, connection->addr, GATTLIB_CONNECTION_OPTIONS_NONE, on_device_connect, NULL);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to connect to the bluetooth device '%s'", connection->addr);
+	}
+
 	printf("------------DONE %s ---------------\n", addr);
 	pthread_mutex_unlock(&g_mutex);
 	return NULL;
@@ -123,6 +123,7 @@ static void ble_discovered_device(void *adapter, const char* addr, const char* n
 		return;
 	}
 	connection->addr = strdup(addr);
+	connection->adapter = adapter;
 
 	ret = pthread_create(&connection->thread, NULL,	ble_connect_device, connection);
 	if (ret != 0) {
@@ -133,31 +134,14 @@ static void ble_discovered_device(void *adapter, const char* addr, const char* n
 	LIST_INSERT_HEAD(&g_ble_connections, connection, entries);
 }
 
-int main(int argc, const char *argv[]) {
-	const char* adapter_name;
+static void* ble_task(void* arg) {
 	void* adapter;
 	int ret;
-
-	if (argc == 1) {
-		adapter_name = NULL;
-	} else if (argc == 2) {
-		adapter_name = argv[1];
-	} else {
-		printf("%s [<bluetooth-adapter>]\n", argv[0]);
-		return 1;
-	}
-
-#ifdef GATTLIB_LOG_BACKEND_SYSLOG
-	openlog("gattlib_ble_scan", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
-	setlogmask(LOG_UPTO(LOG_INFO));
-#endif
-
-	LIST_INIT(&g_ble_connections);
 
 	ret = gattlib_adapter_open(adapter_name, &adapter);
 	if (ret) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to open adapter.");
-		return 1;
+		return NULL;
 	}
 
 	pthread_mutex_lock(&g_mutex);
@@ -183,5 +167,32 @@ int main(int argc, const char *argv[]) {
 
 EXIT:
 	gattlib_adapter_close(adapter);
+	return NULL;
+}
+
+int main(int argc, const char *argv[]) {
+	int ret;
+
+	if (argc == 1) {
+		adapter_name = NULL;
+	} else if (argc == 2) {
+		adapter_name = argv[1];
+	} else {
+		printf("%s [<bluetooth-adapter>]\n", argv[0]);
+		return 1;
+	}
+
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+	openlog("gattlib_ble_scan", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
+	setlogmask(LOG_UPTO(LOG_INFO));
+#endif
+
+	LIST_INIT(&g_ble_connections);
+
+	ret = gattlib_mainloop(ble_task, NULL);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create gattlib mainloop");
+	}
+
 	return ret;
 }

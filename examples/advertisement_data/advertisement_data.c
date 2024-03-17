@@ -33,6 +33,8 @@
 
 #define BLE_SCAN_TIMEOUT   60
 
+static const char* adapter_name;
+
 static void ble_advertising_device(void *adapter, const char* addr, const char* name, void *user_data) {
 	gattlib_advertisement_data_t *advertisement_data;
 	size_t advertisement_data_count;
@@ -60,29 +62,14 @@ static void ble_advertising_device(void *adapter, const char* addr, const char* 
 	printf("\n");
 }
 
-int main(int argc, const char *argv[]) {
-	const char* adapter_name;
+static void* ble_task(void *arg) {
 	void* adapter;
 	int ret;
-
-	if (argc == 1) {
-		adapter_name = NULL;
-	} else if (argc == 2) {
-		adapter_name = argv[1];
-	} else {
-		GATTLIB_LOG(GATTLIB_ERROR, "%s [<bluetooth-adapter>]", argv[0]);
-		return 1;
-	}
-
-#ifdef GATTLIB_LOG_BACKEND_SYSLOG
-	openlog("gattlib_advertisement_dat", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
-	setlogmask(LOG_UPTO(LOG_INFO));
-#endif
 
 	ret = gattlib_adapter_open(adapter_name, &adapter);
 	if (ret) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to open adapter.");
-		return 1;
+		return NULL;
 	}
 
 	ret = gattlib_adapter_scan_enable_with_filter(adapter,
@@ -103,5 +90,30 @@ int main(int argc, const char *argv[]) {
 
 EXIT:
 	gattlib_adapter_close(adapter);
+	return NULL;
+}
+
+int main(int argc, const char *argv[]) {
+	int ret;
+
+	if (argc == 1) {
+		adapter_name = NULL;
+	} else if (argc == 2) {
+		adapter_name = argv[1];
+	} else {
+		GATTLIB_LOG(GATTLIB_ERROR, "%s [<bluetooth-adapter>]", argv[0]);
+		return 1;
+	}
+
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+	openlog("gattlib_advertisement_dat", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
+	setlogmask(LOG_UPTO(LOG_INFO));
+#endif
+
+	ret = gattlib_mainloop(ble_task, NULL);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create gattlib mainloop");
+	}
+
 	return ret;
 }

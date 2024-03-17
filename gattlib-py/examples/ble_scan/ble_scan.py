@@ -10,10 +10,12 @@ import argparse
 import threading
 import time
 
-from gattlib import adapter
+from gattlib import adapter, mainloop
+
+SCAN_TIMEOUT_SEC = 60
 
 parser = argparse.ArgumentParser(description='Gattlib BLE scan example')
-parser.add_argument('--duration', default=30, type=int, help='Duration of the BLE scanning')
+parser.add_argument('--duration', default=SCAN_TIMEOUT_SEC, type=int, help='Duration of the BLE scanning')
 args = parser.parse_args()
 
 # We only use a lock to not mixed printing statements of various devices
@@ -32,10 +34,8 @@ def connect_ble_device(device):
             print("- GATTCharacteristic: 0x%x" % key)
         device.disconnect()
     except Exception as e:
-        print("EXCEPTION: %s:%s", type(e), str(e))
+        print(f"EXCEPTION: {type(e)}: {str(e)}")
     lock.release()
-
-
 
 def on_discovered_ble_device(device, user_data):
     threading.Thread(target=connect_ble_device, args=(device,)).start()
@@ -43,9 +43,12 @@ def on_discovered_ble_device(device, user_data):
 # Use default adapter
 default_adapter = adapter.Adapter()
 
-# Scan for 'args.duration' seconds
-default_adapter.open()
-default_adapter.scan_enable(on_discovered_ble_device, args.duration)
+def scan_ble_devices():
+    default_adapter.open()
+    # Scan for 'args.duration' seconds
+    default_adapter.scan_enable(on_discovered_ble_device, timeout=args.duration)
 
-# Because scan_enable() is not blocking, we need to wait for the same duration
-time.sleep(args.duration)
+    # Because scan_enable() is not blocking, we need to wait for the same duration
+    time.sleep(args.duration)
+
+mainloop.run_mainloop_with(scan_ble_devices)

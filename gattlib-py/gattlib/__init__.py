@@ -140,7 +140,7 @@ gattlib_adapter_scan_enable_with_filter_non_blocking.argtypes = [c_void_p, POINT
 # int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddsytone_types,
 #        gattlib_discovered_device_with_data_t discovered_device_cb, size_t timeout, void *user_data)
 gattlib_adapter_scan_eddystone = gattlib.gattlib_adapter_scan_eddystone
-gattlib_adapter_scan_eddystone.argtypes = [c_void_p, c_int16, c_uint32, c_void_p, c_size_t, c_void_p]
+gattlib_adapter_scan_eddystone.argtypes = [c_void_p, c_int16, c_uint32, py_object, c_size_t, py_object]
 
 # int gattlib_connect(void *adapter, const char *dst, unsigned long options, gatt_connect_cb_t connect_cb, void* user_data)
 gattlib_connect = gattlib.gattlib_connect

@@ -98,5 +98,6 @@ void gattlib_on_gatt_notification(gatt_connection_t* connection, const uuid_t* u
 	g_thread_pool_push(connection->notification.thread_pool, arg, &error);
 	if (error != NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_on_gatt_notification: Failed to push thread in pool: %s", error->message);
+		g_error_free(error);
 	}
 }

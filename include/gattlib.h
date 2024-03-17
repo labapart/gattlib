@@ -44,6 +44,7 @@ extern "C" {
 #define GATTLIB_DEVICE_ERROR           6
 #define GATTLIB_DEVICE_NOT_CONNECTED   7
 #define GATTLIB_NO_ADAPTER             8
+#define GATTLIB_BUSY                   9
 #define GATTLIB_ERROR_MODULE_MASK      0xF0000000
 #define GATTLIB_ERROR_DBUS             0x10000000
 #define GATTLIB_ERROR_BLUEZ            0x20000000
@@ -82,6 +83,7 @@ extern "C" {
  *       is for Bluez prior to v5.42 (before Bluez) support
  */
 //@{
+#define GATTLIB_CONNECTION_OPTIONS_NONE                     0
 #define GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_PUBLIC  (1 << 0)
 #define GATTLIB_CONNECTION_OPTIONS_LEGACY_BDADDR_LE_RANDOM  (1 << 1)
 #define GATTLIB_CONNECTION_OPTIONS_LEGACY_BT_SEC_LOW        (1 << 2)
@@ -293,6 +295,8 @@ int gattlib_adapter_scan_enable_with_filter_non_blocking(void *adapter, uuid_t *
 
 /**
  * @brief Enable Eddystone Bluetooth Device scanning on a given adapter
+ *
+ * This function will block until either the timeout has expired or gattlib_adapter_scan_disable() has been called.
  *
  * @param adapter is the context of the newly opened adapter
  * @param rssi_threshold is the imposed RSSI threshold for the returned devices.
