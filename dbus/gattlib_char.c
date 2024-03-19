@@ -296,7 +296,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void 
 	}
 }
 
-int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb) {
+int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb, void *user_data) {
 	int ret = GATTLIB_SUCCESS;
 
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
@@ -310,7 +310,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 
 		percentage = org_bluez_battery1_get_percentage(dbus_characteristic.battery);
 
-		gatt_read_cb((const void*)&percentage, sizeof(percentage));
+		gatt_read_cb((const void*)&percentage, sizeof(percentage), user_data);
 
 		return GATTLIB_SUCCESS;
 	} else {
@@ -340,7 +340,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	gsize n_elements;
 	gconstpointer const_buffer = g_variant_get_fixed_array(out_value, &n_elements, sizeof(guchar));
 	if (const_buffer) {
-		gatt_read_cb(const_buffer, n_elements);
+		gatt_read_cb(const_buffer, n_elements, user_data);
 	}
 
 	g_object_unref(dbus_characteristic.gatt);
@@ -408,6 +408,14 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 	return ret;
 }
 
+int gattlib_write_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len, gatt_write_cb_t gatt_write_cb, void* user_data) {
+    int ret = gattlib_write_char_by_uuid(connection, uuid, buffer, buffer_len);
+    if(gatt_write_cb) {
+        gatt_write_cb(ret, buffer, buffer_len, user_data);
+    }
+    return ret;
+}
+
 int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len)
 {
 	int ret;
@@ -422,6 +430,15 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 	g_object_unref(dbus_characteristic.gatt);
 	return ret;
 }
+
+int gattlib_write_char_by_handle_async(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len, gatt_write_cb_t gatt_write_cb, void* user_data) {
+    int ret = gattlib_write_char_by_handle(connection, handle, buffer, buffer_len);
+    if(gatt_write_cb) {
+        gatt_write_cb(ret, buffer, buffer_len, user_data);
+    }
+    return ret;
+}
+
 
 int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len)
 {

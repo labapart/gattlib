@@ -35,6 +35,14 @@ struct gattlib_result_read_uuid_t {
 	size_t*        buffer_len;
 	gatt_read_cb_t callback;
 	int            completed;
+	void*          user_data;
+};
+
+struct gattlib_result_write_uuid_t {
+    const void*     buffer;
+    size_t          buffer_len;
+    gatt_write_cb_t callback;
+    void*           user_data;
 };
 
 static void gattlib_result_read_uuid_cb(guint8 status, const guint8 *pdu, guint16 len, gpointer user_data) {
@@ -64,7 +72,7 @@ static void gattlib_result_read_uuid_cb(guint8 status, const guint8 *pdu, guint1
 		value += 2;
 
 		if (gattlib_result->callback) {
-			gattlib_result->callback(value, buffer_len);
+			gattlib_result->callback(value, buffer_len, gattlib_result->user_data);
 		} else {
 			void* buffer = malloc(buffer_len);
 			if (buffer == NULL) {
@@ -135,7 +143,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 }
 
 int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
-				    gatt_read_cb_t gatt_read_cb)
+				    gatt_read_cb_t gatt_read_cb, void* user_data)
 {
 	gattlib_context_t* conn_context = connection->context;
 	struct gattlib_result_read_uuid_t* gattlib_result;
@@ -151,6 +159,7 @@ int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
 	gattlib_result->buffer_len     = 0;
 	gattlib_result->callback       = gatt_read_cb;
 	gattlib_result->completed      = FALSE;
+	gattlib_result->user_data      = user_data;
 
 	uuid_to_bt_uuid(uuid, &bt_uuid);
 
@@ -185,6 +194,48 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 		g_main_context_iteration(g_gattlib_thread.loop_context, FALSE);
 	}
 	return 0;
+}
+
+void gattlib_write_result_cb_async(guint8 status, const guint8 *pdu, guint16 len, gpointer user_data) {
+    struct gattlib_result_write_uuid_t* gattlib_result = (struct gattlib_result_write_uuid_t*)user_data;
+
+    if(gattlib_result->callback) {
+        gattlib_result->callback(status, gattlib_result->buffer, gattlib_result->buffer_len, gattlib_result->user_data);
+    }
+}
+
+int gattlib_write_char_by_handle_async(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len, gatt_write_cb_t gatt_write_cb, void* user_data) {
+    gattlib_context_t* conn_context = connection->context;
+
+    struct gattlib_result_write_uuid_t* gattlib_result = malloc(sizeof(struct gattlib_result_write_uuid_t));
+    if (gattlib_result == NULL) {
+        return GATTLIB_OUT_OF_MEMORY;
+    }
+    gattlib_result->callback       = gatt_write_cb;
+    gattlib_result->buffer         = buffer;
+    gattlib_result->buffer_len     = buffer_len;
+    gattlib_result->user_data      = user_data;
+
+    guint ret = gatt_write_char(conn_context->attrib, handle, (void*)buffer, buffer_len,
+                                gattlib_write_result_cb_async, gattlib_result);
+    if (ret == 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int gattlib_write_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len, gatt_write_cb_t gatt_write_cb, void* user_data) {
+    uint16_t handle = 0;
+    int ret;
+
+    ret = get_handle_from_uuid(connection, uuid, &handle);
+    if (ret) {
+        fprintf(stderr, "Fail to find handle for UUID.\n");
+        return ret;
+    }
+
+    return gattlib_write_char_by_handle_async(connection, handle, buffer, buffer_len, gatt_write_cb, user_data);
 }
 
 int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
