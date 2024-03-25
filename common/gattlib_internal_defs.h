@@ -16,10 +16,12 @@
 
 #include "gattlib.h"
 
+#if defined(WITH_PYTHON)
 struct gattlib_python_args {
 	PyObject* callback;
 	PyObject* args;
 };
+#endif
 
 struct gattlib_handler {
 	union {
@@ -35,8 +37,10 @@ struct gattlib_handler {
 	GThread *thread;
 	// Thread pool
 	GThreadPool *thread_pool;
+#if defined(WITH_PYTHON)
 	// In case of Python callback and argument, we keep track to free it when we stopped to discover BLE devices
 	void* python_args;
+#endif
 };
 
 struct _gatt_connection_t {

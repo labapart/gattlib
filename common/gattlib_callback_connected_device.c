@@ -6,6 +6,7 @@
 
 #include "gattlib_internal.h"
 
+#if defined(WITH_PYTHON)
 void gattlib_connected_device_python_callback(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data) {
 	struct gattlib_python_args* args = user_data;
 	PyObject *result;
@@ -43,6 +44,7 @@ void gattlib_connected_device_python_callback(void *adapter, const char *dst, ga
 ON_ERROR:
 	PyGILState_Release(d_gstate);
 }
+#endif
 
 static gpointer _gattlib_connected_device_thread(gpointer data) {
 	gatt_connection_t* connection = data;
@@ -63,7 +65,11 @@ static void* _connected_device_thread_args_allocator(va_list args) {
 void gattlib_on_connected_device(gatt_connection_t* connection) {
 	gattlib_handler_dispatch_to_thread(
 		&connection->on_connection,
+#if defined(WITH_PYTHON)
 		gattlib_connected_device_python_callback /* python_callback */,
+#else
+		NULL, // No Python support. So we do not need to check the callback against Python callback
+#endif
 		_gattlib_connected_device_thread /* thread_func */,
 		"gattlib_connected_device" /* thread_name */,
 		_connected_device_thread_args_allocator /* thread_args_allocator */,

@@ -78,7 +78,6 @@ set(gattlib_SRCS gattlib.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_disconnected_device.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_discovered_device.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_notification_device.c
-                 ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_python.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/logging_backend/${GATTLIB_LOG_BACKEND}/gattlib_logging.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/mainloop/gattlib_glib_mainloop.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-adaptater1.c
@@ -86,6 +85,10 @@ set(gattlib_SRCS gattlib.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattcharacteristic1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattdescriptor1.c
                  ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-gattservice1.c)
+
+if (GATTLIB_PYTHON_INTERFACE)
+  list(APPEND gattlib_SRCS ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_python.c)
+endif()
 
 if (BLUEZ_VERSION_MINOR GREATER 40)
 	list(APPEND gattlib_SRCS ${CMAKE_CURRENT_BINARY_DIR}/org-bluez-battery1.c)
