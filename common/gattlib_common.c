@@ -147,6 +147,7 @@ void gattlib_handler_free(struct gattlib_handler* handler) {
 	// Reset callback to stop calling it after we stopped
 	handler->callback.callback = NULL;
 
+#if defined(WITH_PYTHON)
 	if (handler->python_args != NULL) {
 		struct gattlib_python_args* args = handler->python_args;
 		Py_DECREF(args->callback);
@@ -155,6 +156,7 @@ void gattlib_handler_free(struct gattlib_handler* handler) {
 		free(handler->python_args);
 		handler->python_args = NULL;
 	}
+#endif
 
 	if (handler->thread_pool != NULL) {
 		g_thread_pool_free(handler->thread_pool, FALSE /* immediate */, TRUE /* wait */);
@@ -175,11 +177,13 @@ void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*
 		return;
 	}
 
+#if defined(WITH_PYTHON)
 	// Check if we are using the Python callback, in case of Python argument we keep track of the argument to free them
 	// once we are done with the handler.
 	if (handler->callback.callback == python_callback) {
 		handler->python_args = handler->user_data;
 	}
+#endif
 
 	// We create a thread to ensure the callback is not blocking the mainloop
 	va_list args;

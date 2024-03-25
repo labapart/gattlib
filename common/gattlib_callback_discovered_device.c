@@ -6,6 +6,7 @@
 
 #include "gattlib_internal.h"
 
+#if defined(WITH_PYTHON)
 void gattlib_discovered_device_python_callback(void *adapter, const char* addr, const char* name, void *user_data) {
 	struct gattlib_python_args* args = user_data;
 	PyObject *result;
@@ -42,6 +43,7 @@ void gattlib_discovered_device_python_callback(void *adapter, const char* addr, 
 ON_ERROR:
 	PyGILState_Release(d_gstate);
 }
+#endif
 
 struct gattlib_discovered_device_thread_args {
 	struct gattlib_adapter* gattlib_adapter;
@@ -87,7 +89,11 @@ static void* _discovered_device_thread_args_allocator(va_list args) {
 void gattlib_on_discovered_device(struct gattlib_adapter* gattlib_adapter, OrgBluezDevice1* device1) {
 	gattlib_handler_dispatch_to_thread(
 		&gattlib_adapter->ble_scan.discovered_device_callback,
+#if defined(WITH_PYTHON)
 		gattlib_discovered_device_python_callback /* python_callback */,
+#else
+		NULL, // No Python support. So we do not need to check the callback against Python callback
+#endif
 		_gattlib_discovered_device_thread /* thread_func */,
 		"gattlib_discovered_device" /* thread_name */,
 		_discovered_device_thread_args_allocator /* thread_args_allocator */,

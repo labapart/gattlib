@@ -6,6 +6,7 @@
 
 #include "gattlib_internal.h"
 
+#if defined(WITH_PYTHON)
 void gattlib_disconnected_device_python_callback(gatt_connection_t* connection, void *user_data) {
 	struct gattlib_python_args* args = user_data;
 	PyObject *result;
@@ -27,6 +28,7 @@ void gattlib_disconnected_device_python_callback(gatt_connection_t* connection, 
 
 	PyGILState_Release(d_gstate);
 }
+#endif
 
 void gattlib_on_disconnected_device(gatt_connection_t* connection) {
 	if (connection->on_disconnection.callback.callback == NULL) {
@@ -35,11 +37,13 @@ void gattlib_on_disconnected_device(gatt_connection_t* connection) {
 		return;
 	}
 
+#if defined(WITH_PYTHON)
 	// Check if we are using the Python callback, in case of Python argument we keep track of the argument to free them
 	// once we are done with the handler.
 	if ((gattlib_disconnection_handler_t)connection->on_disconnection.callback.callback == gattlib_disconnected_device_python_callback) {
 		connection->on_disconnection.python_args = connection->on_disconnection.user_data;
 	}
+#endif
 
 	// For GATT disconnection we do not use thread to ensure the callback is synchronous.
 	connection->on_disconnection.callback.disconnection_handler(connection, connection->on_disconnection.user_data);

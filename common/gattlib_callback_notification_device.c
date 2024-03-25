@@ -6,6 +6,7 @@
 
 #include "gattlib_internal.h"
 
+#if defined(WITH_PYTHON)
 void gattlib_notification_device_python_callback(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data) {
 	struct gattlib_python_args* args = user_data;
 	char uuid_str[MAX_LEN_UUID_STR + 1];
@@ -42,6 +43,7 @@ void gattlib_notification_device_python_callback(const uuid_t* uuid, const uint8
 
 	PyGILState_Release(d_gstate);
 }
+#endif
 
 struct gattlib_notification_device_thread_args {
 	gatt_connection_t* connection;
