@@ -25,6 +25,13 @@ git_version_command = subprocess.Popen(['git', 'describe', '--abbrev=7', '--dirt
 stdout, stderr = git_version_command.communicate()
 git_version = stdout.decode('utf-8').strip()
 
+#
+# Create '_version.py'
+#
+package_version = os.environ.get('GATTLIB_PY_VERSION', git_version)
+with open(os.path.join("gattlib", "_version.py"), "w") as f:
+    f.write(f"__version__ = \"{package_version}\"\n")
+
 
 class CMakeExtension(Extension):
     """Custom extension class that allows to specify the root folder of the CMake project."""
@@ -149,7 +156,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='gattlib-py',
-    version=os.environ.get('GATTLIB_PY_VERSION', git_version),
+    version=package_version,
     author="Olivier Martin",
     author_email="olivier@labapart.com",
     description="Python wrapper for gattlib library",
