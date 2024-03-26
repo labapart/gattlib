@@ -509,7 +509,10 @@ int gattlib_adapter_scan_disable(void* adapter) {
 	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
 
 	if (!org_bluez_adapter1_get_discovering(gattlib_adapter->adapter_proxy)) {
-		GATTLIB_LOG(GATTLIB_DEBUG, "No discovery in progress. We skip discovery stopping.");
+		GATTLIB_LOG(GATTLIB_DEBUG, "No discovery in progress. We skip discovery stopping (1).");
+		goto EXIT;
+	} else if (!gattlib_adapter->ble_scan.is_scanning) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "No discovery in progress. We skip discovery stopping (2).");
 		goto EXIT;
 	}
 
