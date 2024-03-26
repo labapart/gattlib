@@ -42,12 +42,13 @@ void gattlib_log(int level, const char *format, ...) {
 #else
 		result = PyEval_CallObject(m_logging_func, arglist);
 #endif
-		Py_DECREF(arglist);
-
 		if (result == NULL) {
-			GATTLIB_LOG(GATTLIB_ERROR, "Python notification handler has raised an exception.");
+			// We do not call GATTLIB_LOG(GATTLIB_ERROR, "") in case of error to avoid recursion
+			fprintf(stderr, "Failed to call Python logging function for this logging: %s\n", format);
 			PyErr_Print();
 		}
+
+		Py_DECREF(arglist);
 
 		PyGILState_Release(d_gstate);
 	}
