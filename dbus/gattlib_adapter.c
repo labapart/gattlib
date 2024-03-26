@@ -85,8 +85,10 @@ struct gattlib_adapter *init_default_adapter(void) {
 }
 
 GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gattlib_adapter, GError **error) {
+	g_mutex_lock(&m_adapter_list_mutex);
+
 	if (gattlib_adapter->device_manager) {
-		return gattlib_adapter->device_manager;
+		goto EXIT;
 	}
 
 	//
@@ -102,9 +104,12 @@ GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gatt
 			NULL, NULL, NULL, NULL,
 			error);
 	if (gattlib_adapter->device_manager == NULL) {
+		g_mutex_unlock(&m_adapter_list_mutex);
 		return NULL;
 	}
 
+EXIT:
+	g_mutex_unlock(&m_adapter_list_mutex);
 	return gattlib_adapter->device_manager;
 }
 
