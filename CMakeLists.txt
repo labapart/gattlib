@@ -114,9 +114,9 @@ if(GATTLIB_BUILD_EXAMPLES)
   add_subdirectory(examples/discover)
   add_subdirectory(examples/find_eddystone)
   add_subdirectory(examples/read_write)
-  add_subdirectory(examples/read_write_memory)
-  add_subdirectory(examples/notification)
-  add_subdirectory(examples/nordic_uart)
+  #add_subdirectory(examples/read_write_memory)
+  #add_subdirectory(examples/notification)
+  #add_subdirectory(examples/nordic_uart)
 
   # Some examples require Bluez code and other DBus support
   if (NOT GATTLIB_DBUS)

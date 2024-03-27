@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2021  Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2024  Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -22,6 +22,8 @@
  */
 
 #include <assert.h>
+#include <ctype.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -31,66 +33,38 @@
 
 #include "gattlib.h"
 
-typedef enum { READ, WRITE} operation_t;
-operation_t g_operation;
+#define BLE_SCAN_TIMEOUT   10
 
-static uuid_t g_uuid;
-long int value_data;
+static struct {
+	char *adapter_name;
+	char* mac_address;
+	enum { READ, WRITE } operation;
+	uuid_t uuid;
+	long int value_data;
+} m_argument;
+
+// Declaration of thread condition variable
+static pthread_cond_t m_connection_terminated = PTHREAD_COND_INITIALIZER;
+
+// declaring mutex
+static pthread_mutex_t m_connection_terminated_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void usage(char *argv[]) {
 	printf("%s <device_address> <read|write> <uuid> [<hex-value-to-write>]\n", argv[0]);
 }
 
-int main(int argc, char *argv[]) {
-	int i, ret;
+static void on_device_connect(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data) {
+	int ret;
 	size_t len;
-	gatt_connection_t* connection;
 
-	if ((argc != 4) && (argc != 5)) {
-		usage(argv);
-		return 1;
-	}
-
-#ifdef GATTLIB_LOG_BACKEND_SYSLOG
-	openlog("gattlib_read_write", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
-	setlogmask(LOG_UPTO(LOG_INFO));
-#endif
-
-	if (strcmp(argv[2], "read") == 0) {
-		g_operation = READ;
-	} else if ((strcmp(argv[2], "write") == 0) && (argc == 5)) {
-		g_operation = WRITE;
-
-		if ((strlen(argv[4]) >= 2) && (argv[4][0] == '0') && ((argv[4][1] == 'x') || (argv[4][1] == 'X'))) {
-			value_data = strtol(argv[4], NULL, 16);
-		} else {
-			value_data = strtol(argv[4], NULL, 0);
-		}
-		printf("Value to write: 0x%lx\n", value_data);
-	} else {
-		usage(argv);
-		return 1;
-	}
-
-	if (gattlib_string_to_uuid(argv[3], strlen(argv[3]) + 1, &g_uuid) < 0) {
-		usage(argv);
-		return 1;
-	}
-
-	connection = gattlib_connect(NULL, argv[1], GATTLIB_CONNECTION_OPTIONS_LEGACY_DEFAULT);
-	if (connection == NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Fail to connect to the bluetooth device.");
-		return 1;
-	}
-
-	if (g_operation == READ) {
+	if (m_argument.operation == READ) {
 		uint8_t *buffer = NULL;
 
-		ret = gattlib_read_char_by_uuid(connection, &g_uuid, (void **)&buffer, &len);
+		ret = gattlib_read_char_by_uuid(connection, &m_argument.uuid, (void **)&buffer, &len);
 		if (ret != GATTLIB_SUCCESS) {
 			char uuid_str[MAX_LEN_UUID_STR + 1];
 
-			gattlib_uuid_to_string(&g_uuid, uuid_str, sizeof(uuid_str));
+			gattlib_uuid_to_string(&m_argument.uuid, uuid_str, sizeof(uuid_str));
 
 			if (ret == GATTLIB_NOT_FOUND) {
 				GATTLIB_LOG(GATTLIB_ERROR, "Could not find GATT Characteristic with UUID %s. "
@@ -102,18 +76,18 @@ int main(int argc, char *argv[]) {
 		}
 
 		printf("Read UUID completed: ");
-		for (i = 0; i < len; i++) {
+		for (uintptr_t i = 0; i < len; i++) {
 			printf("%02x ", buffer[i]);
 		}
 		printf("\n");
 
 		gattlib_characteristic_free_value(buffer);
 	} else {
-		ret = gattlib_write_char_by_uuid(connection, &g_uuid, &value_data, sizeof(value_data));
+		ret = gattlib_write_char_by_uuid(connection, &m_argument.uuid, &m_argument.value_data, sizeof(m_argument.value_data));
 		if (ret != GATTLIB_SUCCESS) {
 			char uuid_str[MAX_LEN_UUID_STR + 1];
 
-			gattlib_uuid_to_string(&g_uuid, uuid_str, sizeof(uuid_str));
+			gattlib_uuid_to_string(&m_argument.uuid, uuid_str, sizeof(uuid_str));
 
 			if (ret == GATTLIB_NOT_FOUND) {
 				GATTLIB_LOG(GATTLIB_ERROR, "Could not find GATT Characteristic with UUID %s. "
@@ -128,5 +102,101 @@ int main(int argc, char *argv[]) {
 
 EXIT:
 	gattlib_disconnect(connection);
-	return ret;
+
+	pthread_mutex_lock(&m_connection_terminated_lock);
+	pthread_cond_signal(&m_connection_terminated);
+	pthread_mutex_unlock(&m_connection_terminated_lock);
+}
+
+static int stricmp(char const *a, char const *b) {
+    for (;; a++, b++) {
+        int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
+        if (d != 0 || !*a)
+            return d;
+    }
+}
+
+static void ble_discovered_device(void *adapter, const char* addr, const char* name, void *user_data) {
+	int ret;
+
+	if (stricmp(addr, m_argument.mac_address) != 0) {
+		return;
+	}
+
+	GATTLIB_LOG(GATTLIB_INFO, "Found bluetooth device '%s'", m_argument.mac_address);
+
+	ret = gattlib_connect(adapter, addr, GATTLIB_CONNECTION_OPTIONS_NONE, on_device_connect, NULL);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to connect to the bluetooth device '%s'", addr);
+	}
+}
+
+static void* ble_task(void* arg) {
+	char* addr = arg;
+	void* adapter;
+	int ret;
+
+	ret = gattlib_adapter_open(m_argument.adapter_name, &adapter);
+	if (ret) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to open adapter.");
+		return NULL;
+	}
+
+	ret = gattlib_adapter_scan_enable(adapter, ble_discovered_device, BLE_SCAN_TIMEOUT, addr);
+	if (ret) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to scan.");
+		return NULL;
+	}
+
+	// Wait for the device to be connected
+	pthread_mutex_lock(&m_connection_terminated_lock);
+	pthread_cond_wait(&m_connection_terminated, &m_connection_terminated_lock);
+	pthread_mutex_unlock(&m_connection_terminated_lock);
+
+	return NULL;
+}
+
+int main(int argc, char *argv[]) {
+	int ret;
+
+	if ((argc != 4) && (argc != 5)) {
+		usage(argv);
+		return 1;
+	}
+
+#ifdef GATTLIB_LOG_BACKEND_SYSLOG
+	openlog("gattlib_read_write", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
+	setlogmask(LOG_UPTO(LOG_INFO));
+#endif
+
+	m_argument.adapter_name = NULL;
+	m_argument.mac_address = argv[1];
+
+	if (strcmp(argv[2], "read") == 0) {
+		m_argument.operation = READ;
+	} else if ((strcmp(argv[2], "write") == 0) && (argc == 5)) {
+		m_argument.operation = WRITE;
+
+		if ((strlen(argv[4]) >= 2) && (argv[4][0] == '0') && ((argv[4][1] == 'x') || (argv[4][1] == 'X'))) {
+			m_argument.value_data = strtol(argv[4], NULL, 16);
+		} else {
+			m_argument.value_data = strtol(argv[4], NULL, 0);
+		}
+		printf("Value to write: 0x%lx\n", m_argument.value_data);
+	} else {
+		usage(argv);
+		return 1;
+	}
+
+	if (gattlib_string_to_uuid(argv[3], strlen(argv[3]) + 1, &m_argument.uuid) < 0) {
+		usage(argv);
+		return 1;
+	}
+
+	ret = gattlib_mainloop(ble_task, NULL);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create gattlib mainloop");
+	}
+
+	return 0;
 }
