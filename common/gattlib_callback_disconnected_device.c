@@ -31,11 +31,13 @@ void gattlib_disconnected_device_python_callback(gatt_connection_t* connection, 
 #endif
 
 void gattlib_on_disconnected_device(gatt_connection_t* connection) {
-	if (connection->on_disconnection.callback.callback == NULL) {
+	if (!gattlib_has_valid_handler(&connection->on_disconnection)) {
 		// We do not have (anymore) a callback, nothing to do
 		GATTLIB_LOG(GATTLIB_DEBUG, "No callback for GATT disconnection.");
 		return;
 	}
+
+	g_mutex_lock(&connection->on_disconnection.mutex);
 
 #if defined(WITH_PYTHON)
 	// Check if we are using the Python callback, in case of Python argument we keep track of the argument to free them
@@ -47,6 +49,8 @@ void gattlib_on_disconnected_device(gatt_connection_t* connection) {
 
 	// For GATT disconnection we do not use thread to ensure the callback is synchronous.
 	connection->on_disconnection.callback.disconnection_handler(connection, connection->on_disconnection.user_data);
+
+	g_mutex_unlock(&connection->on_disconnection.mutex);
 
 	// Clean GATTLIB connection on disconnection
 	gattlib_connection_free(connection);

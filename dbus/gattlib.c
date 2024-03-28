@@ -176,6 +176,11 @@ int gattlib_connect(void *adapter, const char *dst,
         return GATTLIB_NOT_FOUND;
     }
 
+	if (connect_cb == NULL) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Missing connection callback");
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
 	get_device_path_from_mac(adapter_name, dst, object_path, sizeof(object_path));
 
 	gattlib_context_t* conn_context = calloc(sizeof(gattlib_context_t), 1);
@@ -302,6 +307,12 @@ void gattlib_connection_free(gatt_connection_t* connection) {
 	g_list_free_full(conn_context->dbus_objects, g_object_unref);
 
 	disconnect_all_notifications(conn_context);
+
+	// Free all handler
+	gattlib_handler_free(&connection->on_connection);
+	gattlib_handler_free(&connection->on_disconnection);
+	gattlib_handler_free(&connection->indication);
+	gattlib_handler_free(&connection->notification);
 
 	// Note: We do not free adapter as it might still be used by other devices
 
