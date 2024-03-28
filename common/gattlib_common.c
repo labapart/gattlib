@@ -156,8 +156,12 @@ void gattlib_handler_free(struct gattlib_handler* handler) {
 #if defined(WITH_PYTHON)
 	if (handler->python_args != NULL) {
 		struct gattlib_python_args* args = handler->python_args;
-		Py_DECREF(args->callback);
-		Py_DECREF(args->args);
+		if (args->callback != NULL) {
+			Py_DECREF(args->callback);
+		}
+		if (args->args != NULL) {
+			Py_DECREF(args->args);
+		}
 		handler->python_args = NULL;
 		free(handler->python_args);
 		handler->python_args = NULL;

@@ -76,9 +76,9 @@ void gattlib_notification_device_thread(gpointer data, gpointer user_data) {
 }
 
 static void* _notification_device_thread_args_allocator(gatt_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length) {
-	struct gattlib_notification_device_thread_args* thread_args = malloc(sizeof(struct gattlib_notification_device_thread_args));
+	struct gattlib_notification_device_thread_args* thread_args = calloc(sizeof(struct gattlib_notification_device_thread_args), 1);
 	thread_args->connection = connection;
-	thread_args->uuid = malloc(sizeof(uuid_t));
+	thread_args->uuid = calloc(sizeof(uuid_t), 1);
 	if (thread_args->uuid != NULL) {
 		memcpy(thread_args->uuid, uuid, sizeof(uuid_t));
 	}

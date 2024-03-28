@@ -181,7 +181,7 @@ static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, 
 	}
 
 	// Add signal to the list
-	struct gattlib_notification_handle *notification_handle = malloc(sizeof(struct gattlib_notification_handle));
+	struct gattlib_notification_handle *notification_handle = calloc(sizeof(struct gattlib_notification_handle), 1);
 	if (notification_handle == NULL) {
 		return GATTLIB_OUT_OF_MEMORY;
 	}

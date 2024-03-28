@@ -11,7 +11,7 @@ void* gattlib_python_callback_args(PyObject* python_callback, PyObject* python_a
 	assert(python_callback != NULL);
 	assert(python_args != NULL);
 
-	struct gattlib_python_args* args = malloc(sizeof(struct gattlib_python_args));
+	struct gattlib_python_args* args = calloc(sizeof(struct gattlib_python_args), 1);
 	if (args == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to allocate Python arguments for Python callback.");
 		return NULL;

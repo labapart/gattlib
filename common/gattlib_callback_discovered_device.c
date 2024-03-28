@@ -83,7 +83,7 @@ static void* _discovered_device_thread_args_allocator(va_list args) {
 	struct gattlib_adapter* gattlib_adapter = va_arg(args, struct gattlib_adapter*);
 	OrgBluezDevice1* device1 = va_arg(args, OrgBluezDevice1*);
 
-	struct gattlib_discovered_device_thread_args* thread_args = malloc(sizeof(struct gattlib_discovered_device_thread_args));
+	struct gattlib_discovered_device_thread_args* thread_args = calloc(sizeof(struct gattlib_discovered_device_thread_args), 1);
 	thread_args->gattlib_adapter = gattlib_adapter;
 	thread_args->mac_address = strdup(org_bluez_device1_get_address(device1));
 	const char* device_name = org_bluez_device1_get_name(device1);

@@ -117,7 +117,7 @@ static void ble_discovered_device(void *adapter, const char* addr, const char* n
 		printf("Discovered %s\n", addr);
 	}
 
-	connection = malloc(sizeof(struct connection_t));
+	connection = calloc(sizeof(struct connection_t), 1);
 	if (connection == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failt to allocate connection.");
 		return;

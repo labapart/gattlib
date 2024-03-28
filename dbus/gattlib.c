@@ -407,7 +407,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		count_max++;
 	}
 
-	gattlib_primary_service_t* primary_services = malloc(count_max * sizeof(gattlib_primary_service_t));
+	gattlib_primary_service_t* primary_services = calloc(count_max * sizeof(gattlib_primary_service_t), 1);
 	if (primary_services == NULL) {
 		return GATTLIB_OUT_OF_MEMORY;
 	}
@@ -497,7 +497,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		count_max++;
 	}
 
-	gattlib_primary_service_t* primary_services = malloc(count_max * sizeof(gattlib_primary_service_t));
+	gattlib_primary_service_t* primary_services = calloc(count_max * sizeof(gattlib_primary_service_t), 1);
 	if (primary_services == NULL) {
 		return GATTLIB_OUT_OF_MEMORY;
 	}
@@ -667,7 +667,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 	}
 
 
-	gattlib_characteristic_t* characteristic_list = malloc(count_max * sizeof(gattlib_characteristic_t));
+	gattlib_characteristic_t* characteristic_list = calloc(count_max * sizeof(gattlib_characteristic_t), 1);
 	if (characteristic_list == NULL) {
 		return GATTLIB_OUT_OF_MEMORY;
 	}
@@ -889,7 +889,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 		count_max++;
 	}
 
-	gattlib_characteristic_t* characteristic_list = malloc(count_max * sizeof(gattlib_characteristic_t));
+	gattlib_characteristic_t* characteristic_list = calloc(count_max * sizeof(gattlib_characteristic_t), 1);
 	if (characteristic_list == NULL) {
 		return GATTLIB_OUT_OF_MEMORY;
 	}
