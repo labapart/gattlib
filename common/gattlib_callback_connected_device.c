@@ -51,9 +51,18 @@ static gpointer _gattlib_connected_device_thread(gpointer data) {
 	gattlib_context_t* conn_context = connection->context;
 	const gchar *device_mac_address = org_bluez_device1_get_address(conn_context->device);
 
+	g_rec_mutex_lock(&connection->on_connection.mutex);
+
+	if (!gattlib_has_valid_handler(&connection->on_connection)) {
+		goto EXIT;
+	}
+
 	connection->on_connection.callback.connection_handler(
 		conn_context->adapter, device_mac_address, connection, 0 /* no error */,
 		connection->on_connection.user_data);
+
+EXIT:
+	g_rec_mutex_unlock(&connection->on_connection.mutex);
 	return NULL;
 }
 

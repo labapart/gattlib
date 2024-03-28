@@ -55,11 +55,20 @@ struct gattlib_discovered_device_thread_args {
 static gpointer _gattlib_discovered_device_thread(gpointer data) {
 	struct gattlib_discovered_device_thread_args* args = data;
 
+	g_rec_mutex_lock(&args->gattlib_adapter->ble_scan.discovered_device_callback.mutex);
+
+	if (!gattlib_has_valid_handler(&args->gattlib_adapter->ble_scan.discovered_device_callback)) {
+		goto EXIT;
+	}
+
 	args->gattlib_adapter->ble_scan.discovered_device_callback.callback.discovered_device(
 		args->gattlib_adapter,
 		args->mac_address, args->name,
 		args->gattlib_adapter->ble_scan.discovered_device_callback.user_data
 	);
+
+EXIT:
+	g_rec_mutex_unlock(&args->gattlib_adapter->ble_scan.discovered_device_callback.mutex);
 
 	free(args->mac_address);
 	if (args->name != NULL) {

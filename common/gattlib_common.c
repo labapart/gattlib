@@ -144,6 +144,12 @@ int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2) {
 }
 
 void gattlib_handler_free(struct gattlib_handler* handler) {
+	g_rec_mutex_lock(&handler->mutex);
+
+	if (!gattlib_has_valid_handler(handler)) {
+		goto EXIT;
+	}
+
 	// Reset callback to stop calling it after we stopped
 	handler->callback.callback = NULL;
 
@@ -162,17 +168,20 @@ void gattlib_handler_free(struct gattlib_handler* handler) {
 		g_thread_pool_free(handler->thread_pool, FALSE /* immediate */, TRUE /* wait */);
 		handler->thread_pool = NULL;
 	}
+
+EXIT:
+	g_rec_mutex_unlock(&handler->mutex);
 }
 
 bool gattlib_has_valid_handler(struct gattlib_handler* handler) {
-	return (handler->callback.callback != NULL);
+	return (handler != NULL) && (handler->callback.callback != NULL);
 }
 
 void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*python_callback)(),
 		GThreadFunc thread_func, const char* thread_name, void* (*thread_args_allocator)(va_list args), ...) {
 	GError *error = NULL;
 
-	if (handler->callback.callback == NULL) {
+	if (!gattlib_has_valid_handler(handler)) {
 		// We do not have (anymore) a callback, nothing to do
 		return;
 	}
