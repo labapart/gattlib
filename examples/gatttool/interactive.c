@@ -129,7 +129,7 @@ static void disconnect_io()
 	if (conn_state == STATE_DISCONNECTED)
 		return;
 
-	gattlib_disconnect(g_connection);
+	gattlib_disconnect(g_connection, false /* wait_disconnection */);
 	opt_mtu = 0;
 
 	set_state(STATE_DISCONNECTED);

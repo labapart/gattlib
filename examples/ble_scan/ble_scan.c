@@ -86,7 +86,7 @@ static void on_device_connect(void *adapter, const char *dst, gatt_connection_t*
 	free(characteristics);
 
 disconnect_exit:
-	gattlib_disconnect(connection);
+	gattlib_disconnect(connection, false /* wait_disconnection */);
 }
 
 static void *ble_connect_device(void *arg) {

@@ -52,7 +52,7 @@ static void usage(char *argv[]) {
 }
 
 void int_handler(int dummy) {
-	gattlib_disconnect(m_connection);
+	gattlib_disconnect(m_connection, false /* wait_disconnection */);
 	exit(0);
 }
 
