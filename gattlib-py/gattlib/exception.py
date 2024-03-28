@@ -7,7 +7,7 @@
 GATTLIB_SUCCESS = 0
 GATTLIB_INVALID_PARAMETER = 1
 GATTLIB_NOT_FOUND = 2
-GATTLIB_ERROR_TIMEOUT = 3
+GATTLIB_TIMEOUT = 3
 GATTLIB_OUT_OF_MEMORY = 4
 GATTLIB_NOT_SUPPORTED = 5
 GATTLIB_DEVICE_ERROR = 6
@@ -74,7 +74,7 @@ def handle_return(ret):
         raise NotFound()
     elif ret == GATTLIB_OUT_OF_MEMORY:
         raise OutOfMemory()
-    elif ret == GATTLIB_ERROR_TIMEOUT:
+    elif ret == GATTLIB_TIMEOUT:
         raise TimeoutError()
     elif ret == GATTLIB_NOT_SUPPORTED:
         raise NotSupported()

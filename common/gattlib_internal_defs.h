@@ -35,6 +35,8 @@ struct gattlib_handler {
 	void* user_data;
 	// We create a thread to ensure the callback is not blocking the mainloop
 	GThread *thread;
+	// The mutex ensures the callbacks is not being freed while being called
+	GMutex mutex;
 	// Thread pool
 	GThreadPool *thread_pool;
 #if defined(WITH_PYTHON)
@@ -48,8 +50,16 @@ struct _gatt_connection_t {
 
 	GMutex connection_mutex;
 
+	struct {
+		// Used by gattlib_disconnection when we want to wait for the disconnection to be effective
+		GCond condition;
+		// Mutex used for disconnection_condition synchronization
+		GMutex lock;
+		// Used to avoid spurious or stolen wakeup
+		bool value;
+	} disconnection_wait;
+
 	struct gattlib_handler on_connection;
-	struct gattlib_handler on_connection_error;
 	struct gattlib_handler notification;
 	struct gattlib_handler indication;
 	struct gattlib_handler on_disconnection;

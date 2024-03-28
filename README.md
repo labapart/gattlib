@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/labapart/gattlib.svg?branch=master)](https://travis-ci.org/labapart/gattlib)
-
 GattLib is a library used to access Generic Attribute Profile (GATT) protocol of BLE (Bluetooth Low Energy) devices.
 It has been introduced to allow to build applications that could easily communicate with BLE devices.
 
@@ -8,27 +6,12 @@ It supports Bluez v4 and v5.
 Latest GattLib Release packages
 ===============================
 
-* For x86_64, with Bluez DBUS Support (Recommended):
+* The latest release can be found [here](https://github.com/labapart/gattlib/releases/latest). It contains:
 
-    - ZIP: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dbus_0.2-dev_x86_64.zip>
-    - DEB: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dbus_0.2-dev_x86_64.deb>
-    - RPM: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_dbus_0.2-dev_x86_64.rpm>
+- Prebuilt Debian, RPM and ZIP packages for x86_64 and Bluez v5.x
+- Packages for ARM 32bit and 64bit would have to be built by the developer - see section [Package GattLib](#package-gattlib).
 
-* For x86_64, with Bluez Legacy Support:
-
-    - ZIP: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_0.2-dev_x86_64.zip>
-    - DEB: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_0.2-dev_x86_64.deb>
-    - RPM: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_0.2-dev_x86_64.rpm>
-
-* For ARM 32-bit (for Bluez v5.40+ with DBus support):
-
-    - ZIP: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_0.2-dev_armhf.zip>
-    - DEB: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_0.2-dev_armhf.deb>
-
-* For ARM 64-bit (for Bluez v5.40+ with DBus support):
-
-    - ZIP: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_0.2-dev_arm64.zip>
-    - DEB: <https://github.com/labapart/gattlib/releases/download/dev/gattlib_0.2-dev_arm64.deb>
+- Prebuilt Python packages are available on [Pypi repository](https://pypi.org/project/gattlib-py/).
 
 Build GattLib
 =============

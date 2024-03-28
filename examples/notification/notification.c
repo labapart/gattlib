@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
 	g_main_loop_unref(m_main_loop);
 
 DISCONNECT:
-	gattlib_disconnect(connection);
+	gattlib_disconnect(connection, false /* wait_disconnection */);
 	puts("Done");
 	return ret;
 }

@@ -152,9 +152,9 @@ gattlib_adapter_scan_eddystone.argtypes = [c_void_p, c_int16, c_uint32, py_objec
 gattlib_connect = gattlib.gattlib_connect
 gattlib_connect.argtypes = [c_void_p, c_char_p, c_ulong, c_void_p, c_void_p]
 
-# int gattlib_disconnect(gatt_connection_t* connection);
+# int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection);
 gattlib_disconnect = gattlib.gattlib_disconnect
-gattlib_disconnect.argtypes = [c_void_p]
+gattlib_disconnect.argtypes = [c_void_p, c_bool]
 
 # int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count);
 gattlib_discover_primary = gattlib.gattlib_discover_primary
