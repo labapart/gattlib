@@ -309,10 +309,11 @@ void gattlib_connection_free(gatt_connection_t* connection) {
 	disconnect_all_notifications(conn_context);
 
 	// Free all handler
-	gattlib_handler_free(&connection->on_connection);
-	gattlib_handler_free(&connection->on_disconnection);
-	gattlib_handler_free(&connection->indication);
-	gattlib_handler_free(&connection->notification);
+	//TODO: Fixme - there is a memory leak by not freeing the handlers
+	//gattlib_handler_free(&connection->on_connection);
+	//gattlib_handler_free(&connection->on_disconnection);
+	//gattlib_handler_free(&connection->indication);
+	//gattlib_handler_free(&connection->notification);
 
 	// Note: We do not free adapter as it might still be used by other devices
 
