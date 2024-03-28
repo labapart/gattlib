@@ -81,7 +81,7 @@ static void on_device_connect(void *adapter, const char *dst, gatt_connection_t*
 	free(characteristics);
 
 EXIT:
-	gattlib_disconnect(connection);
+	gattlib_disconnect(connection, false /* wait_disconnection */);
 
 	pthread_mutex_lock(&m_connection_terminated_lock);
 	pthread_cond_signal(&m_connection_terminated);

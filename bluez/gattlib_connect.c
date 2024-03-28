@@ -483,7 +483,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	return conn;
 }
 
-int gattlib_disconnect(gatt_connection_t* connection) {
+int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
 	gattlib_context_t* conn_context = connection->context;
 
 #if BLUEZ_VERSION_MAJOR == 4

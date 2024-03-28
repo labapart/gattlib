@@ -104,7 +104,7 @@ void *connect_ble(void *arg) {
 	}
 
 EXIT:
-	gattlib_disconnect(connection);
+	gattlib_disconnect(connection, false /* wait_disconnection */);
 	g_main_loop_quit(m_main_loop);
 
 	return NULL;

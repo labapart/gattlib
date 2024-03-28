@@ -138,11 +138,11 @@ class Device:
                                        gattlib_disconnected_device_python_callback,
                                        gattlib_python_callback_args(on_disconnection, user_data))
 
-    def disconnect(self):
+    def disconnect(self, wait_disconnection: bool = False):
         self._connection_lock.acquire()
         try:
             if self._connection:
-                ret = gattlib_disconnect(self.connection)
+                ret = gattlib_disconnect(self.connection, wait_disconnection)
                 handle_return(ret)
             self._connection = None
         finally:

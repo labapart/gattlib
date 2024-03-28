@@ -241,7 +241,7 @@ int gattlib_connect(void *adapter, const char *dst,
 			ret = GATTLIB_NOT_FOUND;
 		} else if ((error->domain == 238) && (error->code == 60952)) {
 			GATTLIB_LOG(GATTLIB_ERROR, "Device '%s': %s", dst, error->message);
-			ret = GATTLIB_ERROR_TIMEOUT;
+			ret = GATTLIB_TIMEOUT;
 		} else {
 			GATTLIB_LOG(GATTLIB_ERROR, "Device connected error (device:%s): %s",
 				conn_context->device_object_path,
@@ -325,7 +325,7 @@ void gattlib_connection_free(gatt_connection_t* connection) {
 	free(connection);
 }
 
-int gattlib_disconnect(gatt_connection_t* connection) {
+int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
 	gattlib_context_t* conn_context;
 	int ret = GATTLIB_SUCCESS;
 	GError *error = NULL;
@@ -354,6 +354,22 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 
 	//Note: Signals and memory will be removed/clean on disconnction callback
 	//      See _gattlib_clean_on_disconnection()
+
+	if (wait_disconnection) {
+		gint64 end_time;
+
+		g_mutex_lock(&connection->disconnection_wait.lock);
+
+		end_time = g_get_monotonic_time() + GATTLIB_DISCONNECTION_WAIT_TIMEOUT_SEC * G_TIME_SPAN_SECOND;
+
+		while (!connection->disconnection_wait.value) {
+			if (!g_cond_wait_until(&connection->disconnection_wait.condition, &connection->disconnection_wait.lock, end_time)) {
+				ret = GATTLIB_TIMEOUT;
+				break;
+			}
+		}
+		g_mutex_unlock(&connection->disconnection_wait.lock);
+	}
 
 EXIT:
 	g_mutex_unlock(&connection->connection_mutex);

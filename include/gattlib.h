@@ -11,6 +11,7 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <bluetooth/bluetooth.h>
@@ -32,13 +33,18 @@ extern "C" {
 #endif
 
 /**
+ * Gattlib constants
+ */
+#define GATTLIB_DISCONNECTION_WAIT_TIMEOUT_SEC 5
+
+/**
  * @name Gattlib errors
  */
 //@{
 #define GATTLIB_SUCCESS                0
 #define GATTLIB_INVALID_PARAMETER      1
 #define GATTLIB_NOT_FOUND              2
-#define GATTLIB_ERROR_TIMEOUT          3
+#define GATTLIB_TIMEOUT                3
 #define GATTLIB_OUT_OF_MEMORY          4
 #define GATTLIB_NOT_SUPPORTED          5
 #define GATTLIB_DEVICE_ERROR           6
@@ -132,7 +138,9 @@ extern "C" {
 #define EDDYSTONE_TYPE_EID                                  0x30
 //@}
 
-
+/**
+ * Log level
+ */
 #define GATTLIB_ERROR           0
 #define GATTLIB_WARNING         1
 #define GATTLIB_INFO            2
@@ -351,11 +359,18 @@ int gattlib_connect(void *adapter, const char *dst,
 /**
  * @brief Function to disconnect the GATT connection
  *
- * @param connection Active GATT connection
+ * @note: If a callback has been registered by gattlib_register_on_disconnect() then it will be called
+ *        when the device will have signaled is disconnected.
+ *
+ * @param connection          Active GATT connection
+ * @param wait_disconnection  If false gattlib_disconnect does not wait for the device to confirm it has been
+ *                            disconnected and return immediately.
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
+ * @return GATTLIB_TIMEOUT when wait_disconnection is true and the device has not been disconnected for
+ *                         GATTLIB_DISCONNECTION_WAIT_TIMEOUT_SEC seconds
  */
-int gattlib_disconnect(gatt_connection_t* connection);
+int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection);
 
 /**
  * @brief Function to register a callback on GATT disconnection

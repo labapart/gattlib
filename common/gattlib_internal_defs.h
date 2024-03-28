@@ -53,6 +53,15 @@ struct _gatt_connection_t {
 
 	GMutex connection_mutex;
 
+	struct {
+		// Used by gattlib_disconnection when we want to wait for the disconnection to be effective
+		GCond condition;
+		// Mutex used for disconnection_condition synchronization
+		GMutex lock;
+		// Used to avoid spurious or stolen wakeup
+		bool value;
+	} disconnection_wait;
+
 	struct gattlib_handler on_connection;
 	struct gattlib_handler notification;
 	struct gattlib_handler indication;
