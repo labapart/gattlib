@@ -299,6 +299,12 @@ void gattlib_connection_free(gatt_connection_t* connection) {
 		conn_context->on_handle_device_property_change_id = 0;
 	}
 
+	// Stop the timeout for connection
+	if (conn_context->connection_timeout_id) {
+		g_source_remove(conn_context->connection_timeout_id);
+		conn_context->connection_timeout_id = 0;
+	}
+
 	free(conn_context->device_object_path);
 	if (conn_context->device != NULL) {
 		g_object_unref(conn_context->device);
