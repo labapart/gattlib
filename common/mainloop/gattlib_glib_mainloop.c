@@ -33,8 +33,6 @@ int gattlib_mainloop(void* (*task)(void* arg), void *arg) {
     };
     GError* error;
 
-    GThread *task_thread = g_thread_try_new("gattlib_task", _execute_task, &execute_task_arg, &error);
-
     if (m_main_loop != NULL) {
         GATTLIB_LOG(GATTLIB_ERROR, "Main loop is already running: %s", error->message);
         g_error_free(error);
@@ -42,6 +40,8 @@ int gattlib_mainloop(void* (*task)(void* arg), void *arg) {
     }
 
     m_main_loop = g_main_loop_new(NULL, FALSE);
+
+    GThread *task_thread = g_thread_try_new("gattlib_task", _execute_task, &execute_task_arg, &error);
 
     g_main_loop_run(m_main_loop);
     g_main_loop_unref(m_main_loop);
