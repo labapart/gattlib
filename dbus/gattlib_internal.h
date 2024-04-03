@@ -76,8 +76,10 @@ struct gattlib_adapter {
 
 		GThread *scan_loop_thread; // Thread used to run the '_scan_loop()' when non-blocking
 		bool is_scanning;
-		GMutex scan_loop_mutex;
-		GCond scan_loop_cond;
+		struct {
+			GMutex mutex;
+			GCond cond;
+		} scan_loop;
 
 		uint32_t enabled_filters;
 

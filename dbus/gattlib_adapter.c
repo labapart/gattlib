@@ -262,30 +262,31 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 	}
 }
 
-static void _stop_scan_loop_thread(struct gattlib_adapter *gattlib_adapter) {
-	if (gattlib_adapter->ble_scan.is_scanning) {
-		g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
-		gattlib_adapter->ble_scan.is_scanning = false;
-		g_cond_broadcast(&gattlib_adapter->ble_scan.scan_loop_cond);
-		g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
-	}
-}
-
+/**
+ * Function that waits for the end of the BLE scan
+ *
+ * It either called when we wait for BLE scan to complete or when we close the BLE adapter
+ */
 static void _wait_scan_loop_stop_scanning(struct gattlib_adapter *gattlib_adapter) {
-	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop.mutex);
 	while (gattlib_adapter->ble_scan.is_scanning) {
-		g_cond_wait(&gattlib_adapter->ble_scan.scan_loop_cond, &gattlib_adapter->ble_scan.scan_loop_mutex);
+		g_cond_wait(&gattlib_adapter->ble_scan.scan_loop.cond, &gattlib_adapter->ble_scan.scan_loop.mutex);
 	}
-	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop.mutex);
 }
 
 /**
  * Function called when the BLE scan duration has timeout
  */
-static gboolean _stop_scan_func(gpointer data) {
+static gboolean _stop_scan_on_timeout(gpointer data) {
 	struct gattlib_adapter *gattlib_adapter = data;
 
-	_stop_scan_loop_thread(gattlib_adapter);
+	if (gattlib_adapter->ble_scan.is_scanning) {
+		g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop.mutex);
+		gattlib_adapter->ble_scan.is_scanning = false;
+		g_cond_broadcast(&gattlib_adapter->ble_scan.scan_loop.cond);
+		g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop.mutex);
+	}
 
 	// Unset timeout ID to not try removing it
 	gattlib_adapter->ble_scan.ble_scan_timeout_id = 0;
@@ -294,7 +295,11 @@ static gboolean _stop_scan_func(gpointer data) {
 	return FALSE;
 }
 
-static void* _ble_scan_loop(void* args) {
+/**
+ * Thread that waits for the end of BLE scan that is triggered either by a timeout of the BLE scan
+ * or disabling the BLE scan
+ */
+static void* _ble_scan_loop_thread(void* args) {
 	struct gattlib_adapter *gattlib_adapter = args;
 
 	if (gattlib_adapter->ble_scan.ble_scan_timeout_id > 0) {
@@ -307,7 +312,7 @@ static void* _ble_scan_loop(void* args) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "Scan for BLE devices for %ld seconds", gattlib_adapter->ble_scan.ble_scan_timeout);
 
 		gattlib_adapter->ble_scan.ble_scan_timeout_id = g_timeout_add_seconds(gattlib_adapter->ble_scan.ble_scan_timeout,
-			_stop_scan_func, gattlib_adapter);
+			_stop_scan_on_timeout, gattlib_adapter);
 	}
 
 	// Wait for the BLE scan to be explicitely stopped by 'gattlib_adapter_scan_disable()' or timeout.
@@ -451,22 +456,22 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
 
 	gattlib_adapter->ble_scan.is_scanning = true;
 
-	gattlib_adapter->ble_scan.scan_loop_thread = g_thread_try_new("gattlib_ble_scan", _ble_scan_loop, gattlib_adapter, &error);
+	gattlib_adapter->ble_scan.scan_loop_thread = g_thread_try_new("gattlib_ble_scan", _ble_scan_loop_thread, gattlib_adapter, &error);
 	if (gattlib_adapter->ble_scan.scan_loop_thread == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create BLE scan thread: %s", error->message);
 		g_error_free(error);
 		return GATTLIB_ERROR_INTERNAL;
 	}
 
-	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop.mutex);
 	while (gattlib_adapter->ble_scan.is_scanning) {
-		g_cond_wait(&gattlib_adapter->ble_scan.scan_loop_cond, &gattlib_adapter->ble_scan.scan_loop_mutex);
+		g_cond_wait(&gattlib_adapter->ble_scan.scan_loop.cond, &gattlib_adapter->ble_scan.scan_loop.mutex);
 	}
 
 	// Free thread
 	g_thread_unref(gattlib_adapter->ble_scan.scan_loop_thread);
 	gattlib_adapter->ble_scan.scan_loop_thread = NULL;
-	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop.mutex);
 
 	return 0;
 }
@@ -484,7 +489,7 @@ int gattlib_adapter_scan_enable_with_filter_non_blocking(void *adapter, uuid_t *
 		return ret;
 	}
 
-	gattlib_adapter->ble_scan.scan_loop_thread = g_thread_try_new("gattlib_ble_scan", _ble_scan_loop, gattlib_adapter, &error);
+	gattlib_adapter->ble_scan.scan_loop_thread = g_thread_try_new("gattlib_ble_scan", _ble_scan_loop_thread, gattlib_adapter, &error);
 	if (gattlib_adapter->ble_scan.scan_loop_thread == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create BLE scan thread: %s", error->message);
 		g_error_free(error);
@@ -511,7 +516,7 @@ int gattlib_adapter_scan_disable(void* adapter) {
 		return GATTLIB_NO_ADAPTER;
 	}
 
-	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	g_mutex_lock(&gattlib_adapter->ble_scan.scan_loop.mutex);
 
 	if (!org_bluez_adapter1_get_discovering(gattlib_adapter->adapter_proxy)) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "No discovery in progress. We skip discovery stopping (1).");
@@ -539,7 +544,7 @@ int gattlib_adapter_scan_disable(void* adapter) {
 	// Stop BLE scan loop thread
 	if (gattlib_adapter->ble_scan.is_scanning) {
 		gattlib_adapter->ble_scan.is_scanning = false;
-		g_cond_broadcast(&gattlib_adapter->ble_scan.scan_loop_cond);
+		g_cond_broadcast(&gattlib_adapter->ble_scan.scan_loop.cond);
 	}
 
 	// Remove timeout
@@ -549,7 +554,7 @@ int gattlib_adapter_scan_disable(void* adapter) {
 	}
 
 EXIT:
-	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
+	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop.mutex);
 	return GATTLIB_SUCCESS;
 }
 
