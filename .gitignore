@@ -1,2 +1,9 @@
+# IDE files
+.vscode/
+
+# Generated files
 build
 __pycache__
+MANIFEST.in
+dist
+gattlib-py/gattlib_py.egg-info/

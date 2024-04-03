@@ -28,6 +28,7 @@ mkdir ${gattlib_py_package_dir}/ci/
 cp -r ${ROOT_PATH}/ci/install-bluez.sh ${gattlib_py_package_dir}/ci/
 
 # Create MANIFEST.in
+rm MANIFEST.in
 cat <<EOT >> MANIFEST.in
 graft common
 graft bluez
