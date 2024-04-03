@@ -40,6 +40,8 @@ static void _on_device_connect(gatt_connection_t* connection) {
 	}
 	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
 
+	gattlib_device_set_state(conn_context->adapter, connection->device_id, CONNECTED);
+
 	gattlib_on_connected_device(connection);
 }
 
@@ -183,6 +185,16 @@ int gattlib_connect(void *adapter, const char *dst,
 
 	get_device_path_from_mac(adapter_name, dst, object_path, sizeof(object_path));
 
+	gatt_connection_t* connection = gattlib_device_get_device(adapter, object_path);
+	if (connection == NULL) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot find connection %s", dst);
+		return GATTLIB_INVALID_PARAMETER;
+	} else if (connection->state != DISCONNECTED) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot connect to '%s'. Device is in state %s",
+			dst, device_state_str[connection->state]);
+		return GATTLIB_BUSY;
+	}
+
 	gattlib_context_t* conn_context = calloc(sizeof(gattlib_context_t), 1);
 	if (conn_context == NULL) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot allocate context");
@@ -190,18 +202,14 @@ int gattlib_connect(void *adapter, const char *dst,
 	}
 	conn_context->adapter = gattlib_adapter;
 
-	gatt_connection_t* connection = calloc(sizeof(gatt_connection_t), 1);
-	if (connection == NULL) {
-		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot allocate connection");
-		ret = GATTLIB_OUT_OF_MEMORY;
-		goto FREE_CONN_CONTEXT;
-	}
-
 	connection->context = conn_context;
 	connection->on_connection.callback.connection_handler = connect_cb;
 	connection->on_connection.user_data = user_data;
 
-	GATTLIB_LOG(GATTLIB_DEBUG, "Connect bluetooth device %s", dst);
+	GATTLIB_LOG(GATTLIB_DEBUG, "Connecting bluetooth device %s", dst);
+
+	// Mark the device has disconnected
+	gattlib_device_set_state(connection->adapter, connection->device_id, CONNECTING);
 
 	OrgBluezDevice1* device = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
@@ -219,7 +227,7 @@ int gattlib_connect(void *adapter, const char *dst,
 		} else {
 			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to connect to DBus Bluez Device");
 		}
-		goto FREE_CONNECTION;
+		goto FREE_CONNECTION_CONTEXT;
 	} else {
 		conn_context->device = device;
 		conn_context->device_object_path = strdup(object_path);
@@ -263,10 +271,7 @@ FREE_DEVICE:
 	free(conn_context->device_object_path);
 	g_object_unref(conn_context->device);
 
-FREE_CONNECTION:
-	free(connection);
-
-FREE_CONN_CONTEXT:
+FREE_CONNECTION_CONTEXT:
 	free(conn_context);
 
 	// destroy default adapter
@@ -289,9 +294,13 @@ FREE_CONN_CONTEXT:
  */
 void gattlib_connection_free(gatt_connection_t* connection) {
 	gattlib_context_t* conn_context;
+	void* adapter;
+	char* device_id;
 
 	g_mutex_lock(&connection->device_mutex);
 	conn_context = connection->context;
+	adapter = conn_context->adapter;
+	device_id = connection->device_id;
 
 	// Remove signal
 	if (conn_context->on_handle_device_property_change_id != 0) {
@@ -326,10 +335,10 @@ void gattlib_connection_free(gatt_connection_t* connection) {
 	free(connection->context);
 	connection->context = NULL;
 
-	g_mutex_unlock(&connection->device_mutex);
+	// Mark the device has disconnected
+	gattlib_device_set_state(adapter, device_id, DISCONNECTED);
 
-	// And finally free the connection
-	free(connection);
+	g_mutex_unlock(&connection->device_mutex);
 }
 
 int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
@@ -349,15 +358,23 @@ int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection context is not valid.");
 		ret = GATTLIB_NOT_SUPPORTED;
 		goto EXIT;
+	} else if (connection->state != CONNECTED) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection is not in connected state (state=%s).",
+			device_state_str[connection->state]);
+		ret = GATTLIB_BUSY;
+		goto EXIT;
 	}
 
-	GATTLIB_LOG(GATTLIB_DEBUG, "Disconnect bluetooth device %s", conn_context->device_object_path);
+	GATTLIB_LOG(GATTLIB_DEBUG, "Disconnecting bluetooth device %s", conn_context->device_object_path);
 
 	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
 	if (error) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to disconnect DBus Bluez Device: %s", error->message);
 		g_error_free(error);
 	}
+
+	// Mark the device has disconnected
+	gattlib_device_set_state(connection->adapter, connection->device_id, DISCONNECTING);
 
 	//Note: Signals and memory will be removed/clean on disconnction callback
 	//      See _gattlib_clean_on_disconnection()

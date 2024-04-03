@@ -143,12 +143,9 @@ static void device_manager_on_added_device1_signal(const char* device1_path, str
 
 		//TODO: Add support for connected device with 'gboolean org_bluez_device1_get_connected (OrgBluezDevice1 *object);'
 		//      When the device is connected, we potentially need to initialize some attributes
-		ret = gattlib_device_set_state(gattlib_adapter, address, DISCONNECTED);
-
+		ret = gattlib_device_set_state(gattlib_adapter, device1_path, DISCONNECTED);
 		if (ret == GATTLIB_SUCCESS) {
-			if (gattlib_adapter->ble_scan.enabled_filters & GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE) {
-				gattlib_on_discovered_device(gattlib_adapter, device1);
-			}
+			gattlib_on_discovered_device(gattlib_adapter, device1);
 		}
 
 		g_rec_mutex_unlock(&gattlib_adapter->mutex);
@@ -226,40 +223,28 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 			return;
 		}
 
-		const char* device_mac_address = org_bluez_device1_get_address(device1);
-
 		// Check if the device has been disconnected
 		GVariantDict dict;
 		g_variant_dict_init(&dict, changed_properties);
-		GVariant* connected = g_variant_dict_lookup_value(&dict, "Connected", NULL);
-		GVariant* rssi = g_variant_dict_lookup_value(&dict, "RSSI", NULL);
+		GVariant* has_rssi = g_variant_dict_lookup_value(&dict, "RSSI", NULL);
+		GVariant* has_manufacturer_data = g_variant_dict_lookup_value(&dict, "ManufacturerData", NULL);
 
-		g_mutex_lock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
+		g_rec_mutex_lock(&gattlib_adapter->mutex);
 
-		// Check if the device is already part of the list
-		GSList *found_device = g_slist_find_custom(gattlib_adapter->ble_scan.discovered_devices, device_mac_address, (GCompareFunc)g_ascii_strcasecmp);
+		enum _gattlib_device_state old_device_state = gattlib_device_get_state(gattlib_adapter, proxy_object_path);
 
-		if (connected && !g_variant_get_boolean(connected)) {
-			// The device has been disconnected. We will remove it from the list of discovered device.
-			// In case the device has been found again, it will be seen as a new device
-
-			GATTLIB_LOG(GATTLIB_INFO, "Device %s has been disconnected", device_mac_address);
-
-			if (found_device) {
-				gattlib_adapter->ble_scan.discovered_devices = g_slist_remove(gattlib_adapter->ble_scan.discovered_devices, found_device);
-			}
-		} else if (rssi) {
-			// First time this device is in the list
-			if (found_device == NULL) {
-				// Add the device to the list
-				gattlib_adapter->ble_scan.discovered_devices = g_slist_append(gattlib_adapter->ble_scan.discovered_devices, g_strdup(device_mac_address));
-				gattlib_on_discovered_device(gattlib_adapter, device1);
+		if (old_device_state == NOT_FOUND) {
+			if (has_rssi || has_manufacturer_data) {
+				int ret = gattlib_device_set_state(gattlib_adapter, proxy_object_path, DISCONNECTED);
+				if (ret == GATTLIB_SUCCESS) {
+					gattlib_on_discovered_device(gattlib_adapter, device1);
+				}
 			}
 		}
-		g_mutex_unlock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
+
+		g_rec_mutex_unlock(&gattlib_adapter->mutex);
 
 		g_variant_dict_end(&dict);
-
 		g_object_unref(device1);
 	}
 }
@@ -549,9 +534,15 @@ EXIT:
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_adapter_close(void* adapter)
-{
+int gattlib_adapter_close(void* adapter) {
 	struct gattlib_adapter *gattlib_adapter = adapter;
+	bool are_devices_disconnected;
+
+	are_devices_disconnected = gattlib_devices_are_disconnected(adapter);
+	if (!are_devices_disconnected) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Adapter cannot be closed as some devices are not disconnected");
+		return GATTLIB_BUSY;
+	}
 
 	g_mutex_lock(&m_adapter_list_mutex);
 	GSList *adapter_entry = g_slist_find(m_adapter_list, adapter);
