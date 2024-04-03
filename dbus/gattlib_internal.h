@@ -69,6 +69,7 @@ struct gattlib_adapter {
 	struct {
 		int added_signal_id;
 		int changed_signal_id;
+		int removed_signal_id;
 
 		size_t ble_scan_timeout;
 		guint ble_scan_timeout_id;

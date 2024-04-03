@@ -173,6 +173,19 @@ static void on_dbus_object_added(GDBusObjectManager *device_manager,
 	g_object_unref(interface);
 }
 
+static void on_dbus_object_removed(GDBusObjectManager *device_manager,
+                     GDBusObject        *object,
+                     gpointer            user_data)
+{
+	const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
+	struct gattlib_adapter* gattlib_adapter = (struct gattlib_adapter*)user_data;
+
+	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_object_removed: %s", object_path);
+
+	// Mark the device has not present
+	gattlib_device_set_state(gattlib_adapter, object_path, NOT_FOUND);
+}
+
 static void
 on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
                                        GDBusObjectProxy         *object_proxy,
@@ -303,6 +316,7 @@ static void* _ble_scan_loop(void* args) {
 	// Note: The function only resumes when loop timeout as expired or g_main_loop_quit has been called.
 
 	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(gattlib_adapter->device_manager), gattlib_adapter->ble_scan.added_signal_id);
+	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(gattlib_adapter->device_manager), gattlib_adapter->ble_scan.removed_signal_id);
 	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(gattlib_adapter->device_manager), gattlib_adapter->ble_scan.changed_signal_id);
 
 	// Ensure BLE device discovery is stopped
@@ -395,7 +409,12 @@ static int _gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid
 
 	gattlib_adapter->ble_scan.added_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
 	                    "object-added",
-	                    G_CALLBACK (on_dbus_object_added),
+	                    G_CALLBACK(on_dbus_object_added),
+	                    gattlib_adapter);
+
+	gattlib_adapter->ble_scan.removed_signal_id = g_signal_connect(G_DBUS_OBJECT_MANAGER(device_manager),
+	                    "object-removed",
+	                    G_CALLBACK(on_dbus_object_removed),
 	                    gattlib_adapter);
 
 	// List for object changes to see if there are still devices around
