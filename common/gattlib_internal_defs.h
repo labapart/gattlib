@@ -48,11 +48,25 @@ struct gattlib_handler {
 #endif
 };
 
+enum _gattlib_device_state {
+	NOT_FOUND = 0,
+	CONNECTING,
+	CONNECTED,
+	DISCONNECTING,
+	DISCONNECTED
+};
+
 struct _gattlib_device {
 	// Context specific to the backend implementation (eg: dbus backend)
 	void* context;
 
+	void* adapter;
+	// On some platform, the name could be a UUID, on others its the DBUS device path
+	char* device_id;
 	GMutex device_mutex;
+
+	// We keep the state to prevent concurrent connecting/connected/disconnecting operation
+	enum _gattlib_device_state state;
 
 	struct {
 		// Used by gattlib_disconnection when we want to wait for the disconnection to be effective
@@ -81,6 +95,17 @@ void gattlib_notification_device_thread(gpointer data, gpointer user_data);
  * and implicit disconnection.
  */
 void gattlib_connection_free(gatt_connection_t* connection);
+
+extern const char* device_state_str[];
+struct _gattlib_device* gattlib_device_get_device(void* adapter, const char* device_id);
+enum _gattlib_device_state gattlib_device_get_state(void* adapter, const char* device_id);
+int gattlib_device_set_state(void* adapter, const char* device_id, enum _gattlib_device_state new_state);
+int gattlib_devices_are_disconnected(void* adapter);
+int gattlib_devices_free(void* adapter);
+
+#ifdef DEBUG
+void gattlib_devices_dump_state(void* adapter);
+#endif
 
 #if defined(WITH_PYTHON)
 // Callback used by Python to create arguments used by native callback

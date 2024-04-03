@@ -596,6 +596,8 @@ int gattlib_adapter_close(void* adapter)
 		gattlib_adapter->adapter_name = NULL;
 	}
 
+	gattlib_devices_free(gattlib_adapter);
+
 	free(gattlib_adapter);
 
 	// Remove adapter from the global list

@@ -62,6 +62,9 @@ struct gattlib_adapter {
 	OrgBluezAdapter1 *adapter_proxy;
 	char* adapter_name;
 
+	// The recursive mutex allows to ensure sensible operations are always covered by a mutex in a same thread
+	GRecMutex mutex;
+
 	// Internal attributes only needed during BLE scanning
 	struct {
 		// This list is used to stored discovered devices during BLE scan.
@@ -84,6 +87,10 @@ struct gattlib_adapter {
 
 		struct gattlib_handler discovered_device_callback;
 	} ble_scan;
+
+	// List of `struct _gattlib_device`. This list allows to know weither a device is
+	// discovered/disconnected/connecting/connected/disconnecting.
+	GSList *devices;
 };
 
 struct dbus_characteristic {

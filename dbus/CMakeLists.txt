@@ -73,6 +73,7 @@ set(gattlib_SRCS gattlib.c
                  gattlib_stream.c
                  bluez5/lib/uuid.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_common.c
+                 ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_device_state_management.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_eddystone.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_connected_device.c
                  ${CMAKE_CURRENT_LIST_DIR}/../common/gattlib_callback_disconnected_device.c
