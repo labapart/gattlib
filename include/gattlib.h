@@ -149,7 +149,7 @@ extern "C" {
 
 #define GATTLIB_LOG(level, args...) if (level <= GATTLIB_LOG_LEVEL) { gattlib_log(level, args); }
 
-typedef struct _gatt_connection_t gatt_connection_t;
+typedef struct _gattlib_device gatt_connection_t;
 typedef struct _gatt_stream_t gatt_stream_t;
 
 /**

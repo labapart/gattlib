@@ -48,7 +48,8 @@ struct gattlib_handler {
 #endif
 };
 
-struct _gatt_connection_t {
+struct _gattlib_device {
+	// Context specific to the backend implementation (eg: dbus backend)
 	void* context;
 
 	GMutex connection_mutex;

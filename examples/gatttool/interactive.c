@@ -327,7 +327,7 @@ static void cmd_connect(int argcp, char **argvp)
 	if (connection == NULL) {
 		set_state(STATE_DISCONNECTED);
 	} else {
-		struct _gatt_connection_t *gatt_connection = (struct _gatt_connection_t *)g_connection;
+		struct _gattlib_device *gatt_connection = (struct _gattlib_device *)g_connection;
 		gattlib_context_t* conn_context = gatt_connection->context;
 		g_io_add_watch(conn_context->io, G_IO_HUP, channel_watcher, NULL);
 	}

@@ -148,7 +148,7 @@ done:
 
 static gboolean primary(gpointer user_data)
 {
-	struct _gatt_connection_t *connection = (struct _gatt_connection_t *)user_data;
+	struct _gattlib_device *connection = (struct _gattlib_device *)user_data;
 	gattlib_context_t* conn_context = connection->context;
 	GAttrib *attrib = conn_context->attrib;
 	char uuid_str[MAX_LEN_UUID_STR + 1];
