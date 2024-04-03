@@ -113,7 +113,7 @@ EXIT:
 	return gattlib_adapter->device_manager;
 }
 
-static void device_manager_on_device1_signal(const char* device1_path, struct gattlib_adapter* gattlib_adapter)
+static void device_manager_on_added_device1_signal(const char* device1_path, struct gattlib_adapter* gattlib_adapter)
 {
 	GError *error = NULL;
 	OrgBluezDevice1* device1 = org_bluez_device1_proxy_new_for_bus_sync(
@@ -131,6 +131,7 @@ static void device_manager_on_device1_signal(const char* device1_path, struct ga
 
 	if (device1) {
 		const gchar *address = org_bluez_device1_get_address(device1);
+		int ret;
 
 		// Sometimes org_bluez_device1_get_address returns null addresses. If that's the case, early return.
 		if (address == NULL) {
@@ -138,19 +139,19 @@ static void device_manager_on_device1_signal(const char* device1_path, struct ga
 			return;
 		}
 
-		// Check if the device is already part of the list
-		g_mutex_lock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
-		GSList *item = g_slist_find_custom(gattlib_adapter->ble_scan.discovered_devices, address, (GCompareFunc)g_ascii_strcasecmp);
-		// First time this device is in the list
-		if (item == NULL) {
-			// Add the device to the list
-			gattlib_adapter->ble_scan.discovered_devices = g_slist_append(gattlib_adapter->ble_scan.discovered_devices, g_strdup(address));
-		}
-		g_mutex_unlock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
+		g_rec_mutex_lock(&gattlib_adapter->mutex);
 
-		if ((item == NULL) || (gattlib_adapter->ble_scan.enabled_filters & GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE)) {
-			gattlib_on_discovered_device(gattlib_adapter, device1);
+		//TODO: Add support for connected device with 'gboolean org_bluez_device1_get_connected (OrgBluezDevice1 *object);'
+		//      When the device is connected, we potentially need to initialize some attributes
+		ret = gattlib_device_set_state(gattlib_adapter, address, DISCONNECTED);
+
+		if (ret == GATTLIB_SUCCESS) {
+			if (gattlib_adapter->ble_scan.enabled_filters & GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE) {
+				gattlib_on_discovered_device(gattlib_adapter, device1);
+			}
 		}
+
+		g_rec_mutex_unlock(&gattlib_adapter->mutex);
 		g_object_unref(device1);
 	}
 }
@@ -170,7 +171,7 @@ static void on_dbus_object_added(GDBusObjectManager *device_manager,
 	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_object_added: %s (has 'org.bluez.Device1')", object_path);
 
 	// It is a 'org.bluez.Device1'
-	device_manager_on_device1_signal(object_path, user_data);
+	device_manager_on_added_device1_signal(object_path, user_data);
 
 	g_object_unref(interface);
 }
@@ -542,13 +543,6 @@ int gattlib_adapter_scan_disable(void* adapter) {
 		g_source_remove(gattlib_adapter->ble_scan.ble_scan_timeout_id);
 		gattlib_adapter->ble_scan.ble_scan_timeout_id = 0;
 	}
-
-	// Free discovered device list
-	g_mutex_lock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
-	g_slist_foreach(gattlib_adapter->ble_scan.discovered_devices, (GFunc)g_free, NULL);
-	g_slist_free(gattlib_adapter->ble_scan.discovered_devices);
-	gattlib_adapter->ble_scan.discovered_devices = NULL;
-	g_mutex_unlock(&gattlib_adapter->ble_scan.discovered_devices_mutex);
 
 EXIT:
 	g_mutex_unlock(&gattlib_adapter->ble_scan.scan_loop_mutex);
