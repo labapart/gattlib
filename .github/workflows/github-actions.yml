@@ -27,6 +27,14 @@ jobs:
             build/*.deb
             build/*.rpm
             build/*.zip
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            build/*.deb
+            build/*.rpm
+            build/*.zip
 
   build-release-force-dbus:
     runs-on: ubuntu-latest
