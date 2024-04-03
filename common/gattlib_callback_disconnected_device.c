@@ -49,10 +49,10 @@ void gattlib_on_disconnected_device(gatt_connection_t* connection) {
 	}
 
 	// Signal the device is now disconnected
-	g_mutex_lock(&connection->disconnection_wait.lock);
+	g_mutex_lock(&connection->device_mutex);
 	connection->disconnection_wait.value = true;
 	g_cond_broadcast(&connection->disconnection_wait.condition);
-	g_mutex_unlock(&connection->disconnection_wait.lock);
+	g_mutex_unlock(&connection->device_mutex);
 
 	// Clean GATTLIB connection on disconnection
 	gattlib_connection_free(connection);

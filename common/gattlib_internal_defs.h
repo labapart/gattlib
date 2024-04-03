@@ -52,13 +52,11 @@ struct _gattlib_device {
 	// Context specific to the backend implementation (eg: dbus backend)
 	void* context;
 
-	GMutex connection_mutex;
+	GMutex device_mutex;
 
 	struct {
 		// Used by gattlib_disconnection when we want to wait for the disconnection to be effective
 		GCond condition;
-		// Mutex used for disconnection_condition synchronization
-		GMutex lock;
 		// Used to avoid spurious or stolen wakeup
 		bool value;
 	} disconnection_wait;

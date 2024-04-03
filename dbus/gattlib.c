@@ -290,7 +290,7 @@ FREE_CONN_CONTEXT:
 void gattlib_connection_free(gatt_connection_t* connection) {
 	gattlib_context_t* conn_context;
 
-	g_mutex_lock(&connection->connection_mutex);
+	g_mutex_lock(&connection->device_mutex);
 	conn_context = connection->context;
 
 	// Remove signal
@@ -326,7 +326,7 @@ void gattlib_connection_free(gatt_connection_t* connection) {
 	free(connection->context);
 	connection->context = NULL;
 
-	g_mutex_unlock(&connection->connection_mutex);
+	g_mutex_unlock(&connection->device_mutex);
 
 	// And finally free the connection
 	free(connection);
@@ -342,7 +342,7 @@ int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	g_mutex_lock(&connection->connection_mutex);
+	g_mutex_lock(&connection->device_mutex);
 	conn_context = connection->context;
 
 	if (conn_context == NULL) {
@@ -365,21 +365,18 @@ int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
 	if (wait_disconnection) {
 		gint64 end_time;
 
-		g_mutex_lock(&connection->disconnection_wait.lock);
-
 		end_time = g_get_monotonic_time() + GATTLIB_DISCONNECTION_WAIT_TIMEOUT_SEC * G_TIME_SPAN_SECOND;
 
 		while (!connection->disconnection_wait.value) {
-			if (!g_cond_wait_until(&connection->disconnection_wait.condition, &connection->disconnection_wait.lock, end_time)) {
+			if (!g_cond_wait_until(&connection->disconnection_wait.condition, &connection->device_mutex, end_time)) {
 				ret = GATTLIB_TIMEOUT;
 				break;
 			}
 		}
-		g_mutex_unlock(&connection->disconnection_wait.lock);
 	}
 
 EXIT:
-	g_mutex_unlock(&connection->connection_mutex);
+	g_mutex_unlock(&connection->device_mutex);
 	return ret;
 }
 
