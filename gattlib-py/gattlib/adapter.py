@@ -64,26 +64,30 @@ class Adapter:
         self._lock.acquire()
         if self._is_opened:
             self._lock.release()
-            return 0
+            return
 
-        self._adapter = c_void_p(None)
-        ret = gattlib_adapter_open(self._name, byref(self._adapter))
-        if ret == 0:
-            self._is_opened = True
-            if self._name is None:
-                self._name = gattlib_adapter_get_name(self._adapter)
-        self._lock.release()
-        return ret
+        try:
+            self._adapter = c_void_p(None)
+            ret = gattlib_adapter_open(self._name, byref(self._adapter))
+            if ret == 0:
+                self._is_opened = True
+                if self._name is None:
+                    self._name = gattlib_adapter_get_name(self._adapter)
+            else:
+                handle_return(ret)
+        finally:
+            self._lock.release()
 
     def close(self):
         self._lock.acquire()
-        ret = 0
-        if self._adapter:
-            ret = gattlib.gattlib_adapter_close(self._adapter)
-        self._is_opened = False
-        self._adapter = None
-        self._lock.release()
-        return ret
+        try:
+            if self._adapter:
+                ret = gattlib.gattlib_adapter_close(self._adapter)
+                handle_return(ret)
+            self._is_opened = False
+            self._adapter = None
+        finally:
+            self._lock.release()
 
     # Use a closure to return a method that can be called by the C-library (see: https://stackoverflow.com/a/7261524/6267288)
     def get_on_discovered_device_callback(self):
