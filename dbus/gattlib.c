@@ -221,7 +221,7 @@ int gattlib_connect(void *adapter, const char *dst,
 	if (device == NULL) {
 		ret = GATTLIB_ERROR_DBUS;
 		if (error) {
-			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);;
+			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 			GATTLIB_LOG(GATTLIB_ERROR, "Failed to connect to DBus Bluez Device: %s", error->message);
 			g_error_free(error);
 		} else {
@@ -258,6 +258,10 @@ int gattlib_connect(void *adapter, const char *dst,
 		}
 
 		g_error_free(error);
+
+		// Fail to connect. Mark the device has disconnected to be able to reconnect
+		gattlib_device_set_state(connection->adapter, connection->device_id, DISCONNECTED);
+
 		goto FREE_DEVICE;
 	}
 
