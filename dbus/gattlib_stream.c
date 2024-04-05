@@ -31,12 +31,18 @@ int gattlib_write_char_stream_close(gattlib_stream_t *stream)
 
 int gattlib_write_char_by_uuid_stream_open(gattlib_connection_t* connection, uuid_t* uuid, gattlib_stream_t **stream, uint16_t *mtu)
 {
-	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	GError *error = NULL;
 	GUnixFDList *fd_list;
 	GVariant *out_fd;
 	int ret;
 	int fd;
+
+	//
+	// No need of locking the gattlib mutex. get_characteristic_from_uuid() is taking care of the gattlib
+	// object coherency. And 'dbus_characteristic' is not linked to gattlib object
+	//
+
+	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 
 	GVariantBuilder *variant_options = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 

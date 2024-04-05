@@ -116,13 +116,33 @@ int gattlib_get_advertisement_data(gattlib_connection_t *connection,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 {
+	int ret;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
 	if (connection == NULL) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	return get_advertisement_data_from_device(connection->backend.device,
-			advertisement_data, advertisement_data_count,
-			manufacturer_id, manufacturer_data, manufacturer_data_size);
+	if (!gattlib_device_is_valid(connection->device)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
+	// device is actually a GObject. Increasing its reference counter prevents to
+	// be freed if the connection is released.
+	OrgBluezDevice1* dbus_device = connection->backend.device;
+	g_object_ref(dbus_device);
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+
+	ret = get_advertisement_data_from_device(dbus_device,
+		advertisement_data, advertisement_data_count,
+		manufacturer_id, manufacturer_data, manufacturer_data_size);
+
+	g_object_unref(dbus_device);
+
+	return ret;
 }
 
 int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const char *mac_address,
@@ -132,10 +152,14 @@ int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const ch
 	OrgBluezDevice1 *bluez_device1;
 	int ret;
 
+	//
+	// No need of locking the mutex in this function. It is already done by get_bluez_device_from_mac()
+	// and get_advertisement_data_from_device() does not depend on gattlib objects
+	//
+
 	ret = get_bluez_device_from_mac(adapter, mac_address, &bluez_device1);
 	if (ret != GATTLIB_SUCCESS) {
-		g_object_unref(bluez_device1);
-		return ret;
+		goto EXIT;
 	}
 
 	ret = get_advertisement_data_from_device(bluez_device1,
@@ -144,6 +168,7 @@ int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const ch
 
 	g_object_unref(bluez_device1);
 
+EXIT:
 	return ret;
 }
 

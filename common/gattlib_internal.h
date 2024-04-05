@@ -24,6 +24,18 @@ struct gattlib_python_args {
 };
 #endif
 
+#define GATTLIB_SIGNAL_DEVICE_DISCONNECTION		(1 << 0)
+#define GATTLIB_SIGNAL_ADAPTER_STOP_SCANNING    (1 << 1)
+
+struct gattlib_signal {
+	// Used by gattlib_disconnection when we want to wait for the disconnection to be effective
+	GCond condition;
+	// Mutex for condition
+	GMutex mutex;
+	// Identify the gattlib signals
+	uint32_t signals;
+};
+
 struct gattlib_handler {
 	union {
 		gattlib_discovered_device_t discovered_device;
@@ -36,11 +48,6 @@ struct gattlib_handler {
 	void* user_data;
 	// We create a thread to ensure the callback is not blocking the mainloop
 	GThread *thread;
-	// The mutex ensures the callbacks is not being freed while being called
-	// We use a recursive mutex to be able to disable BLE scan from 'on_discovered_device'
-	// when we want to connect to the discovered device.
-	// Note: The risk is that we are actually realising the handle from the one we are executing
-	GRecMutex mutex;
 	// Thread pool
 	GThreadPool *thread_pool;
 #if defined(WITH_PYTHON)
@@ -64,8 +71,9 @@ struct _gattlib_adapter {
 	// BLE adapter name
 	char* name;
 
-	// The recursive mutex allows to ensure sensible operations are always covered by a mutex in a same thread
-	GRecMutex mutex;
+	// reference counter is used to know whether the adapter is still use by callback
+	// When the reference counter is 0 then the adapter is freed
+	uintptr_t reference_counter;
 
 	// List of `gattlib_device_t`. This list allows to know weither a device is
 	// discovered/disconnected/connecting/connected/disconnecting.
@@ -81,13 +89,6 @@ struct _gattlib_connection {
 	// Context specific to the backend implementation (eg: dbus backend)
 	struct _gattlib_connection_backend backend;
 
-	struct {
-		// Used by gattlib_disconnection when we want to wait for the disconnection to be effective
-		GCond condition;
-		// Used to avoid spurious or stolen wakeup
-		bool value;
-	} disconnection_wait;
-
 	struct gattlib_handler on_connection;
 	struct gattlib_handler notification;
 	struct gattlib_handler indication;
@@ -98,13 +99,37 @@ typedef struct _gattlib_device {
 	struct _gattlib_adapter* adapter;
 	// On some platform, the name could be a UUID, on others its the DBUS device path
 	char* device_id;
-	GMutex device_mutex;
+
+	// reference counter is used to know whether the device is still use by callback
+	// When the reference counter is 0 then the device is freed
+	uintptr_t reference_counter;
 
 	// We keep the state to prevent concurrent connecting/connected/disconnecting operation
 	enum _gattlib_device_state state;
 
 	struct _gattlib_connection connection;
 } gattlib_device_t;
+
+// This recursive mutex ensures all gattlib objects can be accessed in a multi-threaded environment
+// The recursive mutex allows a same thread to lock twice the mutex without being blocked by itself.
+extern GRecMutex m_gattlib_mutex;
+
+// Keep track of the allocated adapters to avoid an adapter to be freed twice.
+// It could happen when using Python wrapper.
+extern GSList *m_adapter_list;
+
+// This structure is used for inter-thread communication
+extern struct gattlib_signal m_gattlib_signal;
+
+bool gattlib_adapter_is_valid(gattlib_adapter_t* adapter);
+bool gattlib_adapter_is_scanning(gattlib_adapter_t* adapter);
+int gattlib_adapter_ref(gattlib_adapter_t* adapter);
+int gattlib_adapter_unref(gattlib_adapter_t* adapter);
+
+bool gattlib_device_is_valid(gattlib_device_t* device);
+int gattlib_device_ref(gattlib_device_t* device);
+int gattlib_device_unref(gattlib_device_t* device);
+bool gattlib_connection_is_connected(gattlib_connection_t* connection);
 
 void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*python_callback)(),
 		GThreadFunc thread_func, const char* thread_name, void* (*thread_args_allocator)(va_list args), ...);

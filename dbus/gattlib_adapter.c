@@ -6,10 +6,12 @@
 
 #include "gattlib_internal.h"
 
-// Keep track of the allocated adapters to avoid an adapter to be freed twice.
-// It could happen when using Python wrapper.
-static GSList *m_adapter_list;
-static GMutex m_adapter_list_mutex;
+// This recursive mutex ensures all gattlib objects can be accessed in a multi-threaded environment
+// The recursive mutex allows a same thread to lock twice the mutex without being blocked by itself.
+GRecMutex m_gattlib_mutex;
+
+// This structure is used for inter-thread communication
+struct gattlib_signal m_gattlib_signal;
 
 
 int gattlib_adapter_open(const char* adapter_name, gattlib_adapter_t** adapter) {
@@ -57,17 +59,23 @@ int gattlib_adapter_open(const char* adapter_name, gattlib_adapter_t** adapter) 
 
 	// Initialize stucture
 	gattlib_adapter->name = strdup(adapter_name);
+	gattlib_adapter->reference_counter = 1;
 	gattlib_adapter->backend.adapter_proxy = adapter_proxy;
 
-	g_mutex_lock(&m_adapter_list_mutex);
+	g_rec_mutex_lock(&m_gattlib_mutex);
 	m_adapter_list = g_slist_append(m_adapter_list, gattlib_adapter);
-	g_mutex_unlock(&m_adapter_list_mutex);
-
 	*adapter = gattlib_adapter;
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+
 	return GATTLIB_SUCCESS;
 }
 
 const char *gattlib_adapter_get_name(gattlib_adapter_t* adapter) {
+	//
+	// Note: There is a risk we access the memory when it has been freed
+	//       What we should do is to take 'm_gattlib_mutex', then to check the adapter is valid
+	//       then to duplicate the string
+	//
 	return adapter->name;
 }
 
@@ -84,8 +92,6 @@ gattlib_adapter_t* init_default_adapter(void) {
 }
 
 GDBusObjectManager *get_device_manager_from_adapter(gattlib_adapter_t* gattlib_adapter, GError **error) {
-	g_mutex_lock(&m_adapter_list_mutex);
-
 	if (gattlib_adapter->backend.device_manager) {
 		goto EXIT;
 	}
@@ -103,12 +109,10 @@ GDBusObjectManager *get_device_manager_from_adapter(gattlib_adapter_t* gattlib_a
 			NULL, NULL, NULL, NULL,
 			error);
 	if (gattlib_adapter->backend.device_manager == NULL) {
-		g_mutex_unlock(&m_adapter_list_mutex);
 		return NULL;
 	}
 
 EXIT:
-	g_mutex_unlock(&m_adapter_list_mutex);
 	return gattlib_adapter->backend.device_manager;
 }
 
@@ -138,7 +142,13 @@ static void device_manager_on_added_device1_signal(const char* device1_path, gat
 			return;
 		}
 
-		g_rec_mutex_lock(&gattlib_adapter->mutex);
+		g_rec_mutex_lock(&m_gattlib_mutex);
+
+		if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+			g_rec_mutex_unlock(&m_gattlib_mutex);
+			g_object_unref(device1);
+			return;
+		}
 
 		//TODO: Add support for connected device with 'gboolean org_bluez_device1_get_connected (OrgBluezDevice1 *object);'
 		//      When the device is connected, we potentially need to initialize some attributes
@@ -147,7 +157,7 @@ static void device_manager_on_added_device1_signal(const char* device1_path, gat
 			gattlib_on_discovered_device(gattlib_adapter, device1);
 		}
 
-		g_rec_mutex_unlock(&gattlib_adapter->mutex);
+		g_rec_mutex_unlock(&m_gattlib_mutex);
 		g_object_unref(device1);
 	}
 }
@@ -196,10 +206,6 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 	const char* proxy_object_path = g_dbus_proxy_get_object_path(interface_proxy);
 	gattlib_adapter_t* gattlib_adapter = user_data;
 
-	if (gattlib_adapter->backend.device_manager == NULL) {
-		return;
-	}
-
 	// Count number of invalidated properties
 	size_t invalidated_properties_count = 0;
 	if (invalidated_properties != NULL) {
@@ -216,6 +222,16 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 			g_variant_print(changed_properties, TRUE),
 			invalidated_properties_count);
 
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+		goto EXIT;
+	}
+
+	if (gattlib_adapter->backend.device_manager == NULL) {
+		goto EXIT;
+	}
+
 	// Check if the object is a 'org.bluez.Device1'
 	if (strcmp(g_dbus_proxy_get_interface_name(interface_proxy), "org.bluez.Device1") == 0) {
 		// It is a 'org.bluez.Device1'
@@ -229,10 +245,10 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 		if (error) {
 			GATTLIB_LOG(GATTLIB_ERROR, "Failed to connection to new DBus Bluez Device: %s", error->message);
 			g_error_free(error);
-			return;
+			goto EXIT;
 		} else if (device1 == NULL) {
 			GATTLIB_LOG(GATTLIB_ERROR, "Unexpected NULL device");
-			return;
+			goto EXIT;
 		}
 
 		// Check if the device has been disconnected
@@ -240,8 +256,6 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 		g_variant_dict_init(&dict, changed_properties);
 		GVariant* has_rssi = g_variant_dict_lookup_value(&dict, "RSSI", NULL);
 		GVariant* has_manufacturer_data = g_variant_dict_lookup_value(&dict, "ManufacturerData", NULL);
-
-		g_rec_mutex_lock(&gattlib_adapter->mutex);
 
 		enum _gattlib_device_state old_device_state = gattlib_device_get_state(gattlib_adapter, proxy_object_path);
 
@@ -254,11 +268,12 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 			}
 		}
 
-		g_rec_mutex_unlock(&gattlib_adapter->mutex);
-
 		g_variant_dict_end(&dict);
 		g_object_unref(device1);
 	}
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 }
 
 /**
@@ -267,11 +282,11 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
  * It either called when we wait for BLE scan to complete or when we close the BLE adapter
  */
 static void _wait_scan_loop_stop_scanning(gattlib_adapter_t* gattlib_adapter) {
-	g_mutex_lock(&gattlib_adapter->backend.ble_scan.scan_loop.mutex);
-	while (gattlib_adapter->backend.ble_scan.is_scanning) {
-		g_cond_wait(&gattlib_adapter->backend.ble_scan.scan_loop.cond, &gattlib_adapter->backend.ble_scan.scan_loop.mutex);
+	g_mutex_lock(&m_gattlib_signal.mutex);
+	while (gattlib_adapter_is_scanning(gattlib_adapter)) {
+		g_cond_wait(&m_gattlib_signal.condition, &m_gattlib_signal.mutex);
 	}
-	g_mutex_unlock(&gattlib_adapter->backend.ble_scan.scan_loop.mutex);
+	g_mutex_unlock(&m_gattlib_signal.mutex);
 }
 
 /**
@@ -280,15 +295,25 @@ static void _wait_scan_loop_stop_scanning(gattlib_adapter_t* gattlib_adapter) {
 static gboolean _stop_scan_on_timeout(gpointer data) {
 	gattlib_adapter_t* gattlib_adapter = data;
 
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return FALSE;
+	}
+
 	if (gattlib_adapter->backend.ble_scan.is_scanning) {
-		g_mutex_lock(&gattlib_adapter->backend.ble_scan.scan_loop.mutex);
+		g_mutex_lock(&m_gattlib_signal.mutex);
 		gattlib_adapter->backend.ble_scan.is_scanning = false;
-		g_cond_broadcast(&gattlib_adapter->backend.ble_scan.scan_loop.cond);
-		g_mutex_unlock(&gattlib_adapter->backend.ble_scan.scan_loop.mutex);
+		m_gattlib_signal.signals |= GATTLIB_SIGNAL_ADAPTER_STOP_SCANNING;
+		g_cond_broadcast(&m_gattlib_signal.condition);
+		g_mutex_unlock(&m_gattlib_signal.mutex);
 	}
 
 	// Unset timeout ID to not try removing it
 	gattlib_adapter->backend.ble_scan.ble_scan_timeout_id = 0;
+
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 
 	GATTLIB_LOG(GATTLIB_DEBUG, "BLE scan is stopped after scanning time has expired.");
 	return FALSE;
@@ -300,6 +325,12 @@ static gboolean _stop_scan_on_timeout(gpointer data) {
  */
 static void* _ble_scan_loop_thread(void* args) {
 	gattlib_adapter_t* gattlib_adapter = args;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+		goto EXIT;
+	}
 
 	if (gattlib_adapter->backend.ble_scan.ble_scan_timeout_id > 0) {
 		GATTLIB_LOG(GATTLIB_WARNING, "A BLE scan seems to already be in progress.");
@@ -314,10 +345,19 @@ static void* _ble_scan_loop_thread(void* args) {
 			_stop_scan_on_timeout, gattlib_adapter);
 	}
 
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+
 	// Wait for the BLE scan to be explicitely stopped by 'gattlib_adapter_scan_disable()' or timeout.
 	_wait_scan_loop_stop_scanning(gattlib_adapter);
 
 	// Note: The function only resumes when loop timeout as expired or g_main_loop_quit has been called.
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	// Confirm gattlib_adapter is still valid
+	if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+		goto EXIT;
+	}
 
 	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(gattlib_adapter->backend.device_manager), gattlib_adapter->backend.ble_scan.added_signal_id);
 	g_signal_handler_disconnect(G_DBUS_OBJECT_MANAGER(gattlib_adapter->backend.device_manager), gattlib_adapter->backend.ble_scan.removed_signal_id);
@@ -326,7 +366,9 @@ static void* _ble_scan_loop_thread(void* args) {
 	// Ensure BLE device discovery is stopped
 	gattlib_adapter_scan_disable(gattlib_adapter);
 
-	return 0;
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return NULL;
 }
 
 static int _gattlib_adapter_scan_enable_with_filter(gattlib_adapter_t* adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
@@ -443,12 +485,19 @@ int gattlib_adapter_scan_enable_with_filter(gattlib_adapter_t* adapter, uuid_t *
 		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
 {
 	GError *error = NULL;
-	int ret;
+	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_adapter_is_valid(adapter)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
 
 	ret = _gattlib_adapter_scan_enable_with_filter(adapter, uuid_list, rssi_threshold, enabled_filters,
 		discovered_device_cb, timeout, user_data);
 	if (ret != GATTLIB_SUCCESS) {
-		return ret;
+		goto EXIT;
 	}
 
 	adapter->backend.ble_scan.is_scanning = true;
@@ -457,42 +506,67 @@ int gattlib_adapter_scan_enable_with_filter(gattlib_adapter_t* adapter, uuid_t *
 	if (adapter->backend.ble_scan.scan_loop_thread == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create BLE scan thread: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_INTERNAL;
+		ret = GATTLIB_ERROR_INTERNAL;
+		goto EXIT;
 	}
 
-	g_mutex_lock(&adapter->backend.ble_scan.scan_loop.mutex);
-	while (adapter->backend.ble_scan.is_scanning) {
-		g_cond_wait(&adapter->backend.ble_scan.scan_loop.cond, &adapter->backend.ble_scan.scan_loop.mutex);
+	// We need to release the mutex to ensure we leave the other thread to signal us
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+
+	g_mutex_lock(&m_gattlib_signal.mutex);
+	while (gattlib_adapter_is_scanning(adapter)) {
+		g_cond_wait(&m_gattlib_signal.condition, &m_gattlib_signal.mutex);
+	}
+	g_mutex_unlock(&m_gattlib_signal.mutex);
+
+	// Get the mutex again
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	// Ensure the adapter is still valid when we get the mutex again
+	if (!gattlib_adapter_is_valid(adapter)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
 	}
 
 	// Free thread
 	g_thread_unref(adapter->backend.ble_scan.scan_loop_thread);
 	adapter->backend.ble_scan.scan_loop_thread = NULL;
-	g_mutex_unlock(&adapter->backend.ble_scan.scan_loop.mutex);
 
-	return 0;
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }
 
 int gattlib_adapter_scan_enable_with_filter_non_blocking(gattlib_adapter_t* adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
 {
 	GError *error = NULL;
-	int ret;
+	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_adapter_is_valid(adapter)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
 
 	ret = _gattlib_adapter_scan_enable_with_filter(adapter, uuid_list, rssi_threshold, enabled_filters,
 		discovered_device_cb, timeout, user_data);
 	if (ret != GATTLIB_SUCCESS) {
-		return ret;
+		goto EXIT;
 	}
 
 	adapter->backend.ble_scan.scan_loop_thread = g_thread_try_new("gattlib_ble_scan", _ble_scan_loop_thread, adapter, &error);
 	if (adapter->backend.ble_scan.scan_loop_thread == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create BLE scan thread: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_INTERNAL;
+		ret = GATTLIB_ERROR_INTERNAL;
+		goto EXIT;
 	}
 
-	return 0;
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }
 
 int gattlib_adapter_scan_enable(gattlib_adapter_t* adapter, gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
@@ -505,13 +579,20 @@ int gattlib_adapter_scan_enable(gattlib_adapter_t* adapter, gattlib_discovered_d
 
 int gattlib_adapter_scan_disable(gattlib_adapter_t* adapter) {
 	GError *error = NULL;
+	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_adapter_is_valid(adapter)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
 
 	if (adapter->backend.adapter_proxy == NULL) {
 		GATTLIB_LOG(GATTLIB_INFO, "Could not disable BLE scan. No BLE adapter setup.");
-		return GATTLIB_NO_ADAPTER;
+		ret = GATTLIB_NO_ADAPTER;
+		goto EXIT;
 	}
-
-	g_mutex_lock(&adapter->backend.ble_scan.scan_loop.mutex);
 
 	if (!org_bluez_adapter1_get_discovering(adapter->backend.adapter_proxy)) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "No discovery in progress. We skip discovery stopping (1).");
@@ -526,6 +607,7 @@ int gattlib_adapter_scan_disable(gattlib_adapter_t* adapter) {
 	org_bluez_adapter1_call_stop_discovery_sync(adapter->backend.adapter_proxy, NULL, &error);
 	if (error != NULL) {
 		if (((error->domain == 238) || (error->domain == 239)) && (error->code == 36)) {
+			GATTLIB_LOG(GATTLIB_WARNING, "No bluetooth scan has been started.");
 			// Correspond to error: GDBus.Error:org.bluez.Error.Failed: No discovery started
 			goto EXIT;
 		} else {
@@ -539,7 +621,10 @@ int gattlib_adapter_scan_disable(gattlib_adapter_t* adapter) {
 	// Stop BLE scan loop thread
 	if (adapter->backend.ble_scan.is_scanning) {
 		adapter->backend.ble_scan.is_scanning = false;
-		g_cond_broadcast(&adapter->backend.ble_scan.scan_loop.cond);
+		g_mutex_lock(&m_gattlib_signal.mutex);
+		m_gattlib_signal.signals |= GATTLIB_SIGNAL_ADAPTER_STOP_SCANNING;
+		g_cond_broadcast(&m_gattlib_signal.condition);
+		g_mutex_unlock(&m_gattlib_signal.mutex);
 	}
 
 	// Remove timeout
@@ -549,20 +634,33 @@ int gattlib_adapter_scan_disable(gattlib_adapter_t* adapter) {
 	}
 
 EXIT:
-	g_mutex_unlock(&adapter->backend.ble_scan.scan_loop.mutex);
-	return GATTLIB_SUCCESS;
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }
 
 int gattlib_adapter_close(gattlib_adapter_t* adapter) {
 	bool are_devices_disconnected;
+	int ret = GATTLIB_SUCCESS;
+
+	//
+	// TODO: Should we use reference counting to be able to open multiple times an adapter
+	//       without freeing it on the first gattlib_adapter_close()
+	//
+
+    g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_adapter_is_valid(adapter)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
 
 	are_devices_disconnected = gattlib_devices_are_disconnected(adapter);
 	if (!are_devices_disconnected) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Adapter cannot be closed as some devices are not disconnected");
-		return GATTLIB_BUSY;
+		ret = GATTLIB_BUSY;
+		goto EXIT;
 	}
 
-	g_mutex_lock(&m_adapter_list_mutex);
 	GSList *adapter_entry = g_slist_find(m_adapter_list, adapter);
 	if (adapter_entry == NULL) {
 		GATTLIB_LOG(GATTLIB_WARNING, "Adapter has already been closed");
@@ -576,6 +674,34 @@ int gattlib_adapter_close(gattlib_adapter_t* adapter) {
 
 		_wait_scan_loop_stop_scanning(adapter);
 		g_thread_join(adapter->backend.ble_scan.scan_loop_thread);
+	}
+
+	// Unref/Free the adapter
+	gattlib_adapter_unref(adapter);
+
+	// Remove adapter from the global list
+	m_adapter_list = g_slist_remove(m_adapter_list, adapter);
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
+}
+
+int gattlib_adapter_ref(gattlib_adapter_t* adapter) {
+	g_rec_mutex_lock(&m_gattlib_mutex);
+	adapter->reference_counter++;
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return GATTLIB_SUCCESS;
+}
+
+int gattlib_adapter_unref(gattlib_adapter_t* adapter) {
+	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+	adapter->reference_counter--;
+
+	if (adapter->reference_counter > 0) {
+		goto EXIT;
 	}
 
 	// Ensure the thread is freed on adapter closing
@@ -603,12 +729,7 @@ int gattlib_adapter_close(gattlib_adapter_t* adapter) {
 
 	free(adapter);
 
-	// Remove adapter from the global list
-	m_adapter_list = g_slist_remove(m_adapter_list, adapter);
-
-	adapter = NULL;
-
 EXIT:
-	g_mutex_unlock(&m_adapter_list_mutex);
-	return GATTLIB_SUCCESS;
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }

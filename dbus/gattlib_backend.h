@@ -36,6 +36,11 @@
 
 #define GATTLIB_DEFAULT_ADAPTER "hci0"
 
+// Arbitrary size used to build DBUS object path from adapter name and mac address.
+// Otherwise DBUs Object path are unlimited:
+// See: https://dbus.freedesktop.org/doc/api/html/group__DBusProtocol.html#ga80186ac58d031d83127d1ad6644b0011
+#define GATTLIB_DBUS_OBJECT_PATH_SIZE_MAX 200
+
 struct _gattlib_connection_backend {
 	char* device_object_path;
 	OrgBluezDevice1* device;
@@ -69,11 +74,6 @@ struct _gattlib_adapter_backend {
 
 		GThread *scan_loop_thread; // Thread used to run the '_scan_loop()' when non-blocking
 		bool is_scanning;
-		struct {
-			GMutex mutex;
-			GCond cond;
-		} scan_loop;
-
 		uint32_t enabled_filters;
 	} ble_scan;
 };

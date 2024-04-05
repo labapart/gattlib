@@ -8,10 +8,10 @@
 
 const char* device_state_str[] = {
     "NOT_FOUND",
-	"CONNECTING",
-	"CONNECTED",
-	"DISCONNECTING",
-	"DISCONNECTED"
+    "CONNECTING",
+    "CONNECTED",
+    "DISCONNECTING",
+    "DISCONNECTED"
 };
 
 static gint _compare_device_with_device_id(gconstpointer a, gconstpointer b) {
@@ -26,41 +26,33 @@ static GSList* _find_device_with_device_id(gattlib_adapter_t* adapter, const cha
 }
 
 gattlib_device_t* gattlib_device_get_device(gattlib_adapter_t* adapter, const char* device_id) {
-    gattlib_device_t* device = NULL;
-
-    g_rec_mutex_lock(&adapter->mutex);
-
     GSList *item = _find_device_with_device_id(adapter, device_id);
     if (item == NULL) {
-        goto EXIT;
+        return NULL;
     }
 
-    device = (gattlib_device_t*)item->data;
-
-EXIT:
-    g_rec_mutex_unlock(&adapter->mutex);
-    return device;
+    return (gattlib_device_t*)item->data;
 }
 
 enum _gattlib_device_state gattlib_device_get_state(gattlib_adapter_t* adapter, const char* device_id) {
-    enum _gattlib_device_state state = NOT_FOUND;
-
-    g_rec_mutex_lock(&adapter->mutex);
-
     gattlib_device_t* device = gattlib_device_get_device(adapter, device_id);
-    if (device != NULL) {
-        state = device->state;
+    if (device == NULL) {
+        return NOT_FOUND;
     }
 
-    g_rec_mutex_unlock(&adapter->mutex);
-    return state;
+    return device->state;
 }
 
 int gattlib_device_set_state(gattlib_adapter_t* adapter, const char* device_id, enum _gattlib_device_state new_state) {
     enum _gattlib_device_state old_state;
     int ret = GATTLIB_SUCCESS;
 
-    g_rec_mutex_lock(&adapter->mutex);
+    g_rec_mutex_lock(&m_gattlib_mutex);
+
+    if (!gattlib_adapter_is_valid(adapter)) {
+        ret = GATTLIB_INVALID_PARAMETER;
+        goto EXIT;
+    }
 
     old_state = gattlib_device_get_state(adapter, device_id);
     if (old_state == NOT_FOUND) {
@@ -77,6 +69,7 @@ int gattlib_device_set_state(gattlib_adapter_t* adapter, const char* device_id, 
 
             GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_device_set_state:%s: Set initial state %s", device_id, device_state_str[new_state]);
 
+            device->reference_counter = 1;
             device->adapter = adapter;
             device->device_id = g_strdup(device_id);
             device->state = new_state;
@@ -103,7 +96,7 @@ int gattlib_device_set_state(gattlib_adapter_t* adapter, const char* device_id, 
         case DISCONNECTED:
             GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_device_set_state: Free device %p", device);
             adapter->devices = g_slist_remove(adapter->devices, device);
-            free(device);
+            gattlib_device_unref(device);
             break;
         case CONNECTING:
             GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_device_set_state: Connecting device needs to be removed - ignore it");
@@ -130,7 +123,7 @@ int gattlib_device_set_state(gattlib_adapter_t* adapter, const char* device_id, 
     }
 
 EXIT:
-    g_rec_mutex_unlock(&adapter->mutex);
+    g_rec_mutex_unlock(&m_gattlib_mutex);
     return ret;
 }
 
@@ -139,7 +132,7 @@ static void _gattlib_device_free(gpointer data) {
 
     switch (device->state) {
     case DISCONNECTED:
-        free(device);
+        gattlib_device_unref(device);
         break;
     default:
         GATTLIB_LOG(GATTLIB_WARNING, "Memory of the BLE device '%s' has not been freed because in state %s",
@@ -148,11 +141,22 @@ static void _gattlib_device_free(gpointer data) {
 }
 
 int gattlib_devices_free(gattlib_adapter_t* adapter) {
-    g_rec_mutex_lock(&adapter->mutex);
     g_slist_free_full(adapter->devices, _gattlib_device_free);
-    g_rec_mutex_unlock(&adapter->mutex);
-
     return 0;
+}
+
+int gattlib_device_unref(gattlib_device_t* device) {
+    g_rec_mutex_lock(&m_gattlib_mutex);
+    device->reference_counter--;
+    if (device->reference_counter > 0) {
+        goto EXIT;
+    }
+
+    free(device);
+
+EXIT:
+    g_rec_mutex_unlock(&m_gattlib_mutex);
+    return GATTLIB_SUCCESS;
 }
 
 static void _gattlib_device_is_disconnected(gpointer data, gpointer user_data) {
@@ -167,9 +171,7 @@ static void _gattlib_device_is_disconnected(gpointer data, gpointer user_data) {
 int gattlib_devices_are_disconnected(gattlib_adapter_t* adapter) {
     bool devices_are_disconnected = true;
 
-    g_rec_mutex_lock(&adapter->mutex);
     g_slist_foreach(adapter->devices, _gattlib_device_is_disconnected, &devices_are_disconnected);
-    g_rec_mutex_unlock(&adapter->mutex);
 
     return devices_are_disconnected;
 }
@@ -182,10 +184,17 @@ static void _gattlib_device_dump_state(gpointer data, gpointer user_data) {
 }
 
 void gattlib_devices_dump_state(gattlib_adapter_t* adapter) {
-    g_rec_mutex_lock(&adapter->mutex);
+    g_rec_mutex_lock(&m_gattlib_mutex);
+
+    if (!gattlib_adapter_is_valid(adapter)) {
+        goto EXIT;
+    }
+
     GATTLIB_LOG(GATTLIB_DEBUG, "Device list:");
     g_slist_foreach(adapter->devices, _gattlib_device_dump_state, NULL);
-    g_rec_mutex_unlock(&adapter->mutex);
+
+EXIT:
+    g_rec_mutex_unlock(&m_gattlib_mutex);
 }
 
 #endif

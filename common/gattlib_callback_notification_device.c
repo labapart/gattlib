@@ -56,14 +56,19 @@ void gattlib_notification_device_thread(gpointer data, gpointer user_data) {
 	struct gattlib_notification_device_thread_args* args = data;
 	struct gattlib_handler* handler = user_data;
 
-	g_rec_mutex_lock(&handler->mutex);
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_connection_is_connected(args->connection)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return;
+	}
 
 	handler->callback.notification_handler(
 		args->uuid, args->data, args->data_length,
 		handler->user_data
 	);
 
-	g_rec_mutex_unlock(&handler->mutex);
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 
 	if (args->uuid != NULL) {
 		free(args->uuid);

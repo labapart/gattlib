@@ -55,11 +55,23 @@ struct gattlib_discovered_device_thread_args {
 static gpointer _gattlib_discovered_device_thread(gpointer data) {
 	struct gattlib_discovered_device_thread_args* args = data;
 
-	g_rec_mutex_lock(&args->gattlib_adapter->discovered_device_callback.mutex);
+	g_rec_mutex_lock(&m_gattlib_mutex);
 
-	if (!gattlib_has_valid_handler(&args->gattlib_adapter->discovered_device_callback)) {
+	if (!gattlib_adapter_is_valid(args->gattlib_adapter)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
 		goto EXIT;
 	}
+
+	if (!gattlib_has_valid_handler(&args->gattlib_adapter->discovered_device_callback)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		goto EXIT;
+	}
+
+	// Increase adapter reference counter to ensure the adapter is not freed while
+	// the callback is in use.
+	gattlib_adapter_ref(args->gattlib_adapter);
+
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 
 	args->gattlib_adapter->discovered_device_callback.callback.discovered_device(
 		args->gattlib_adapter,
@@ -67,9 +79,9 @@ static gpointer _gattlib_discovered_device_thread(gpointer data) {
 		args->gattlib_adapter->discovered_device_callback.user_data
 	);
 
-EXIT:
-	g_rec_mutex_unlock(&args->gattlib_adapter->discovered_device_callback.mutex);
+	gattlib_adapter_unref(args->gattlib_adapter);
 
+EXIT:
 	free(args->mac_address);
 	if (args->name != NULL) {
 		free(args->name);
@@ -96,6 +108,10 @@ static void* _discovered_device_thread_args_allocator(va_list args) {
 }
 
 void gattlib_on_discovered_device(gattlib_adapter_t* gattlib_adapter, OrgBluezDevice1* device1) {
+	if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+		return;
+	}
+
 	gattlib_handler_dispatch_to_thread(
 		&gattlib_adapter->discovered_device_callback,
 #if defined(WITH_PYTHON)

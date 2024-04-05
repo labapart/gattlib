@@ -50,22 +50,31 @@ static gpointer _gattlib_connected_device_thread(gpointer data) {
 	gattlib_connection_t* connection = data;
 	const gchar *device_mac_address = org_bluez_device1_get_address(connection->backend.device);
 
-	// Mutex to ensure the device is valid and not freed during its use
-	g_mutex_lock(&connection->device->device_mutex);
 	// Mutex to ensure the handler is valid
-	g_rec_mutex_lock(&connection->on_connection.mutex);
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_connection_is_connected(connection)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return NULL;
+	}
 
 	if (!gattlib_has_valid_handler(&connection->on_connection)) {
-		goto EXIT;
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return NULL;
 	}
+
+	// Ensure we increment device reference counter to prevent the device/connection is freed during the execution
+	gattlib_device_ref(connection->device);
+
+	// We need to release the lock here to ensure the connection callback that is actually
+	// doing the application sepcific work is not locking the BLE state.
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 
 	connection->on_connection.callback.connection_handler(
 		connection->device->adapter, device_mac_address, connection, 0 /* no error */,
 		connection->on_connection.user_data);
 
-EXIT:
-	g_rec_mutex_unlock(&connection->on_connection.mutex);
-	g_mutex_unlock(&connection->device->device_mutex);
+	gattlib_device_unref(connection->device);
 	return NULL;
 }
 
@@ -75,6 +84,10 @@ static void* _connected_device_thread_args_allocator(va_list args) {
 }
 
 void gattlib_on_connected_device(gattlib_connection_t* connection) {
+	if (!gattlib_device_is_valid(connection->device)) {
+		return;
+	}
+
 	gattlib_handler_dispatch_to_thread(
 		&connection->on_connection,
 #if defined(WITH_PYTHON)

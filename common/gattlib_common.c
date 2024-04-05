@@ -8,11 +8,21 @@
 
 #include "gattlib_internal.h"
 
+
 int gattlib_register_notification(gattlib_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
 	GError *error = NULL;
+	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (connection == NULL) {
-		return GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
+
+	if (!gattlib_device_is_valid(connection->device)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
 	}
 
 	connection->notification.callback.notification_handler = notification_handler;
@@ -25,19 +35,33 @@ int gattlib_register_notification(gattlib_connection_t* connection, gattlib_even
 	if (error != NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_register_notification: Failed to create thread pool: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_INTERNAL;
+		ret = GATTLIB_ERROR_INTERNAL;
+		goto EXIT;
 	} else {
 		assert(connection->notification.thread_pool != NULL);
-		return GATTLIB_SUCCESS;
 	}
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }
 
 int gattlib_register_indication(gattlib_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
 	GError *error = NULL;
+	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (connection == NULL) {
-		return GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
 	}
+
+	if (!gattlib_device_is_valid(connection->device)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
+
 	connection->indication.callback.notification_handler = indication_handler;
 	connection->indication.user_data = user_data;
 
@@ -48,19 +72,36 @@ int gattlib_register_indication(gattlib_connection_t* connection, gattlib_event_
 	if (error != NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_register_indication: Failed to create thread pool: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_ERROR_INTERNAL;
-	} else {
-		return GATTLIB_SUCCESS;
+		ret = GATTLIB_ERROR_INTERNAL;
+		goto EXIT;
 	}
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }
 
 int gattlib_register_on_disconnect(gattlib_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
+	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
 	if (connection == NULL) {
-		return GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
 	}
+
+	if (!gattlib_device_is_valid(connection->device)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
+
 	connection->on_disconnection.callback.disconnection_handler = handler;
 	connection->on_disconnection.user_data = user_data;
-	return GATTLIB_SUCCESS;
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }
 
 void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid) {
@@ -144,10 +185,8 @@ int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2) {
 }
 
 void gattlib_handler_free(struct gattlib_handler* handler) {
-	g_rec_mutex_lock(&handler->mutex);
-
 	if (!gattlib_has_valid_handler(handler)) {
-		goto EXIT;
+		return;
 	}
 
 	// Reset callback to stop calling it after we stopped
@@ -172,9 +211,6 @@ void gattlib_handler_free(struct gattlib_handler* handler) {
 		g_thread_pool_free(handler->thread_pool, FALSE /* immediate */, TRUE /* wait */);
 		handler->thread_pool = NULL;
 	}
-
-EXIT:
-	g_rec_mutex_unlock(&handler->mutex);
 }
 
 bool gattlib_has_valid_handler(struct gattlib_handler* handler) {
@@ -185,8 +221,11 @@ void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*
 		GThreadFunc thread_func, const char* thread_name, void* (*thread_args_allocator)(va_list args), ...) {
 	GError *error = NULL;
 
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
 	if (!gattlib_has_valid_handler(handler)) {
 		// We do not have (anymore) a callback, nothing to do
+		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return;
 	}
 
@@ -197,6 +236,8 @@ void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*
 		handler->python_args = handler->user_data;
 	}
 #endif
+
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 
 	// We create a thread to ensure the callback is not blocking the mainloop
 	va_list args;
@@ -217,4 +258,11 @@ void gattlib_free_mem(void *ptr) {
 	if (ptr != NULL) {
 		free(ptr);
 	}
+}
+
+int gattlib_device_ref(gattlib_device_t* device) {
+	g_rec_mutex_lock(&m_gattlib_mutex);
+	device->reference_counter++;
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return GATTLIB_SUCCESS;
 }

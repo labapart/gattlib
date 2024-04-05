@@ -19,6 +19,12 @@ static void _on_device_connect(gattlib_connection_t* connection) {
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
 
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_device_is_valid(connection->device)) {
+		goto EXIT;
+	}
+
 	// Stop the timeout for connection
 	if (connection->backend.connection_timeout_id) {
 		g_source_remove(connection->backend.connection_timeout_id);
@@ -35,17 +41,20 @@ static void _on_device_connect(gattlib_connection_t* connection) {
 			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to get device manager from adapter");
 		}
 		//TODO: Free device
-		return;
+		goto EXIT;
 	}
 	connection->backend.dbus_objects = g_dbus_object_manager_get_objects(device_manager);
 
 	gattlib_device_set_state(connection->device->adapter, connection->device->device_id, CONNECTED);
 
 	gattlib_on_connected_device(connection);
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 }
 
 gboolean on_handle_device_property_change(
-	    OrgBluezGattCharacteristic1 *object,
+	    GDBusProxy *proxy,
 	    GVariant *arg_changed_properties,
 	    const gchar *const *arg_invalidated_properties,
 	    gpointer user_data)
@@ -54,6 +63,7 @@ gboolean on_handle_device_property_change(
 
 	// Retrieve 'Value' from 'arg_changed_properties'
 	if (g_variant_n_children (arg_changed_properties) > 0) {
+		const gchar* device_object_path = g_dbus_proxy_get_object_path(proxy);
 		GVariantIter *iter;
 		const gchar *key;
 		GVariant *value;
@@ -62,17 +72,14 @@ gboolean on_handle_device_property_change(
 		while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
 			if (strcmp(key, "Connected") == 0) {
 				if (!g_variant_get_boolean(value)) {
-					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Disconnection",
-						connection->backend.device_object_path);
+					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Disconnection", device_object_path);
 					gattlib_on_disconnected_device(connection);
 				} else {
-					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Connection",
-						connection->backend.device_object_path);
+					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Connection", device_object_path);
 				}
 			} else if (strcmp(key, "ServicesResolved") == 0) {
 				if (g_variant_get_boolean(value)) {
-					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Service Resolved",
-						connection->backend.device_object_path);
+					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Service Resolved", device_object_path);
 					_on_device_connect(connection);
 				}
 			}
@@ -132,8 +139,17 @@ void get_device_path_from_mac(const char *adapter_name, const char *mac_address,
 static gboolean _stop_connect_func(gpointer data) {
 	gattlib_connection_t *connection = data;
 
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_device_is_valid(connection->device)) {
+		goto EXIT;
+	}
+
 	// Reset the connection timeout
 	connection->backend.connection_timeout_id = 0;
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 
 	// We return FALSE when it is a one-off event
 	return FALSE;
@@ -159,7 +175,7 @@ int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 {
 	const char* adapter_name = NULL;
 	GError *error = NULL;
-	char object_path[100];
+	char object_path[GATTLIB_DBUS_OBJECT_PATH_SIZE_MAX];
 	int ret = GATTLIB_SUCCESS;
 
 	// In case NULL is passed, we initialized default adapter
@@ -180,14 +196,23 @@ int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 
 	get_device_path_from_mac(adapter_name, dst, object_path, sizeof(object_path));
 
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_adapter_is_valid(adapter)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
+
 	gattlib_device_t* device = gattlib_device_get_device(adapter, object_path);
 	if (device == NULL) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot find connection %s", dst);
-		return GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
 	} else if (device->state != DISCONNECTED) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot connect to '%s'. Device is in state %s",
 			dst, device_state_str[device->state]);
-		return GATTLIB_BUSY;
+		ret = GATTLIB_BUSY;
+		goto EXIT;
 	}
 
 	device->connection.on_connection.callback.connection_handler = connect_cb;
@@ -214,6 +239,7 @@ int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 		} else {
 			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to connect to DBus Bluez Device");
 		}
+		goto EXIT;
 	} else {
 		device->connection.backend.device = bluez_device;
 		device->connection.backend.device_object_path = strdup(object_path);
@@ -255,6 +281,7 @@ int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
 	device->connection.backend.connection_timeout_id = g_timeout_add_seconds(CONNECT_TIMEOUT_SEC, _stop_connect_func, &device->connection);
 
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 	return GATTLIB_SUCCESS;
 
 FREE_DEVICE:
@@ -265,10 +292,12 @@ FREE_DEVICE:
 		gattlib_adapter_close(adapter);
 	}
 
+EXIT:
 	if (ret != GATTLIB_SUCCESS) {
 		connect_cb(adapter, dst, NULL, ret /* error */, user_data);
 	}
 
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 	return ret;
 }
 
@@ -281,7 +310,6 @@ FREE_DEVICE:
 void gattlib_connection_free(gattlib_connection_t* connection) {
 	char* device_id;
 
-	g_mutex_lock(&connection->device->device_mutex);
 	device_id = connection->device->device_id;
 
 	// Remove signal
@@ -312,26 +340,24 @@ void gattlib_connection_free(gattlib_connection_t* connection) {
 
 	// Mark the device has disconnected
 	gattlib_device_set_state(connection->device->adapter, device_id, DISCONNECTED);
-
-	g_mutex_unlock(&connection->device->device_mutex);
 }
 
 int gattlib_disconnect(gattlib_connection_t* connection, bool wait_disconnection) {
-	int ret = GATTLIB_SUCCESS;
 	GError *error = NULL;
+	int ret = GATTLIB_SUCCESS;
 
 	if (connection == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection parameter is not valid.");
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	g_mutex_lock(&connection->device->device_mutex);
+	g_rec_mutex_lock(&m_gattlib_mutex);
 
-	if (connection->device->state != CONNECTED) {
+	if (!gattlib_connection_is_connected(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection is not in connected state (state=%s).",
 			device_state_str[connection->device->state]);
-		ret = GATTLIB_BUSY;
-		goto EXIT;
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return GATTLIB_BUSY;
 	}
 
 	GATTLIB_LOG(GATTLIB_DEBUG, "Disconnecting bluetooth device %s", connection->backend.device_object_path);
@@ -340,6 +366,8 @@ int gattlib_disconnect(gattlib_connection_t* connection, bool wait_disconnection
 	if (error) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to disconnect DBus Bluez Device: %s", error->message);
 		g_error_free(error);
+
+		// We continue, we still want to set the correct state
 	}
 
 	// Mark the device has disconnected
@@ -348,35 +376,53 @@ int gattlib_disconnect(gattlib_connection_t* connection, bool wait_disconnection
 	//Note: Signals and memory will be removed/clean on disconnction callback
 	//      See _gattlib_clean_on_disconnection()
 
+	// We must release the mutex before the loop to leave other threads to signal the disconnection
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+
 	if (wait_disconnection) {
 		gint64 end_time;
 
+		g_mutex_lock(&m_gattlib_signal.mutex);
+
 		end_time = g_get_monotonic_time() + GATTLIB_DISCONNECTION_WAIT_TIMEOUT_SEC * G_TIME_SPAN_SECOND;
 
-		while (!connection->disconnection_wait.value) {
-			if (!g_cond_wait_until(&connection->disconnection_wait.condition, &connection->device->device_mutex, end_time)) {
+		while (gattlib_connection_is_connected(connection)) {
+			if (!g_cond_wait_until(&m_gattlib_signal.condition, &m_gattlib_signal.mutex, end_time)) {
 				ret = GATTLIB_TIMEOUT;
 				break;
 			}
 		}
+
+		g_mutex_unlock(&m_gattlib_signal.mutex);
 	}
 
-EXIT:
-	g_mutex_unlock(&connection->device->device_mutex);
 	return ret;
 }
 
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 38)
 int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
+	const gchar* const* service_str;
+	GError *error = NULL;
+	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
 	if (connection == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib connection not initialized.");
+		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
+	if (!gattlib_device_is_valid(connection->device)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
+	// Increase 'bluez_device' reference counter to avoid to keep the lock longer
 	OrgBluezDevice1* bluez_device = connection->backend.device;
-	const gchar* const* service_str;
-	GError *error = NULL;
+	g_object_ref(bluez_device);
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 
 	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(bluez_device);
 
@@ -398,7 +444,8 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 
 	gattlib_primary_service_t* primary_services = calloc(count_max * sizeof(gattlib_primary_service_t), 1);
 	if (primary_services == NULL) {
-		return GATTLIB_OUT_OF_MEMORY;
+		ret = GATTLIB_OUT_OF_MEMORY;
+		goto EXIT;
 	}
 
 	for (service_str = service_strs; *service_str != NULL; service_str++) {
@@ -440,20 +487,32 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 	if (services_count != NULL) {
 		*services_count = count;
 	}
-	return GATTLIB_SUCCESS;
+
+EXIT:
+	g_object_unref(bluez_device);
+	return ret;
 }
 #else
 int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
-	if (connection == NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib connection not initialized.");
-		return GATTLIB_INVALID_PARAMETER;
-	}
-
 	GError *error = NULL;
-	GDBusObjectManager *device_manager = get_device_manager_from_adapter(connection->device->adapter, &error);
-	OrgBluezDevice1* device = connection->backend.device;
 	const gchar* const* service_str;
 	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (connection == NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib connection not initialized.");
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
+
+	if (!gattlib_device_is_valid(connection->device)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
+
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(connection->device->adapter, &error);
+	OrgBluezDevice1* device = connection->backend.device;
 
 	const gchar* const* service_strs = org_bluez_device1_get_uuids(device);
 
@@ -466,7 +525,7 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 			ret = GATTLIB_ERROR_DBUS;
 			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized.");
 		}
-		return ret;
+		goto EXIT;
 	}
 
 	if (service_strs == NULL) {
@@ -476,7 +535,7 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 		if (services_count != NULL) {
 			*services_count = 0;
 		}
-		return GATTLIB_SUCCESS;
+		goto EXIT;
 	}
 
 	// Maximum number of primary services
@@ -487,7 +546,8 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 
 	gattlib_primary_service_t* primary_services = calloc(count_max * sizeof(gattlib_primary_service_t), 1);
 	if (primary_services == NULL) {
-		return GATTLIB_OUT_OF_MEMORY;
+		ret = GATTLIB_OUT_OF_MEMORY;
+		goto EXIT;
 	}
 
 	GList *l;
@@ -590,6 +650,9 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 	if (ret != GATTLIB_SUCCESS) {
 		free(primary_services);
 	}
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 	return ret;
 }
 #endif
@@ -597,9 +660,21 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 38)
 int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
-	OrgBluezDevice1* bluez_device = connection->backend.bluez_device;
 	GError *error = NULL;
 	int handle;
+	int ret = GATTLIB_SUCCESS;
+
+	// Increase bluez_device object reference counter to avoid to keep locking the mutex
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_device_is_valid(connection->device)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
+	OrgBluezDevice1* bluez_device = connection->backend.bluez_device;
+	g_object_ref(bluez_device);
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 
 	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(bluez_device);
 	const gchar* const* service_str;
@@ -607,7 +682,8 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 	const gchar* characteristic_str;
 
 	if (service_strs == NULL) {
-		return GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
 	}
 
 	// Maximum number of primary services
@@ -656,7 +732,8 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 
 	gattlib_characteristic_t* characteristic_list = calloc(count_max * sizeof(gattlib_characteristic_t), 1);
 	if (characteristic_list == NULL) {
-		return GATTLIB_OUT_OF_MEMORY;
+		ret = GATTLIB_OUT_OF_MEMORY;
+		goto EXIT;
 	}
 
 	for (service_str = service_strs; *service_str != NULL; service_str++) {
@@ -744,7 +821,10 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 
 	*characteristics       = characteristic_list;
 	*characteristics_count = count;
-	return GATTLIB_SUCCESS;
+
+EXIT:
+	g_object_unref(bluez_device);
+	return ret;
 }
 #else
 static void add_characteristics_from_service(struct _gattlib_connection_backend* backend, GDBusObjectManager *device_manager,
@@ -840,10 +920,18 @@ static void add_characteristics_from_service(struct _gattlib_connection_backend*
 
 int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	GError *error = NULL;
-	GDBusObjectManager *device_manager = get_device_manager_from_adapter(connection->device->adapter, &error);
+	GDBusObjectManager *device_manager;
 	GList *l;
-	int ret;
+	int ret = GATTLIB_SUCCESS;
 
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_device_is_valid(connection->device)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
+
+	device_manager = get_device_manager_from_adapter(connection->device->adapter, &error);
 	if (device_manager == NULL) {
 		if (error != NULL) {
 			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
@@ -853,7 +941,7 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 			ret = GATTLIB_ERROR_DBUS;
 			GATTLIB_LOG(GATTLIB_ERROR, "Gattlib Context not initialized.");
 		}
-		return ret;
+		goto EXIT;
 	}
 
 	// Count the maximum number of characteristic to allocate the array (we count all the characterstic for all devices)
@@ -877,7 +965,8 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 
 	gattlib_characteristic_t* characteristic_list = calloc(count_max * sizeof(gattlib_characteristic_t), 1);
 	if (characteristic_list == NULL) {
-		return GATTLIB_OUT_OF_MEMORY;
+		ret = GATTLIB_OUT_OF_MEMORY;
+		goto EXIT;
 	}
 
 	// List all services for this device
@@ -941,7 +1030,9 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 
 	*characteristics       = characteristic_list;
 	*characteristics_count = count;
-	return GATTLIB_SUCCESS;
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }
 #endif
 
@@ -961,10 +1052,17 @@ int gattlib_discover_desc(gattlib_connection_t* connection, gattlib_descriptor_t
 int get_bluez_device_from_mac(struct _gattlib_adapter *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1)
 {
 	GError *error = NULL;
-	char object_path[100];
-	int ret;
+	char object_path[GATTLIB_DBUS_OBJECT_PATH_SIZE_MAX];
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_adapter_is_valid(adapter)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return GATTLIB_INVALID_PARAMETER;
+	}
 
 	if (adapter->backend.adapter_proxy == NULL) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_NO_ADAPTER;
 	}
 
@@ -974,6 +1072,9 @@ int get_bluez_device_from_mac(struct _gattlib_adapter *adapter, const char *mac_
 		get_device_path_from_mac(NULL, mac_address, object_path, sizeof(object_path));
 	}
 
+	// No need to keep the mutex longer. After it is DBUS specific operations not depending on gattlib structure
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+
 	*bluez_device1 = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
 			G_DBUS_PROXY_FLAGS_NONE,
@@ -982,10 +1083,9 @@ int get_bluez_device_from_mac(struct _gattlib_adapter *adapter, const char *mac_
 			NULL,
 			&error);
 	if (error) {
-		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to connection to new DBus Bluez Device: %s", error->message);
 		g_error_free(error);
-		return ret;
+		return GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 	}
 
 	return GATTLIB_SUCCESS;
@@ -993,15 +1093,31 @@ int get_bluez_device_from_mac(struct _gattlib_adapter *adapter, const char *mac_
 
 int gattlib_get_rssi(gattlib_connection_t *connection, int16_t *rssi)
 {
-	if (connection == NULL) {
-		return GATTLIB_INVALID_PARAMETER;
-	}
-
 	if (rssi == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	*rssi = org_bluez_device1_get_rssi(connection->backend.device);
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (connection == NULL) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
+	if (!gattlib_device_is_valid(connection->device)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return GATTLIB_INVALID_PARAMETER;
+	}
+
+	// device is actually a GObject. Increasing its reference counter prevents to
+	// be freed if the connection is released.
+	OrgBluezDevice1* dbus_device = connection->backend.device;
+	g_object_ref(dbus_device);
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+
+	*rssi = org_bluez_device1_get_rssi(dbus_device);
+
+	g_object_unref(dbus_device);
 
 	return GATTLIB_SUCCESS;
 }
@@ -1015,9 +1131,12 @@ int gattlib_get_rssi_from_mac(gattlib_adapter_t* adapter, const char *mac_addres
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
+	//
+	// No need of locking the mutex in this function. get_bluez_device_from_mac() ensures the adapter is valid.
+	//
+
 	ret = get_bluez_device_from_mac(adapter, mac_address, &bluez_device1);
 	if (ret != GATTLIB_SUCCESS) {
-		g_object_unref(bluez_device1);
 		return ret;
 	}
 

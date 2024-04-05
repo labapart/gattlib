@@ -31,6 +31,13 @@ gboolean on_handle_battery_level_property_change(
 			g_variant_print(arg_changed_properties, TRUE),
 			arg_invalidated_properties);
 
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_connection_is_connected(connection)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return FALSE;
+	}
+
 	if (gattlib_has_valid_handler(&connection->notification)) {
 		// Retrieve 'Value' from 'arg_changed_properties'
 		if (g_variant_n_children (arg_changed_properties) > 0) {
@@ -54,6 +61,7 @@ gboolean on_handle_battery_level_property_change(
 			g_variant_iter_free(iter);
 		}
 	}
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 	return TRUE;
 }
 #endif
@@ -65,6 +73,13 @@ static gboolean on_handle_characteristic_property_change(
 	    gpointer user_data)
 {
 	gattlib_connection_t* connection = user_data;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_connection_is_connected(connection)) {
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return FALSE;
+	}
 
 	if (gattlib_has_valid_handler(&connection->notification)) {
 		GVariantDict dict;
@@ -96,6 +111,8 @@ static gboolean on_handle_characteristic_property_change(
 	} else {
 		GATTLIB_LOG(GATTLIB_DEBUG, "on_handle_characteristic_property_change: not a notification handler");
 	}
+
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 	return TRUE;
 }
 
@@ -142,9 +159,16 @@ static gboolean on_handle_characteristic_indication(
 }
 
 static int connect_signal_to_characteristic_uuid(gattlib_connection_t* connection, const uuid_t* uuid, void *callback) {
-	int ret;
+	int ret = GATTLIB_SUCCESS;
 
 	assert(callback != NULL);
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_connection_is_connected(connection)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
 
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	if (dbus_characteristic.type == TYPE_NONE) {
@@ -153,7 +177,8 @@ static int connect_signal_to_characteristic_uuid(gattlib_connection_t* connectio
 		gattlib_uuid_to_string(uuid, uuid_str, sizeof(uuid_str));
 
 		GATTLIB_LOG(GATTLIB_ERROR, "GATT characteristic '%s' not found", uuid_str);
-		return GATTLIB_NOT_FOUND;
+		ret = GATTLIB_NOT_FOUND;
+		goto EXIT;
 	}
 #if BLUEZ_VERSION > BLUEZ_VERSIONS(5, 40)
 	else if (dbus_characteristic.type == TYPE_BATTERY_LEVEL) {
@@ -163,7 +188,8 @@ static int connect_signal_to_characteristic_uuid(gattlib_connection_t* connectio
 			G_CALLBACK (on_handle_battery_level_property_change),
 			connection);
 
-		return GATTLIB_SUCCESS;
+		ret = GATTLIB_SUCCESS;
+		goto EXIT;
 	} else {
 		assert(dbus_characteristic.type == TYPE_GATT);
 	}
@@ -176,18 +202,22 @@ static int connect_signal_to_characteristic_uuid(gattlib_connection_t* connectio
 		connection);
 	if (signal_id == 0) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to connect signal to DBus GATT notification");
-		return GATTLIB_ERROR_DBUS;
+		ret = GATTLIB_ERROR_DBUS;
+		goto EXIT;
 	}
 
 	// Add signal to the list
 	struct gattlib_notification_handle *notification_handle = calloc(sizeof(struct gattlib_notification_handle), 1);
 	if (notification_handle == NULL) {
-		return GATTLIB_OUT_OF_MEMORY;
+		ret = GATTLIB_OUT_OF_MEMORY;
+		goto EXIT;
 	}
 	notification_handle->gatt = dbus_characteristic.gatt;
 	notification_handle->signal_id = signal_id;
 	memcpy(&notification_handle->uuid, uuid, sizeof(*uuid));
 	connection->backend.notified_characteristics = g_list_append(connection->backend.notified_characteristics, notification_handle);
+
+	// Note: An optimisation could be to release mutex here after increasing reference counter of 'dbus_characteristic.gatt'
 
 	GError *error = NULL;
 	org_bluez_gatt_characteristic1_call_start_notify_sync(dbus_characteristic.gatt, NULL, &error);
@@ -195,14 +225,24 @@ static int connect_signal_to_characteristic_uuid(gattlib_connection_t* connectio
 		ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to start DBus GATT notification: %s", error->message);
 		g_error_free(error);
-		return ret;
-	} else {
-		return GATTLIB_SUCCESS;
+		goto EXIT;
 	}
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }
 
 static int disconnect_signal_to_characteristic_uuid(gattlib_connection_t* connection, const uuid_t* uuid, void *callback) {
 	struct gattlib_notification_handle *notification_handle = NULL;
+	int ret = GATTLIB_SUCCESS;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	if (!gattlib_connection_is_connected(connection)) {
+		ret = GATTLIB_INVALID_PARAMETER;
+		goto EXIT;
+	}
 
 	// Find notification handle
 	for (GList *l = connection->backend.notified_characteristics; l != NULL; l = l->next) {
@@ -216,7 +256,8 @@ static int disconnect_signal_to_characteristic_uuid(gattlib_connection_t* connec
 	}
 
 	if (notification_handle == NULL) {
-		return GATTLIB_NOT_FOUND;
+		ret = GATTLIB_NOT_FOUND;
+		goto EXIT;
 	}
 
 	g_signal_handler_disconnect(notification_handle->gatt, notification_handle->signal_id);
@@ -230,10 +271,13 @@ static int disconnect_signal_to_characteristic_uuid(gattlib_connection_t* connec
 	if (error) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to stop DBus GATT notification: %s", error->message);
 		g_error_free(error);
-		return GATTLIB_NOT_FOUND;
-	} else {
-		return GATTLIB_SUCCESS;
+		ret = GATTLIB_NOT_FOUND;
+		goto EXIT;
 	}
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return ret;
 }
 
 int gattlib_notification_start(gattlib_connection_t* connection, const uuid_t* uuid) {
