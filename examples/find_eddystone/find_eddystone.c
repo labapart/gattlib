@@ -43,7 +43,7 @@ const char* m_adapter_name;
  * @param manufacturer_data_size is the size of manufacturer_data
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
-void on_eddystone_found(void *adapter, const char* addr, const char* name,
+void on_eddystone_found(gattlib_adapter_t* adapter, const char* addr, const char* name,
 		gattlib_advertisement_data_t *advertisement_data, size_t advertisement_data_count,
 		uint16_t manufacturer_id, uint8_t *manufacturer_data, size_t manufacturer_data_size,
 		void *user_data)
@@ -81,7 +81,7 @@ void on_eddystone_found(void *adapter, const char* addr, const char* name,
 }
 
 static void* ble_task(void* arg) {
-	void* adapter = NULL;
+	gattlib_adapter_t* adapter = NULL;
 	int ret;
 
 	ret = gattlib_adapter_open(m_adapter_name, &adapter);

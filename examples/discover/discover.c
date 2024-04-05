@@ -42,7 +42,7 @@ static pthread_cond_t m_connection_terminated = PTHREAD_COND_INITIALIZER;
 // declaring mutex
 static pthread_mutex_t m_connection_terminated_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static void on_device_connect(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data) {
+static void on_device_connect(gattlib_adapter_t* adapter, const char *dst, gattlib_connection_t* connection, int error, void* user_data) {
 	gattlib_primary_service_t* services;
 	gattlib_characteristic_t* characteristics;
 	int services_count, characteristics_count;
@@ -96,7 +96,7 @@ static int stricmp(char const *a, char const *b) {
     }
 }
 
-static void ble_discovered_device(void *adapter, const char* addr, const char* name, void *user_data) {
+static void ble_discovered_device(gattlib_adapter_t* adapter, const char* addr, const char* name, void *user_data) {
 	const char* reference_mac_address = user_data;
 	int ret;
 
@@ -114,7 +114,7 @@ static void ble_discovered_device(void *adapter, const char* addr, const char* n
 
 static void* ble_task(void* arg) {
 	char* addr = arg;
-	void* adapter;
+	gattlib_adapter_t* adapter;
 	int ret;
 
 	ret = gattlib_adapter_open(adapter_name, &adapter);

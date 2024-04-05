@@ -107,7 +107,7 @@ static char* parse_name(uint8_t* data, size_t size) {
 	return NULL;
 }
 
-static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data) {
+static int ble_scan(gattlib_adapter_t* adapter, int device_desc, gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data) {
 	struct hci_filter old_options;
 	socklen_t slen = sizeof(old_options);
 	struct hci_filter new_options;
@@ -212,7 +212,7 @@ static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t 
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data) {
+int gattlib_adapter_scan_enable(gattlib_adapter_t* adapter, gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data) {
 	int device_desc = *(int*)adapter;
 
 	uint16_t interval = htobs(DISCOV_LE_SCAN_INT);
@@ -241,13 +241,13 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+int gattlib_adapter_scan_enable_with_filter(gattlib_adapter_t* adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }
 
-int gattlib_adapter_scan_disable(void* adapter) {
+int gattlib_adapter_scan_disable(gattlib_adapter_t* adapter) {
 	int device_desc = *(int*)adapter;
 
 	if (device_desc == -1) {
@@ -262,7 +262,7 @@ int gattlib_adapter_scan_disable(void* adapter) {
 	return result;
 }
 
-int gattlib_adapter_close(void* adapter) {
+int gattlib_adapter_close(gattlib_adapter_t* adapter) {
 	hci_close_dev(*(int*)adapter);
 	free(adapter);
 	return GATTLIB_SUCCESS;

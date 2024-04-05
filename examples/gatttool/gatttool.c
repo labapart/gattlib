@@ -106,7 +106,7 @@ void indication_handler(const uuid_t* uuid, const uint8_t* data, size_t data_len
 	rl_forced_update_display();
 }
 
-static void connect_cb(gatt_connection_t* connection, void* user_data)
+static void connect_cb(gattlib_connection_t* connection, void* user_data)
 {
 	if (connection == NULL) {
 		got_error = TRUE;
@@ -148,9 +148,8 @@ done:
 
 static gboolean primary(gpointer user_data)
 {
-	struct _gattlib_device *connection = (struct _gattlib_device *)user_data;
-	gattlib_context_t* conn_context = connection->context;
-	GAttrib *attrib = conn_context->attrib;
+	gattlib_device_t* connection = (gattlib_device_t* )user_data;
+	GAttrib *attrib = connection->backend.attrib;
 	char uuid_str[MAX_LEN_UUID_STR + 1];
 
 	if (opt_uuid)
@@ -176,7 +175,7 @@ static gboolean primary(gpointer user_data)
 
 static gboolean characteristics(gpointer user_data)
 {
-	gatt_connection_t* connection = (gatt_connection_t*)user_data;
+	gattlib_connection_t* connection = (gattlib_connection_t*)user_data;
 	gattlib_characteristic_t* characteristics;
 	int characteristic_count, i;
 
@@ -244,7 +243,7 @@ static void bt_uuid_to_uuid(bt_uuid_t* bt_uuid, uuid_t* uuid) {
 
 static gboolean characteristics_read(gpointer user_data)
 {
-	gatt_connection_t* connection = (gatt_connection_t*)user_data;
+	gattlib_connection_t* connection = (gattlib_connection_t*)user_data;
 	gattlib_context_t* conn_context = connection->context;
 	GAttrib *attrib = conn_context->attrib;
 
@@ -296,7 +295,7 @@ static void mainloop_quit(gpointer user_data)
 
 static gboolean characteristics_write(gpointer user_data)
 {
-	gattlib_context_t* conn_context = ((gatt_connection_t*)user_data)->context;
+	gattlib_context_t* conn_context = ((gattlib_connection_t*)user_data)->context;
 	GAttrib *attrib = conn_context->attrib;
 	uint8_t *value;
 	size_t len;
@@ -354,7 +353,7 @@ done:
 
 static gboolean characteristics_write_req(gpointer user_data)
 {
-	gattlib_context_t* conn_context = ((gatt_connection_t*)user_data)->context;
+	gattlib_context_t* conn_context = ((gattlib_connection_t*)user_data)->context;
 	GAttrib *attrib = conn_context->attrib;
 	uint8_t *value;
 	size_t len;
@@ -388,7 +387,7 @@ error:
 
 static gboolean characteristics_desc(gpointer user_data)
 {
-	gatt_connection_t* connection = (gatt_connection_t*)user_data;
+	gattlib_connection_t* connection = (gattlib_connection_t*)user_data;
 	gattlib_descriptor_t* descriptors;
 	int descriptor_count, i;
 
@@ -486,7 +485,7 @@ int main(int argc, char *argv[])
 	GOptionContext *context;
 	GOptionGroup *gatt_group, *params_group, *char_rw_group;
 	GError *gerr = NULL;
-	gatt_connection_t *connection;
+	gattlib_connection_t *connection;
 	unsigned long conn_options = 0;
 	BtIOSecLevel sec_level;
 	uint8_t dest_type;

@@ -35,7 +35,7 @@
 
 static const char* adapter_name;
 
-static void ble_advertising_device(void *adapter, const char* addr, const char* name, void *user_data) {
+static void ble_advertising_device(gattlib_adapter_t* adapter, const char* addr, const char* name, void *user_data) {
 	gattlib_advertisement_data_t *advertisement_data;
 	size_t advertisement_data_count;
 	uint16_t manufacturer_id;
@@ -63,7 +63,7 @@ static void ble_advertising_device(void *adapter, const char* addr, const char* 
 }
 
 static void* ble_task(void *arg) {
-	void* adapter;
+	gattlib_adapter_t* adapter;
 	int ret;
 
 	ret = gattlib_adapter_open(adapter_name, &adapter);

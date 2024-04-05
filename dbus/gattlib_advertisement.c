@@ -8,14 +8,14 @@
 
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 
-int gattlib_get_advertisement_data(gatt_connection_t *connection,
+int gattlib_get_advertisement_data(gattlib_connection_t *connection,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }
 
-int gattlib_get_advertisement_data_from_mac(void *adapter, const char *mac_address,
+int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const char *mac_address,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 {
@@ -112,24 +112,20 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_get_advertisement_data(gatt_connection_t *connection,
+int gattlib_get_advertisement_data(gattlib_connection_t *connection,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 {
-	gattlib_context_t* conn_context;
-
 	if (connection == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	conn_context = connection->context;
-
-	return get_advertisement_data_from_device(conn_context->device,
+	return get_advertisement_data_from_device(connection->backend.device,
 			advertisement_data, advertisement_data_count,
 			manufacturer_id, manufacturer_data, manufacturer_data_size);
 }
 
-int gattlib_get_advertisement_data_from_mac(void *adapter, const char *mac_address,
+int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const char *mac_address,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 {

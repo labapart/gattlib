@@ -8,7 +8,7 @@
 
 #include "gattlib_internal.h"
 
-int gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
+int gattlib_register_notification(gattlib_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data) {
 	GError *error = NULL;
 
 	if (connection == NULL) {
@@ -32,7 +32,7 @@ int gattlib_register_notification(gatt_connection_t* connection, gattlib_event_h
 	}
 }
 
-int gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
+int gattlib_register_indication(gattlib_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data) {
 	GError *error = NULL;
 
 	if (connection == NULL) {
@@ -54,7 +54,7 @@ int gattlib_register_indication(gatt_connection_t* connection, gattlib_event_han
 	}
 }
 
-int gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
+int gattlib_register_on_disconnect(gattlib_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data) {
 	if (connection == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
 	}

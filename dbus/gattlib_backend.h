@@ -4,13 +4,12 @@
  * Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
  */
 
-#ifndef __GATTLIB_INTERNAL_H__
-#define __GATTLIB_INTERNAL_H__
+#ifndef __GATTLIB_BACKEND_H__
+#define __GATTLIB_BACKEND_H__
 
 #include <assert.h>
 #include <pthread.h>
 
-#include "gattlib_internal_defs.h"
 #include "gattlib.h"
 
 #include "org-bluez-adaptater1.h"
@@ -37,9 +36,7 @@
 
 #define GATTLIB_DEFAULT_ADAPTER "hci0"
 
-typedef struct {
-	struct gattlib_adapter *adapter;
-
+struct _gattlib_connection_backend {
 	char* device_object_path;
 	OrgBluezDevice1* device;
 
@@ -54,16 +51,12 @@ typedef struct {
 
 	// List of 'OrgBluezGattCharacteristic1*' which has an attached notification
 	GList *notified_characteristics;
-} gattlib_context_t;
+};
 
-struct gattlib_adapter {
+struct _gattlib_adapter_backend {
 	GDBusObjectManager *device_manager;
 
 	OrgBluezAdapter1 *adapter_proxy;
-	char* adapter_name;
-
-	// The recursive mutex allows to ensure sensible operations are always covered by a mutex in a same thread
-	GRecMutex mutex;
 
 	// Internal attributes only needed during BLE scanning
 	struct {
@@ -82,13 +75,7 @@ struct gattlib_adapter {
 		} scan_loop;
 
 		uint32_t enabled_filters;
-
-		struct gattlib_handler discovered_device_callback;
 	} ble_scan;
-
-	// List of `struct _gattlib_device`. This list allows to know weither a device is
-	// discovered/disconnected/connecting/connected/disconnecting.
-	GSList *devices;
 };
 
 struct dbus_characteristic {
@@ -107,24 +94,24 @@ struct dbus_characteristic {
 
 extern const uuid_t m_battery_level_uuid;
 
-struct gattlib_adapter *init_default_adapter(void);
-GDBusObjectManager *get_device_manager_from_adapter(struct gattlib_adapter *gattlib_adapter, GError **error);
+struct _gattlib_adapter *init_default_adapter(void);
+GDBusObjectManager *get_device_manager_from_adapter(gattlib_adapter_t* gattlib_adapter, GError **error);
 
 void get_device_path_from_mac_with_adapter(OrgBluezAdapter1* adapter, const char *mac_address, char *object_path, size_t object_path_len);
 void get_device_path_from_mac(const char *adapter_name, const char *mac_address, char *object_path, size_t object_path_len);
-int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1);
+int get_bluez_device_from_mac(struct _gattlib_adapter *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1);
 
-struct dbus_characteristic get_characteristic_from_uuid(gatt_connection_t* connection, const uuid_t* uuid);
+struct dbus_characteristic get_characteristic_from_uuid(gattlib_connection_t* connection, const uuid_t* uuid);
 
 // Invoke when a new device has been discovered
-void gattlib_on_discovered_device(struct gattlib_adapter* gattlib_adapter, OrgBluezDevice1* device1);
+void gattlib_on_discovered_device(gattlib_adapter_t* gattlib_adapter, OrgBluezDevice1* device1);
 // Invoke when a new device is being connected
-void gattlib_on_connected_device(gatt_connection_t* connection);
+void gattlib_on_connected_device(gattlib_connection_t* connection);
 // Invoke when a new device is being disconnected
-void gattlib_on_disconnected_device(gatt_connection_t* connection);
+void gattlib_on_disconnected_device(gattlib_connection_t* connection);
 // Invoke when a new device receive a GATT notification
-void gattlib_on_gatt_notification(gatt_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length);
+void gattlib_on_gatt_notification(gattlib_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length);
 
-void disconnect_all_notifications(gattlib_context_t* conn_context);
+void disconnect_all_notifications(struct _gattlib_connection_backend* backend);
 
 #endif

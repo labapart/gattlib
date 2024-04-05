@@ -15,19 +15,18 @@
 
 static const char *m_dbus_error_unknown_object = "GDBus.Error:org.freedesktop.DBus.Error.UnknownObject";
 
-static void _on_device_connect(gatt_connection_t* connection) {
-	gattlib_context_t* conn_context = connection->context;
+static void _on_device_connect(gattlib_connection_t* connection) {
 	GDBusObjectManager *device_manager;
 	GError *error = NULL;
 
 	// Stop the timeout for connection
-	if (conn_context->connection_timeout_id) {
-		g_source_remove(conn_context->connection_timeout_id);
-		conn_context->connection_timeout_id = 0;
+	if (connection->backend.connection_timeout_id) {
+		g_source_remove(connection->backend.connection_timeout_id);
+		connection->backend.connection_timeout_id = 0;
 	}
 
 	// Get list of objects belonging to Device Manager
-	device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
+	device_manager = get_device_manager_from_adapter(connection->device->adapter, &error);
 	if (device_manager == NULL) {
 		if (error != NULL) {
 			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to get device manager from adapter (%d, %d).", error->domain, error->code);
@@ -38,9 +37,9 @@ static void _on_device_connect(gatt_connection_t* connection) {
 		//TODO: Free device
 		return;
 	}
-	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
+	connection->backend.dbus_objects = g_dbus_object_manager_get_objects(device_manager);
 
-	gattlib_device_set_state(conn_context->adapter, connection->device_id, CONNECTED);
+	gattlib_device_set_state(connection->device->adapter, connection->device->device_id, CONNECTED);
 
 	gattlib_on_connected_device(connection);
 }
@@ -51,8 +50,7 @@ gboolean on_handle_device_property_change(
 	    const gchar *const *arg_invalidated_properties,
 	    gpointer user_data)
 {
-	gatt_connection_t* connection = user_data;
-	gattlib_context_t* conn_context = connection->context;
+	gattlib_connection_t* connection = user_data;
 
 	// Retrieve 'Value' from 'arg_changed_properties'
 	if (g_variant_n_children (arg_changed_properties) > 0) {
@@ -65,16 +63,16 @@ gboolean on_handle_device_property_change(
 			if (strcmp(key, "Connected") == 0) {
 				if (!g_variant_get_boolean(value)) {
 					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Disconnection",
-						conn_context->device_object_path);
+						connection->backend.device_object_path);
 					gattlib_on_disconnected_device(connection);
 				} else {
 					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Connection",
-						conn_context->device_object_path);
+						connection->backend.device_object_path);
 				}
 			} else if (strcmp(key, "ServicesResolved") == 0) {
 				if (g_variant_get_boolean(value)) {
 					GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: device_property_change(%s): Service Resolved",
-						conn_context->device_object_path);
+						connection->backend.device_object_path);
 					_on_device_connect(connection);
 				}
 			}
@@ -132,10 +130,10 @@ void get_device_path_from_mac(const char *adapter_name, const char *mac_address,
 }
 
 static gboolean _stop_connect_func(gpointer data) {
-	gattlib_context_t *conn_context = data;
+	gattlib_connection_t *connection = data;
 
 	// Reset the connection timeout
-	conn_context->connection_timeout_id = 0;
+	connection->backend.connection_timeout_id = 0;
 
 	// We return FALSE when it is a one-off event
 	return FALSE;
@@ -154,29 +152,26 @@ static gboolean _stop_connect_func(gpointer data) {
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_connect(void *adapter, const char *dst,
+int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 		unsigned long options,
 		gatt_connect_cb_t connect_cb,
 		void* user_data)
 {
-	struct gattlib_adapter *gattlib_adapter = adapter;
 	const char* adapter_name = NULL;
 	GError *error = NULL;
 	char object_path[100];
 	int ret = GATTLIB_SUCCESS;
 
 	// In case NULL is passed, we initialized default adapter
-	if (gattlib_adapter == NULL) {
-		gattlib_adapter = init_default_adapter();
+	if (adapter == NULL) {
+		adapter = init_default_adapter();
+		if (adapter == NULL) {
+			GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: No default adapter");
+	        return GATTLIB_NOT_FOUND;
+		}
 	} else {
-		adapter_name = gattlib_adapter->adapter_name;
+		adapter_name = adapter->name;
 	}
-
-    // even after init_default_adapter() - the adapter can be NULL
-    if (gattlib_adapter == NULL) {
-        GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: No adapter");
-        return GATTLIB_NOT_FOUND;
-    }
 
 	if (connect_cb == NULL) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Missing connection callback");
@@ -185,40 +180,32 @@ int gattlib_connect(void *adapter, const char *dst,
 
 	get_device_path_from_mac(adapter_name, dst, object_path, sizeof(object_path));
 
-	gatt_connection_t* connection = gattlib_device_get_device(adapter, object_path);
-	if (connection == NULL) {
+	gattlib_device_t* device = gattlib_device_get_device(adapter, object_path);
+	if (device == NULL) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot find connection %s", dst);
 		return GATTLIB_INVALID_PARAMETER;
-	} else if (connection->state != DISCONNECTED) {
+	} else if (device->state != DISCONNECTED) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot connect to '%s'. Device is in state %s",
-			dst, device_state_str[connection->state]);
+			dst, device_state_str[device->state]);
 		return GATTLIB_BUSY;
 	}
 
-	gattlib_context_t* conn_context = calloc(sizeof(gattlib_context_t), 1);
-	if (conn_context == NULL) {
-		GATTLIB_LOG(GATTLIB_DEBUG, "gattlib_connect: Cannot allocate context");
-		return GATTLIB_OUT_OF_MEMORY;
-	}
-	conn_context->adapter = gattlib_adapter;
-
-	connection->context = conn_context;
-	connection->on_connection.callback.connection_handler = connect_cb;
-	connection->on_connection.user_data = user_data;
+	device->connection.on_connection.callback.connection_handler = connect_cb;
+	device->connection.on_connection.user_data = user_data;
 
 	GATTLIB_LOG(GATTLIB_DEBUG, "Connecting bluetooth device %s", dst);
 
 	// Mark the device has disconnected
-	gattlib_device_set_state(connection->adapter, connection->device_id, CONNECTING);
+	gattlib_device_set_state(device->adapter, device->device_id, CONNECTING);
 
-	OrgBluezDevice1* device = org_bluez_device1_proxy_new_for_bus_sync(
+	OrgBluezDevice1* bluez_device = org_bluez_device1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM,
 			G_DBUS_PROXY_FLAGS_NONE,
 			"org.bluez",
 			object_path,
 			NULL,
 			&error);
-	if (device == NULL) {
+	if (bluez_device == NULL) {
 		ret = GATTLIB_ERROR_DBUS;
 		if (error) {
 			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
@@ -227,20 +214,19 @@ int gattlib_connect(void *adapter, const char *dst,
 		} else {
 			GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Failed to connect to DBus Bluez Device");
 		}
-		goto FREE_CONNECTION_CONTEXT;
 	} else {
-		conn_context->device = device;
-		conn_context->device_object_path = strdup(object_path);
+		device->connection.backend.device = bluez_device;
+		device->connection.backend.device_object_path = strdup(object_path);
 	}
 
 	// Register a handle for notification
-	conn_context->on_handle_device_property_change_id = g_signal_connect(device,
+	device->connection.backend.on_handle_device_property_change_id = g_signal_connect(bluez_device,
 		"g-properties-changed",
-		G_CALLBACK (on_handle_device_property_change),
-		connection);
+		G_CALLBACK(on_handle_device_property_change),
+		&device->connection);
 
 	error = NULL;
-	org_bluez_device1_call_connect_sync(device, NULL, &error);
+	org_bluez_device1_call_connect_sync(bluez_device, NULL, &error);
 	if (error) {
 		if (strncmp(error->message, m_dbus_error_unknown_object, strlen(m_dbus_error_unknown_object)) == 0) {
 			// You might have this error if the computer has not scanned or has not already had
@@ -252,7 +238,7 @@ int gattlib_connect(void *adapter, const char *dst,
 			ret = GATTLIB_TIMEOUT;
 		} else {
 			GATTLIB_LOG(GATTLIB_ERROR, "Device connected error (device:%s): %s",
-				conn_context->device_object_path,
+				device->connection.backend.device_object_path,
 				error->message);
 			ret = GATTLIB_ERROR_DBUS_WITH_ERROR(error);
 		}
@@ -260,27 +246,23 @@ int gattlib_connect(void *adapter, const char *dst,
 		g_error_free(error);
 
 		// Fail to connect. Mark the device has disconnected to be able to reconnect
-		gattlib_device_set_state(connection->adapter, connection->device_id, DISCONNECTED);
+		gattlib_device_set_state(adapter, device->device_id, DISCONNECTED);
 
 		goto FREE_DEVICE;
 	}
 
 	// Wait for the property 'UUIDs' to be changed. We assume 'org.bluez.GattService1
 	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
-	conn_context->connection_timeout_id = g_timeout_add_seconds(CONNECT_TIMEOUT_SEC, _stop_connect_func, conn_context);
+	device->connection.backend.connection_timeout_id = g_timeout_add_seconds(CONNECT_TIMEOUT_SEC, _stop_connect_func, &device->connection);
 
 	return GATTLIB_SUCCESS;
 
 FREE_DEVICE:
-	free(conn_context->device_object_path);
-	g_object_unref(conn_context->device);
-
-FREE_CONNECTION_CONTEXT:
-	free(conn_context);
+	free(device->connection.backend.device_object_path);
 
 	// destroy default adapter
 	if(adapter == NULL) {
-		gattlib_adapter_close(gattlib_adapter);
+		gattlib_adapter_close(adapter);
 	}
 
 	if (ret != GATTLIB_SUCCESS) {
@@ -296,36 +278,28 @@ FREE_CONNECTION_CONTEXT:
  * This function is called by the disconnection callback to always be called on explicit
  * and implicit disconnection.
  */
-void gattlib_connection_free(gatt_connection_t* connection) {
-	gattlib_context_t* conn_context;
-	void* adapter;
+void gattlib_connection_free(gattlib_connection_t* connection) {
 	char* device_id;
 
-	g_mutex_lock(&connection->device_mutex);
-	conn_context = connection->context;
-	adapter = conn_context->adapter;
-	device_id = connection->device_id;
+	g_mutex_lock(&connection->device->device_mutex);
+	device_id = connection->device->device_id;
 
 	// Remove signal
-	if (conn_context->on_handle_device_property_change_id != 0) {
-		g_signal_handler_disconnect(conn_context->device, conn_context->on_handle_device_property_change_id);
-		conn_context->on_handle_device_property_change_id = 0;
+	if (connection->backend.on_handle_device_property_change_id != 0) {
+		g_signal_handler_disconnect(connection->backend.device, connection->backend.on_handle_device_property_change_id);
+		connection->backend.on_handle_device_property_change_id = 0;
 	}
 
 	// Stop the timeout for connection
-	if (conn_context->connection_timeout_id) {
-		g_source_remove(conn_context->connection_timeout_id);
-		conn_context->connection_timeout_id = 0;
+	if (connection->backend.connection_timeout_id) {
+		g_source_remove(connection->backend.connection_timeout_id);
+		connection->backend.connection_timeout_id = 0;
 	}
 
-	free(conn_context->device_object_path);
-	if (conn_context->device != NULL) {
-		g_object_unref(conn_context->device);
-		conn_context->device = NULL;
-	}
-	g_list_free_full(conn_context->dbus_objects, g_object_unref);
+	free(connection->backend.device_object_path);
+	g_list_free_full(connection->backend.dbus_objects, g_object_unref);
 
-	disconnect_all_notifications(conn_context);
+	disconnect_all_notifications(&connection->backend);
 
 	// Free all handler
 	//TODO: Fixme - there is a memory leak by not freeing the handlers
@@ -336,17 +310,13 @@ void gattlib_connection_free(gatt_connection_t* connection) {
 
 	// Note: We do not free adapter as it might still be used by other devices
 
-	free(connection->context);
-	connection->context = NULL;
-
 	// Mark the device has disconnected
-	gattlib_device_set_state(adapter, device_id, DISCONNECTED);
+	gattlib_device_set_state(connection->device->adapter, device_id, DISCONNECTED);
 
-	g_mutex_unlock(&connection->device_mutex);
+	g_mutex_unlock(&connection->device->device_mutex);
 }
 
-int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
-	gattlib_context_t* conn_context;
+int gattlib_disconnect(gattlib_connection_t* connection, bool wait_disconnection) {
 	int ret = GATTLIB_SUCCESS;
 	GError *error = NULL;
 
@@ -355,30 +325,25 @@ int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	g_mutex_lock(&connection->device_mutex);
-	conn_context = connection->context;
+	g_mutex_lock(&connection->device->device_mutex);
 
-	if (conn_context == NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection context is not valid.");
-		ret = GATTLIB_NOT_SUPPORTED;
-		goto EXIT;
-	} else if (connection->state != CONNECTED) {
+	if (connection->device->state != CONNECTED) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Cannot disconnect - connection is not in connected state (state=%s).",
-			device_state_str[connection->state]);
+			device_state_str[connection->device->state]);
 		ret = GATTLIB_BUSY;
 		goto EXIT;
 	}
 
-	GATTLIB_LOG(GATTLIB_DEBUG, "Disconnecting bluetooth device %s", conn_context->device_object_path);
+	GATTLIB_LOG(GATTLIB_DEBUG, "Disconnecting bluetooth device %s", connection->backend.device_object_path);
 
-	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
+	org_bluez_device1_call_disconnect_sync(connection->backend.device, NULL, &error);
 	if (error) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Failed to disconnect DBus Bluez Device: %s", error->message);
 		g_error_free(error);
 	}
 
 	// Mark the device has disconnected
-	gattlib_device_set_state(connection->adapter, connection->device_id, DISCONNECTING);
+	gattlib_device_set_state(connection->device->adapter, connection->device->device_id, DISCONNECTING);
 
 	//Note: Signals and memory will be removed/clean on disconnction callback
 	//      See _gattlib_clean_on_disconnection()
@@ -389,7 +354,7 @@ int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
 		end_time = g_get_monotonic_time() + GATTLIB_DISCONNECTION_WAIT_TIMEOUT_SEC * G_TIME_SPAN_SECOND;
 
 		while (!connection->disconnection_wait.value) {
-			if (!g_cond_wait_until(&connection->disconnection_wait.condition, &connection->device_mutex, end_time)) {
+			if (!g_cond_wait_until(&connection->disconnection_wait.condition, &connection->device->device_mutex, end_time)) {
 				ret = GATTLIB_TIMEOUT;
 				break;
 			}
@@ -397,24 +362,23 @@ int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
 	}
 
 EXIT:
-	g_mutex_unlock(&connection->device_mutex);
+	g_mutex_unlock(&connection->device->device_mutex);
 	return ret;
 }
 
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 38)
-int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
+int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	if (connection == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib connection not initialized.");
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	gattlib_context_t* conn_context = connection->context;
-	OrgBluezDevice1* device = conn_context->device;
+	OrgBluezDevice1* bluez_device = connection->backend.device;
 	const gchar* const* service_str;
 	GError *error = NULL;
 
-	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(device);
+	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(bluez_device);
 
 	if (service_strs == NULL) {
 		if (services != NULL) {
@@ -479,16 +443,15 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	return GATTLIB_SUCCESS;
 }
 #else
-int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
+int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	if (connection == NULL) {
 		GATTLIB_LOG(GATTLIB_ERROR, "Gattlib connection not initialized.");
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	gattlib_context_t* conn_context = connection->context;
 	GError *error = NULL;
-	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
-	OrgBluezDevice1* device = conn_context->device;
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(connection->device->adapter, &error);
+	OrgBluezDevice1* device = connection->backend.device;
 	const gchar* const* service_str;
 	int ret = GATTLIB_SUCCESS;
 
@@ -528,7 +491,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	}
 
 	GList *l;
-	for (l = conn_context->dbus_objects; l != NULL; l = l->next)  {
+	for (l = connection->backend.dbus_objects; l != NULL; l = l->next)  {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 
@@ -568,7 +531,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
             }
             continue;
         }
-		if (strcmp(conn_context->device_object_path, service_property)) {
+		if (strcmp(connection->backend.device_object_path, service_property)) {
 			g_object_unref(service_proxy);
 			continue;
 		}
@@ -582,7 +545,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 			primary_services[count].attr_handle_end   = service_handle;
 
 			// Loop through all objects, as ordering is not guaranteed.
-			for (GList *m = conn_context->dbus_objects; m != NULL; m = m->next)  {
+			for (GList *m = connection->backend.dbus_objects; m != NULL; m = m->next)  {
 				GDBusObject *characteristic_object = m->data;
 				const char* characteristic_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(characteristic_object));
 				interface = g_dbus_object_manager_get_interface(device_manager, characteristic_path, "org.bluez.GattCharacteristic1");
@@ -633,13 +596,12 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 
 // Bluez was using org.bluez.Device1.GattServices until 5.37 to expose the list of available GATT Services
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 38)
-int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
-	gattlib_context_t* conn_context = connection->context;
-	OrgBluezDevice1* device = conn_context->device;
+int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
+	OrgBluezDevice1* bluez_device = connection->backend.bluez_device;
 	GError *error = NULL;
 	int handle;
 
-	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(device);
+	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(bluez_device);
 	const gchar* const* service_str;
 	const gchar* const* characteristic_strs;
 	const gchar* characteristic_str;
@@ -785,14 +747,14 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 	return GATTLIB_SUCCESS;
 }
 #else
-static void add_characteristics_from_service(gattlib_context_t* conn_context, GDBusObjectManager *device_manager,
+static void add_characteristics_from_service(struct _gattlib_connection_backend* backend, GDBusObjectManager *device_manager,
 			const char* service_object_path,
 			unsigned int start, unsigned int end,
 			gattlib_characteristic_t* characteristic_list, int* count)
 {
 	GError *error = NULL;
 
-	for (GList *l = conn_context->dbus_objects; l != NULL; l = l->next) {
+	for (GList *l = backend->dbus_objects; l != NULL; l = l->next) {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 		GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattCharacteristic1");
@@ -876,10 +838,9 @@ static void add_characteristics_from_service(gattlib_context_t* conn_context, GD
 	}
 }
 
-int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
-	gattlib_context_t* conn_context = connection->context;
+int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	GError *error = NULL;
-	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter, &error);
+	GDBusObjectManager *device_manager = get_device_manager_from_adapter(connection->device->adapter, &error);
 	GList *l;
 	int ret;
 
@@ -897,7 +858,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 
 	// Count the maximum number of characteristic to allocate the array (we count all the characterstic for all devices)
 	int count_max = 0, count = 0;
-	for (l = conn_context->dbus_objects; l != NULL; l = l->next) {
+	for (l = connection->backend.dbus_objects; l != NULL; l = l->next) {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 		GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattCharacteristic1");
@@ -920,7 +881,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 	}
 
 	// List all services for this device
-	for (l = conn_context->dbus_objects; l != NULL; l = l->next) {
+	for (l = connection->backend.dbus_objects; l != NULL; l = l->next) {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
 
@@ -968,13 +929,13 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 
 		// Ensure the service is attached to this device
 		const char* service_object_path = org_bluez_gatt_service1_get_device(service_proxy);
-		if (strcmp(conn_context->device_object_path, service_object_path)) {
+		if (strcmp(connection->backend.device_object_path, service_object_path)) {
 			g_object_unref(service_proxy);
 			continue;
 		}
 
 		// Add all characteristics attached to this service
-		add_characteristics_from_service(conn_context, device_manager, object_path, start, end, characteristic_list, &count);
+		add_characteristics_from_service(&connection->backend, device_manager, object_path, start, end, characteristic_list, &count);
 		g_object_unref(service_proxy);
 	}
 
@@ -984,31 +945,31 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 }
 #endif
 
-int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristics_count)
+int gattlib_discover_char(gattlib_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristics_count)
 {
 	return gattlib_discover_char_range(connection, 0x00, 0xFF, characteristics, characteristics_count);
 }
 
-int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count) {
+int gattlib_discover_desc_range(gattlib_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count) {
 	return GATTLIB_NOT_SUPPORTED;
 }
 
-int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count) {
+int gattlib_discover_desc(gattlib_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count) {
 	return GATTLIB_NOT_SUPPORTED;
 }
 
-int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1)
+int get_bluez_device_from_mac(struct _gattlib_adapter *adapter, const char *mac_address, OrgBluezDevice1 **bluez_device1)
 {
 	GError *error = NULL;
 	char object_path[100];
 	int ret;
 
-	if (adapter->adapter_proxy == NULL) {
+	if (adapter->backend.adapter_proxy == NULL) {
 		return GATTLIB_NO_ADAPTER;
 	}
 
 	if (adapter != NULL) {
-		get_device_path_from_mac_with_adapter(adapter->adapter_proxy, mac_address, object_path, sizeof(object_path));
+		get_device_path_from_mac_with_adapter(adapter->backend.adapter_proxy, mac_address, object_path, sizeof(object_path));
 	} else {
 		get_device_path_from_mac(NULL, mac_address, object_path, sizeof(object_path));
 	}
@@ -1030,24 +991,22 @@ int get_bluez_device_from_mac(struct gattlib_adapter *adapter, const char *mac_a
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
+int gattlib_get_rssi(gattlib_connection_t *connection, int16_t *rssi)
 {
 	if (connection == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	gattlib_context_t* conn_context = connection->context;
-
 	if (rssi == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	*rssi = org_bluez_device1_get_rssi(conn_context->device);
+	*rssi = org_bluez_device1_get_rssi(connection->backend.device);
 
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi)
+int gattlib_get_rssi_from_mac(gattlib_adapter_t* adapter, const char *mac_address, int16_t *rssi)
 {
 	OrgBluezDevice1 *bluez_device1;
 	int ret;

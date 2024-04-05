@@ -102,7 +102,7 @@ void uuid_to_bt_uuid(uuid_t* uuid, bt_uuid_t* bt_uuid) {
 	}
 }
 
-int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
+int gattlib_read_char_by_uuid(gattlib_connection_t* connection, uuid_t* uuid,
 			      void **buffer, size_t* buffer_len)
 {
 	gattlib_context_t* conn_context = connection->context;
@@ -134,7 +134,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid,
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid,
+int gattlib_read_char_by_uuid_async(gattlib_connection_t* connection, uuid_t* uuid,
 				    gatt_read_cb_t gatt_read_cb)
 {
 	gattlib_context_t* conn_context = connection->context;
@@ -170,7 +170,7 @@ void gattlib_write_result_cb(guint8 status, const guint8 *pdu, guint16 len, gpoi
 	*write_completed = TRUE;
 }
 
-int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len) {
+int gattlib_write_char_by_handle(gattlib_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len) {
 	gattlib_context_t* conn_context = connection->context;
 	int write_completed = FALSE;
 
@@ -187,7 +187,7 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
 	return 0;
 }
 
-int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
+int gattlib_write_char_by_uuid(gattlib_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len) {
 	uint16_t handle = 0;
 	int ret;
 
@@ -200,19 +200,19 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
 	return gattlib_write_char_by_handle(connection, handle, buffer, buffer_len);
 }
 
-int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len)
+int gattlib_write_without_response_char_by_uuid(gattlib_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len)
 {
 	// Only supported in the DBUS API (ie: Bluez > v5.40) at the moment
 	return GATTLIB_NOT_SUPPORTED;
 }
 
-int gattlib_write_without_response_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len)
+int gattlib_write_without_response_char_by_handle(gattlib_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len)
 {
 	// Only supported in the DBUS API (ie: Bluez > v5.40) at the moment
 	return GATTLIB_NOT_SUPPORTED;
 }
 
-int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
+int gattlib_notification_start(gattlib_connection_t* connection, const uuid_t* uuid) {
 	uint16_t handle;
 	uint16_t enable_notification = 0x0001;
 
@@ -225,7 +225,7 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
 	return gattlib_write_char_by_handle(connection, handle + 1, &enable_notification, sizeof(enable_notification));
 }
 
-int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+int gattlib_notification_stop(gattlib_connection_t* connection, const uuid_t* uuid) {
 	uint16_t handle;
 	uint16_t enable_notification = 0x0000;
 

@@ -7,7 +7,7 @@
 #include "gattlib_internal.h"
 
 #if defined(WITH_PYTHON)
-void gattlib_connected_device_python_callback(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data) {
+void gattlib_connected_device_python_callback(gattlib_adapter_t* adapter, const char *dst, gattlib_connection_t* connection, int error, void* user_data) {
 	struct gattlib_python_args* args = user_data;
 	PyObject *result;
 
@@ -17,7 +17,7 @@ void gattlib_connected_device_python_callback(void *adapter, const char *dst, ga
 
 	const char* argument_string;
 	// We pass pointer into integer/long parameter. We need to check the address size of the platform
-	// arguments: (void *adapter, const char *dst, gatt_connection_t* connection, void* user_data)
+	// arguments: (gattlib_adapter_t* adapter, const char *dst, gattlib_connection_t* connection, void* user_data)
 	if (sizeof(void*) == 8) {
 		argument_string = "(LsLIO)";
 	} else {
@@ -47,12 +47,11 @@ ON_ERROR:
 #endif
 
 static gpointer _gattlib_connected_device_thread(gpointer data) {
-	gatt_connection_t* connection = data;
-	gattlib_context_t* conn_context = connection->context;
-	const gchar *device_mac_address = org_bluez_device1_get_address(conn_context->device);
+	gattlib_connection_t* connection = data;
+	const gchar *device_mac_address = org_bluez_device1_get_address(connection->backend.device);
 
 	// Mutex to ensure the device is valid and not freed during its use
-	g_mutex_lock(&connection->device_mutex);
+	g_mutex_lock(&connection->device->device_mutex);
 	// Mutex to ensure the handler is valid
 	g_rec_mutex_lock(&connection->on_connection.mutex);
 
@@ -61,21 +60,21 @@ static gpointer _gattlib_connected_device_thread(gpointer data) {
 	}
 
 	connection->on_connection.callback.connection_handler(
-		conn_context->adapter, device_mac_address, connection, 0 /* no error */,
+		connection->device->adapter, device_mac_address, connection, 0 /* no error */,
 		connection->on_connection.user_data);
 
 EXIT:
 	g_rec_mutex_unlock(&connection->on_connection.mutex);
-	g_mutex_unlock(&connection->device_mutex);
+	g_mutex_unlock(&connection->device->device_mutex);
 	return NULL;
 }
 
 static void* _connected_device_thread_args_allocator(va_list args) {
-	gatt_connection_t* connection = va_arg(args, gatt_connection_t*);
+	gattlib_connection_t* connection = va_arg(args, gattlib_connection_t*);
 	return connection;
 }
 
-void gattlib_on_connected_device(gatt_connection_t* connection) {
+void gattlib_on_connected_device(gattlib_connection_t* connection) {
 	gattlib_handler_dispatch_to_thread(
 		&connection->on_connection,
 #if defined(WITH_PYTHON)

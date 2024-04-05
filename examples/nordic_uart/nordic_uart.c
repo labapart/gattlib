@@ -37,7 +37,7 @@
 #define NUS_CHARACTERISTIC_TX_UUID	"6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 #define NUS_CHARACTERISTIC_RX_UUID	"6e400003-b5a3-f393-e0a9-e50e24dcca9e"
 
-gatt_connection_t* m_connection;
+gattlib_connection_t* m_connection;
 
 void notification_cb(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data) {
 	int i;

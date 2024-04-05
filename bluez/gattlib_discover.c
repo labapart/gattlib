@@ -74,7 +74,7 @@ done:
 	data->discovered = TRUE;
 }
 
-int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
+int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	struct primary_all_cb_t user_data;
 	guint ret;
 
@@ -146,7 +146,7 @@ done:
 	data->discovered = TRUE;
 }
 
-int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
+int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	struct characteristic_cb_t user_data;
 	guint ret;
 
@@ -170,7 +170,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristics_count) {
+int gattlib_discover_char(gattlib_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristics_count) {
 	return gattlib_discover_char_range(connection, 0x0001, 0xffff, characteristics, characteristics_count);
 }
 
@@ -264,7 +264,7 @@ done:
 }
 #endif
 
-int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count) {
+int gattlib_discover_desc_range(gattlib_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptor_count) {
 	gattlib_context_t* conn_context = connection->context;
 	struct descriptor_cb_t descriptor_data;
 	guint ret;
@@ -292,7 +292,7 @@ int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int en
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count) {
+int gattlib_discover_desc(gattlib_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptor_count) {
 	return gattlib_discover_desc_range(connection, 0x0001, 0xffff, descriptors, descriptor_count);
 }
 
@@ -309,7 +309,7 @@ int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** 
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_get_advertisement_data(gatt_connection_t *connection,
+int gattlib_get_advertisement_data(gattlib_connection_t *connection,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 {
@@ -329,7 +329,7 @@ int gattlib_get_advertisement_data(gatt_connection_t *connection,
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_get_advertisement_data_from_mac(void *adapter, const char *mac_address,
+int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const char *mac_address,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 {

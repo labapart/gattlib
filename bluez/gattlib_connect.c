@@ -41,7 +41,7 @@
 struct gattlib_thread_t g_gattlib_thread = { 0 };
 
 typedef struct {
-	gatt_connection_t* conn;
+	gattlib_connection_t* conn;
 	gatt_connect_cb_t  connect_cb;
 	int                connected;
 	int                timeout;
@@ -50,7 +50,7 @@ typedef struct {
 } io_connect_arg_t;
 
 static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data) {
-	gatt_connection_t *conn = user_data;
+	gattlib_connection_t *conn = user_data;
 	uint8_t opdu[ATT_MAX_MTU];
 	uint16_t handle, olen = 0;
 	uuid_t uuid = {};
@@ -98,7 +98,7 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 }
 
 static gboolean io_listen_cb(gpointer user_data) {
-	gatt_connection_t *conn = user_data;
+	gattlib_connection_t *conn = user_data;
 	gattlib_context_t* conn_context = conn->context;
 
 	g_attrib_register(conn_context->attrib, ATT_OP_HANDLE_NOTIFY,
@@ -178,7 +178,7 @@ static void *connection_thread(void* arg) {
 	return NULL;
 }
 
-static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const gchar *dst,
+static gattlib_connection_t *initialize_gattlib_connection(const gchar *src, const gchar *dst,
 		uint8_t dest_type, BtIOSecLevel sec_level, int psm, int mtu,
 		gatt_connect_cb_t connect_cb,
 		io_connect_arg_t* io_connect_arg)
@@ -250,7 +250,7 @@ static gatt_connection_t *initialize_gattlib_connection(const gchar *src, const 
 		return NULL;
 	}
 
-	gatt_connection_t* conn = calloc(sizeof(gatt_connection_t), 1);
+	gattlib_connection_t* conn = calloc(sizeof(gattlib_connection_t), 1);
 	if (conn == NULL) {
 		free(conn_context);
 		return NULL;
@@ -325,13 +325,13 @@ static void get_connection_options(unsigned long options, BtIOSecLevel *bt_io_se
 	*mtu = GATTLIB_CONNECTION_OPTIONS_LEGACY_GET_MTU(options);
 }
 
-int gattlib_connect(void *adapter, const char *dst,
+int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 		unsigned long options,
 		gatt_connect_cb_t connect_cb,
 		void* user_data)
 {
 	const char *adapter_mac_address;
-	gatt_connection_t *conn;
+	gattlib_connection_t *conn;
 	BtIOSecLevel bt_io_sec_level;
 	int psm, mtu;
 
@@ -393,11 +393,11 @@ static gboolean connection_timeout(gpointer user_data) {
  * @param psm          Specify the PSM for GATT/ATT over BR/EDR
  * @param mtu          Specify the MTU size
  */
-static gatt_connection_t *gattlib_connect_with_options(const char *src, const char *dst,
+static gattlib_connection_t *gattlib_connect_with_options(const char *src, const char *dst,
 						       uint8_t dest_type, BtIOSecLevel bt_io_sec_level, int psm, int mtu)
 {
 	GSource* timeout;
-	gatt_connection_t *conn;
+	gattlib_connection_t *conn;
 	io_connect_arg_t io_connect_arg;
 
 	conn = initialize_gattlib_connection(src, dst, dest_type, bt_io_sec_level,
@@ -444,10 +444,10 @@ static gatt_connection_t *gattlib_connect_with_options(const char *src, const ch
  * @param dst		Remote Bluetooth address
  * @param options	Options to connect to BLE device. See `GATTLIB_CONNECTION_OPTIONS_*`
  */
-gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long options)
+gattlib_connection_t *gattlib_connect(gattlib_adapter_t* adapter, const char *dst, unsigned long options)
 {
 	const char* adapter_mac_address;
-	gatt_connection_t *conn;
+	gattlib_connection_t *conn;
 	BtIOSecLevel bt_io_sec_level;
 	int psm, mtu;
 
@@ -483,7 +483,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	return conn;
 }
 
-int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection) {
+int gattlib_disconnect(gattlib_connection_t* connection, bool wait_disconnection) {
 	gattlib_context_t* conn_context = connection->context;
 
 #if BLUEZ_VERSION_MAJOR == 4
@@ -546,7 +546,7 @@ GSource* gattlib_timeout_add_seconds(guint interval, GSourceFunc function, gpoin
 	return source;
 }
 
-int get_uuid_from_handle(gatt_connection_t* connection, uint16_t handle, uuid_t* uuid) {
+int get_uuid_from_handle(gattlib_connection_t* connection, uint16_t handle, uuid_t* uuid) {
 	gattlib_context_t* conn_context = connection->context;
 	int i;
 
@@ -559,7 +559,7 @@ int get_uuid_from_handle(gatt_connection_t* connection, uint16_t handle, uuid_t*
 	return GATTLIB_NOT_FOUND;
 }
 
-int get_handle_from_uuid(gatt_connection_t* connection, const uuid_t* uuid, uint16_t* handle) {
+int get_handle_from_uuid(gattlib_connection_t* connection, const uuid_t* uuid, uint16_t* handle) {
 	gattlib_context_t* conn_context = connection->context;
 	int i;
 
@@ -573,13 +573,13 @@ int get_handle_from_uuid(gatt_connection_t* connection, const uuid_t* uuid, uint
 }
 
 #if 0 // Disable until https://github.com/labapart/gattlib/issues/75 is resolved
-int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi)
+int gattlib_get_rssi(gattlib_connection_t *connection, int16_t *rssi)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }
 #endif
 
-int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi)
+int gattlib_get_rssi_from_mac(gattlib_adapter_t* adapter, const char *mac_address, int16_t *rssi)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }

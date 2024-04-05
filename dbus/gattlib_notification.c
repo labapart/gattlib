@@ -25,7 +25,7 @@ gboolean on_handle_battery_level_property_change(
 	    gpointer user_data)
 {
 	static guint8 percentage;
-	gatt_connection_t* connection = user_data;
+	gattlib_connection_t* connection = user_data;
 
 	GATTLIB_LOG(GATTLIB_DEBUG, "DBUS: on_handle_battery_level_property_change: changed_properties:%s invalidated_properties:%s",
 			g_variant_print(arg_changed_properties, TRUE),
@@ -64,7 +64,7 @@ static gboolean on_handle_characteristic_property_change(
 	    const gchar *const *arg_invalidated_properties,
 	    gpointer user_data)
 {
-	gatt_connection_t* connection = user_data;
+	gattlib_connection_t* connection = user_data;
 
 	if (gattlib_has_valid_handler(&connection->notification)) {
 		GVariantDict dict;
@@ -105,7 +105,7 @@ static gboolean on_handle_characteristic_indication(
 	    const gchar *const *arg_invalidated_properties,
 	    gpointer user_data)
 {
-	gatt_connection_t* connection = user_data;
+	gattlib_connection_t* connection = user_data;
 
 	if (gattlib_has_valid_handler(&connection->indication)) {
 		// Retrieve 'Value' from 'arg_changed_properties'
@@ -141,8 +141,7 @@ static gboolean on_handle_characteristic_indication(
 	return TRUE;
 }
 
-static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, const uuid_t* uuid, void *callback) {
-	gattlib_context_t* conn_context = connection->context;
+static int connect_signal_to_characteristic_uuid(gattlib_connection_t* connection, const uuid_t* uuid, void *callback) {
 	int ret;
 
 	assert(callback != NULL);
@@ -188,7 +187,7 @@ static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, 
 	notification_handle->gatt = dbus_characteristic.gatt;
 	notification_handle->signal_id = signal_id;
 	memcpy(&notification_handle->uuid, uuid, sizeof(*uuid));
-	conn_context->notified_characteristics = g_list_append(conn_context->notified_characteristics, notification_handle);
+	connection->backend.notified_characteristics = g_list_append(connection->backend.notified_characteristics, notification_handle);
 
 	GError *error = NULL;
 	org_bluez_gatt_characteristic1_call_start_notify_sync(dbus_characteristic.gatt, NULL, &error);
@@ -202,17 +201,16 @@ static int connect_signal_to_characteristic_uuid(gatt_connection_t* connection, 
 	}
 }
 
-static int disconnect_signal_to_characteristic_uuid(gatt_connection_t* connection, const uuid_t* uuid, void *callback) {
-	gattlib_context_t* conn_context = connection->context;
+static int disconnect_signal_to_characteristic_uuid(gattlib_connection_t* connection, const uuid_t* uuid, void *callback) {
 	struct gattlib_notification_handle *notification_handle = NULL;
 
 	// Find notification handle
-	for (GList *l = conn_context->notified_characteristics; l != NULL; l = l->next) {
+	for (GList *l = connection->backend.notified_characteristics; l != NULL; l = l->next) {
 		struct gattlib_notification_handle *notification_handle_ptr = l->data;
 		if (gattlib_uuid_cmp(&notification_handle_ptr->uuid, uuid) == GATTLIB_SUCCESS) {
 			notification_handle = notification_handle_ptr;
 
-			conn_context->notified_characteristics = g_list_delete_link(conn_context->notified_characteristics, l);
+			connection->backend.notified_characteristics = g_list_delete_link(connection->backend.notified_characteristics, l);
 			break;
 		}
 	}
@@ -238,19 +236,19 @@ static int disconnect_signal_to_characteristic_uuid(gatt_connection_t* connectio
 	}
 }
 
-int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid) {
+int gattlib_notification_start(gattlib_connection_t* connection, const uuid_t* uuid) {
 	return connect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_property_change);
 }
 
-int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+int gattlib_notification_stop(gattlib_connection_t* connection, const uuid_t* uuid) {
 	return disconnect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_property_change);
 }
 
-int gattlib_indication_start(gatt_connection_t* connection, const uuid_t* uuid) {
+int gattlib_indication_start(gattlib_connection_t* connection, const uuid_t* uuid) {
 	return connect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_indication);
 }
 
-int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid) {
+int gattlib_indication_stop(gattlib_connection_t* connection, const uuid_t* uuid) {
 	return disconnect_signal_to_characteristic_uuid(connection, uuid, on_handle_characteristic_indication);
 }
 
@@ -261,6 +259,6 @@ static void end_notification(void *notified_characteristic) {
 	free(notification_handle);
 }
 
-void disconnect_all_notifications(gattlib_context_t* conn_context) {
-	g_list_free_full(g_steal_pointer(&conn_context->notified_characteristics), end_notification);
+void disconnect_all_notifications(struct _gattlib_connection_backend* backend) {
+	g_list_free_full(g_steal_pointer(&backend->notified_characteristics), end_notification);
 }

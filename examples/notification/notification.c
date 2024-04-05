@@ -61,7 +61,7 @@ static void usage(char *argv[]) {
 int main(int argc, char *argv[]) {
 	int ret;
 	int argid;
-	gatt_connection_t* connection;
+	gattlib_connection_t* connection;
 
 	if (argc < 3) {
 		usage(argv);

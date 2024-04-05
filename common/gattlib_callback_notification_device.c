@@ -46,7 +46,7 @@ void gattlib_notification_device_python_callback(const uuid_t* uuid, const uint8
 #endif
 
 struct gattlib_notification_device_thread_args {
-	gatt_connection_t* connection;
+	gattlib_connection_t* connection;
 	uuid_t* uuid;
 	uint8_t* data;
 	size_t data_length;
@@ -75,7 +75,7 @@ void gattlib_notification_device_thread(gpointer data, gpointer user_data) {
 	}
 }
 
-static void* _notification_device_thread_args_allocator(gatt_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length) {
+static void* _notification_device_thread_args_allocator(gattlib_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length) {
 	struct gattlib_notification_device_thread_args* thread_args = calloc(sizeof(struct gattlib_notification_device_thread_args), 1);
 	thread_args->connection = connection;
 	thread_args->uuid = calloc(sizeof(uuid_t), 1);
@@ -91,7 +91,7 @@ static void* _notification_device_thread_args_allocator(gatt_connection_t* conne
 	return thread_args;
 }
 
-void gattlib_on_gatt_notification(gatt_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length) {
+void gattlib_on_gatt_notification(gattlib_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length) {
 	GError *error = NULL;
 
 	assert(connection->notification.thread_pool != NULL);

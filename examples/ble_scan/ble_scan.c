@@ -44,12 +44,12 @@ static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIST_HEAD(listhead, connection_t) g_ble_connections;
 struct connection_t {
 	pthread_t thread;
-	void *adapter;
+	gattlib_adapter_t* adapter;
 	char* addr;
 	LIST_ENTRY(connection_t) entries;
 };
 
-static void on_device_connect(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data) {
+static void on_device_connect(gattlib_adapter_t* adapter, const char *dst, gattlib_connection_t* connection, int error, void* user_data) {
 	gattlib_primary_service_t* services;
 	gattlib_characteristic_t* characteristics;
 	int services_count, characteristics_count;
@@ -107,7 +107,7 @@ static void *ble_connect_device(void *arg) {
 	return NULL;
 }
 
-static void ble_discovered_device(void *adapter, const char* addr, const char* name, void *user_data) {
+static void ble_discovered_device(gattlib_adapter_t* adapter, const char* addr, const char* name, void *user_data) {
 	struct connection_t *connection;
 	int ret;
 
@@ -135,7 +135,7 @@ static void ble_discovered_device(void *adapter, const char* addr, const char* n
 }
 
 static void* ble_task(void* arg) {
-	void* adapter;
+	gattlib_adapter_t* adapter;
 	int ret;
 
 	ret = gattlib_adapter_open(adapter_name, &adapter);

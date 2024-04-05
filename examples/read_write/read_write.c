@@ -53,7 +53,7 @@ static void usage(char *argv[]) {
 	printf("%s <device_address> <read|write> <uuid> [<hex-value-to-write>]\n", argv[0]);
 }
 
-static void on_device_connect(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data) {
+static void on_device_connect(gattlib_adapter_t* adapter, const char *dst, gattlib_connection_t* connection, int error, void* user_data) {
 	int ret;
 	size_t len;
 
@@ -116,7 +116,7 @@ static int stricmp(char const *a, char const *b) {
     }
 }
 
-static void ble_discovered_device(void *adapter, const char* addr, const char* name, void *user_data) {
+static void ble_discovered_device(gattlib_adapter_t* adapter, const char* addr, const char* name, void *user_data) {
 	int ret;
 
 	if (stricmp(addr, m_argument.mac_address) != 0) {
@@ -133,7 +133,7 @@ static void ble_discovered_device(void *adapter, const char* addr, const char* n
 
 static void* ble_task(void* arg) {
 	char* addr = arg;
-	void* adapter;
+	gattlib_adapter_t* adapter;
 	int ret;
 
 	ret = gattlib_adapter_open(m_argument.adapter_name, &adapter);

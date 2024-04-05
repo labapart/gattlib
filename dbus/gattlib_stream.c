@@ -12,24 +12,24 @@
 
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 48)
 
-int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t* uuid, gatt_stream_t **stream, uint16_t *mtu)
+int gattlib_write_char_by_uuid_stream_open(gattlib_connection_t* connection, uuid_t* uuid, gattlib_stream_t **stream, uint16_t *mtu)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }
 
-int gattlib_write_char_stream_write(gatt_stream_t *stream, const void *buffer, size_t buffer_len)
+int gattlib_write_char_stream_write(gattlib_stream_t *stream, const void *buffer, size_t buffer_len)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }
 
-int gattlib_write_char_stream_close(gatt_stream_t *stream)
+int gattlib_write_char_stream_close(gattlib_stream_t *stream)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }
 
 #else
 
-int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t* uuid, gatt_stream_t **stream, uint16_t *mtu)
+int gattlib_write_char_by_uuid_stream_open(gattlib_connection_t* connection, uuid_t* uuid, gattlib_stream_t **stream, uint16_t *mtu)
 {
 	struct dbus_characteristic dbus_characteristic = get_characteristic_from_uuid(connection, uuid);
 	GError *error = NULL;
@@ -67,12 +67,12 @@ int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t
 	}
 
 	// We abuse the pointer 'stream' to pass the 'File Descriptor'
-	*stream = (gatt_stream_t*)(unsigned long)fd;
+	*stream = (gattlib_stream_t*)(unsigned long)fd;
 
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_write_char_stream_write(gatt_stream_t *stream, const void *buffer, size_t buffer_len)
+int gattlib_write_char_stream_write(gattlib_stream_t *stream, const void *buffer, size_t buffer_len)
 {
 	ssize_t ret = write((unsigned long)stream, buffer, buffer_len);
 	if (ret < 0) {
@@ -82,7 +82,7 @@ int gattlib_write_char_stream_write(gatt_stream_t *stream, const void *buffer, s
 	}
 }
 
-int gattlib_write_char_stream_close(gatt_stream_t *stream)
+int gattlib_write_char_stream_close(gattlib_stream_t *stream)
 {
 	close((unsigned long)stream);
 	return GATTLIB_SUCCESS;

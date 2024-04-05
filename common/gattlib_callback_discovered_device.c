@@ -7,7 +7,7 @@
 #include "gattlib_internal.h"
 
 #if defined(WITH_PYTHON)
-void gattlib_discovered_device_python_callback(void *adapter, const char* addr, const char* name, void *user_data) {
+void gattlib_discovered_device_python_callback(gattlib_adapter_t* adapter, const char* addr, const char* name, void *user_data) {
 	struct gattlib_python_args* args = user_data;
 	PyObject *result;
 
@@ -46,7 +46,7 @@ ON_ERROR:
 #endif
 
 struct gattlib_discovered_device_thread_args {
-	struct gattlib_adapter* gattlib_adapter;
+	struct _gattlib_adapter* gattlib_adapter;
 	char* mac_address;
 	char* name;
 	OrgBluezDevice1* device1;
@@ -55,20 +55,20 @@ struct gattlib_discovered_device_thread_args {
 static gpointer _gattlib_discovered_device_thread(gpointer data) {
 	struct gattlib_discovered_device_thread_args* args = data;
 
-	g_rec_mutex_lock(&args->gattlib_adapter->ble_scan.discovered_device_callback.mutex);
+	g_rec_mutex_lock(&args->gattlib_adapter->discovered_device_callback.mutex);
 
-	if (!gattlib_has_valid_handler(&args->gattlib_adapter->ble_scan.discovered_device_callback)) {
+	if (!gattlib_has_valid_handler(&args->gattlib_adapter->discovered_device_callback)) {
 		goto EXIT;
 	}
 
-	args->gattlib_adapter->ble_scan.discovered_device_callback.callback.discovered_device(
+	args->gattlib_adapter->discovered_device_callback.callback.discovered_device(
 		args->gattlib_adapter,
 		args->mac_address, args->name,
-		args->gattlib_adapter->ble_scan.discovered_device_callback.user_data
+		args->gattlib_adapter->discovered_device_callback.user_data
 	);
 
 EXIT:
-	g_rec_mutex_unlock(&args->gattlib_adapter->ble_scan.discovered_device_callback.mutex);
+	g_rec_mutex_unlock(&args->gattlib_adapter->discovered_device_callback.mutex);
 
 	free(args->mac_address);
 	if (args->name != NULL) {
@@ -80,7 +80,7 @@ EXIT:
 }
 
 static void* _discovered_device_thread_args_allocator(va_list args) {
-	struct gattlib_adapter* gattlib_adapter = va_arg(args, struct gattlib_adapter*);
+	gattlib_adapter_t* gattlib_adapter = va_arg(args, gattlib_adapter_t*);
 	OrgBluezDevice1* device1 = va_arg(args, OrgBluezDevice1*);
 
 	struct gattlib_discovered_device_thread_args* thread_args = calloc(sizeof(struct gattlib_discovered_device_thread_args), 1);
@@ -95,9 +95,9 @@ static void* _discovered_device_thread_args_allocator(va_list args) {
 	return thread_args;
 }
 
-void gattlib_on_discovered_device(struct gattlib_adapter* gattlib_adapter, OrgBluezDevice1* device1) {
+void gattlib_on_discovered_device(gattlib_adapter_t* gattlib_adapter, OrgBluezDevice1* device1) {
 	gattlib_handler_dispatch_to_thread(
-		&gattlib_adapter->ble_scan.discovered_device_callback,
+		&gattlib_adapter->discovered_device_callback,
 #if defined(WITH_PYTHON)
 		gattlib_discovered_device_python_callback /* python_callback */,
 #else

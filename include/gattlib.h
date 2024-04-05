@@ -149,8 +149,9 @@ extern "C" {
 
 #define GATTLIB_LOG(level, args...) if (level <= GATTLIB_LOG_LEVEL) { gattlib_log(level, args); }
 
-typedef struct _gattlib_device gatt_connection_t;
-typedef struct _gatt_stream_t gatt_stream_t;
+typedef struct _gattlib_adapter gattlib_adapter_t;
+typedef struct _gattlib_connection gattlib_connection_t;
+typedef struct _gattlib_stream_t gattlib_stream_t;
 
 /**
  * Structure to represent a GATT Service and its data in the BLE advertisement packet
@@ -169,7 +170,7 @@ typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data,
  * @param connection Connection that is disconnecting
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
-typedef void (*gattlib_disconnection_handler_t)(gatt_connection_t* connection, void* user_data);
+typedef void (*gattlib_disconnection_handler_t)(gattlib_connection_t* connection, void* user_data);
 
 /**
  * @brief Handler called on new discovered BLE device
@@ -179,7 +180,7 @@ typedef void (*gattlib_disconnection_handler_t)(gatt_connection_t* connection, v
  * @param name is the name of BLE device if advertised
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
-typedef void (*gattlib_discovered_device_t)(void *adapter, const char* addr, const char* name, void *user_data);
+typedef void (*gattlib_discovered_device_t)(gattlib_adapter_t* adapter, const char* addr, const char* name, void *user_data);
 
 /**
  * @brief Handler called on new discovered BLE device
@@ -194,7 +195,7 @@ typedef void (*gattlib_discovered_device_t)(void *adapter, const char* addr, con
  * @param manufacturer_data_size is the size of manufacturer_data
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
-typedef void (*gattlib_discovered_device_with_data_t)(void *adapter, const char* addr, const char* name,
+typedef void (*gattlib_discovered_device_with_data_t)(gattlib_adapter_t* adapter, const char* addr, const char* name,
 		gattlib_advertisement_data_t *advertisement_data, size_t advertisement_data_count,
 		uint16_t manufacturer_id, uint8_t *manufacturer_data, size_t manufacturer_data_size,
 		void *user_data);
@@ -208,7 +209,7 @@ typedef void (*gattlib_discovered_device_with_data_t)(void *adapter, const char*
  * @param error      Connection error code
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
-typedef void (*gatt_connect_cb_t)(void *adapter, const char *dst, gatt_connection_t* connection, int error, void* user_data);
+typedef void (*gatt_connect_cb_t)(gattlib_adapter_t* adapter, const char *dst, gattlib_connection_t* connection, int error, void* user_data);
 
 /**
  * @brief Callback called when GATT characteristic read value has been received
@@ -239,7 +240,7 @@ extern const char *gattlib_eddystone_url_scheme_prefix[];
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_adapter_open(const char* adapter_name, void** adapter);
+int gattlib_adapter_open(const char* adapter_name, gattlib_adapter_t** adapter);
 
 /**
  * @brief Get adapter name
@@ -248,7 +249,7 @@ int gattlib_adapter_open(const char* adapter_name, void** adapter);
  *
  * @return Adapter name
  */
-const char *gattlib_adapter_get_name(void* adapter);
+const char *gattlib_adapter_get_name(gattlib_adapter_t* adapter);
 
 /**
  * @brief Enable Bluetooth scanning on a given adapter
@@ -260,7 +261,7 @@ const char *gattlib_adapter_get_name(void* adapter);
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data);
+int gattlib_adapter_scan_enable(gattlib_adapter_t* adapter, gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data);
 
 /**
  * @brief Enable Bluetooth scanning on a given adapter
@@ -279,7 +280,7 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+int gattlib_adapter_scan_enable_with_filter(gattlib_adapter_t* adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data);
 
 /**
@@ -299,7 +300,7 @@ int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, i
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_adapter_scan_enable_with_filter_non_blocking(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
+int gattlib_adapter_scan_enable_with_filter_non_blocking(gattlib_adapter_t* adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
 		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data);
 
 /**
@@ -318,7 +319,7 @@ int gattlib_adapter_scan_enable_with_filter_non_blocking(void *adapter, uuid_t *
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32_t eddystone_types,
+int gattlib_adapter_scan_eddystone(gattlib_adapter_t* adapter, int16_t rssi_threshold, uint32_t eddystone_types,
 		gattlib_discovered_device_with_data_t discovered_device_cb, size_t timeout, void *user_data);
 
 /**
@@ -328,7 +329,7 @@ int gattlib_adapter_scan_eddystone(void *adapter, int16_t rssi_threshold, uint32
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_adapter_scan_disable(void* adapter);
+int gattlib_adapter_scan_disable(gattlib_adapter_t* adapter);
 
 /**
  * @brief Close Bluetooth adapter context
@@ -337,7 +338,7 @@ int gattlib_adapter_scan_disable(void* adapter);
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_adapter_close(void* adapter);
+int gattlib_adapter_close(gattlib_adapter_t* adapter);
 
 /**
  * @brief Function to asynchronously connect to a BLE device
@@ -352,7 +353,7 @@ int gattlib_adapter_close(void* adapter);
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_connect(void *adapter, const char *dst,
+int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 		unsigned long options,
 		gatt_connect_cb_t connect_cb,
 		void* user_data);
@@ -371,7 +372,7 @@ int gattlib_connect(void *adapter, const char *dst,
  * @return GATTLIB_TIMEOUT when wait_disconnection is true and the device has not been disconnected for
  *                         GATTLIB_DISCONNECTION_WAIT_TIMEOUT_SEC seconds
  */
-int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection);
+int gattlib_disconnect(gattlib_connection_t* connection, bool wait_disconnection);
 
 /**
  * @brief Function to register a callback on GATT disconnection
@@ -382,7 +383,7 @@ int gattlib_disconnect(gatt_connection_t* connection, bool wait_disconnection);
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_register_on_disconnect(gatt_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data);
+int gattlib_register_on_disconnect(gattlib_connection_t *connection, gattlib_disconnection_handler_t handler, void* user_data);
 
 /**
  * Structure to represent GATT Primary Service
@@ -423,7 +424,7 @@ typedef struct {
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count);
+int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_service_t** services, int* services_count);
 
 /**
  * @brief Function to discover GATT Characteristic
@@ -438,7 +439,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count);
+int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start, uint16_t end, gattlib_characteristic_t** characteristics, int* characteristics_count);
 
 /**
  * @brief Function to discover GATT Characteristic
@@ -451,7 +452,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, uint16_t start, u
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristics_count);
+int gattlib_discover_char(gattlib_connection_t* connection, gattlib_characteristic_t** characteristics, int* characteristics_count);
 
 /**
  * @brief Function to discover GATT Descriptors in a range of handles
@@ -464,7 +465,7 @@ int gattlib_discover_char(gatt_connection_t* connection, gattlib_characteristic_
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptors_count);
+int gattlib_discover_desc_range(gattlib_connection_t* connection, int start, int end, gattlib_descriptor_t** descriptors, int* descriptors_count);
 
 /**
  * @brief Function to discover GATT Descriptor
@@ -475,7 +476,7 @@ int gattlib_discover_desc_range(gatt_connection_t* connection, int start, int en
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptors_count);
+int gattlib_discover_desc(gattlib_connection_t* connection, gattlib_descriptor_t** descriptors, int* descriptors_count);
 
 /**
  * @brief Function to read GATT characteristic
@@ -489,7 +490,7 @@ int gattlib_discover_desc(gatt_connection_t* connection, gattlib_descriptor_t** 
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void** buffer, size_t* buffer_len);
+int gattlib_read_char_by_uuid(gattlib_connection_t* connection, uuid_t* uuid, void** buffer, size_t* buffer_len);
 
 /**
  * @brief Function to asynchronously read GATT characteristic
@@ -500,7 +501,7 @@ int gattlib_read_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, void*
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_read_char_by_uuid_async(gatt_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb);
+int gattlib_read_char_by_uuid_async(gattlib_connection_t* connection, uuid_t* uuid, gatt_read_cb_t gatt_read_cb);
 
 /**
  * @brief Free buffer allocated by the characteristic reading to store the value
@@ -519,7 +520,7 @@ void gattlib_characteristic_free_value(void *ptr);
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
+int gattlib_write_char_by_uuid(gattlib_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
 
 /**
  * @brief Function to write to the GATT characteristic handle
@@ -531,7 +532,7 @@ int gattlib_write_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, cons
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
+int gattlib_write_char_by_handle(gattlib_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
 
 /**
  * @brief Function to write without response to the GATT characteristic UUID
@@ -543,7 +544,7 @@ int gattlib_write_char_by_handle(gatt_connection_t* connection, uint16_t handle,
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
+int gattlib_write_without_response_char_by_uuid(gattlib_connection_t* connection, uuid_t* uuid, const void* buffer, size_t buffer_len);
 
 /**
  * @brief Create a stream to a GATT characteristic to write data in continue
@@ -557,7 +558,7 @@ int gattlib_write_without_response_char_by_uuid(gatt_connection_t* connection, u
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t* uuid, gatt_stream_t **stream, uint16_t *mtu);
+int gattlib_write_char_by_uuid_stream_open(gattlib_connection_t* connection, uuid_t* uuid, gattlib_stream_t **stream, uint16_t *mtu);
 
 /**
  * @brief Write data to the stream previously created with `gattlib_write_char_by_uuid_stream_open()`
@@ -568,7 +569,7 @@ int gattlib_write_char_by_uuid_stream_open(gatt_connection_t* connection, uuid_t
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_write_char_stream_write(gatt_stream_t *stream, const void *buffer, size_t buffer_len);
+int gattlib_write_char_stream_write(gattlib_stream_t *stream, const void *buffer, size_t buffer_len);
 
 /**
  * @brief Close the stream previously created with `gattlib_write_char_by_uuid_stream_open()`
@@ -577,7 +578,7 @@ int gattlib_write_char_stream_write(gatt_stream_t *stream, const void *buffer, s
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_write_char_stream_close(gatt_stream_t *stream);
+int gattlib_write_char_stream_close(gattlib_stream_t *stream);
 
 /**
  * @brief Function to write without response to the GATT characteristic handle
@@ -589,7 +590,7 @@ int gattlib_write_char_stream_close(gatt_stream_t *stream);
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_write_without_response_char_by_handle(gatt_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
+int gattlib_write_without_response_char_by_handle(gattlib_connection_t* connection, uint16_t handle, const void* buffer, size_t buffer_len);
 
 /*
  * @brief Enable notification on GATT characteristic represented by its UUID
@@ -599,7 +600,7 @@ int gattlib_write_without_response_char_by_handle(gatt_connection_t* connection,
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid);
+int gattlib_notification_start(gattlib_connection_t* connection, const uuid_t* uuid);
 
 /*
  * @brief Disable notification on GATT characteristic represented by its UUID
@@ -609,7 +610,7 @@ int gattlib_notification_start(gatt_connection_t* connection, const uuid_t* uuid
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid);
+int gattlib_notification_stop(gattlib_connection_t* connection, const uuid_t* uuid);
 
 /*
  * @brief Enable indication on GATT characteristic represented by its UUID
@@ -619,7 +620,7 @@ int gattlib_notification_stop(gatt_connection_t* connection, const uuid_t* uuid)
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_indication_start(gatt_connection_t* connection, const uuid_t* uuid);
+int gattlib_indication_start(gattlib_connection_t* connection, const uuid_t* uuid);
 
 /*
  * @brief Disable indication on GATT characteristic represented by its UUID
@@ -629,7 +630,7 @@ int gattlib_indication_start(gatt_connection_t* connection, const uuid_t* uuid);
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid);
+int gattlib_indication_stop(gattlib_connection_t* connection, const uuid_t* uuid);
 
 /*
  * @brief Register a handle for the GATT notifications
@@ -640,7 +641,7 @@ int gattlib_indication_stop(gatt_connection_t* connection, const uuid_t* uuid);
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_register_notification(gatt_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data);
+int gattlib_register_notification(gattlib_connection_t* connection, gattlib_event_handler_t notification_handler, void* user_data);
 
 /*
  * @brief Register a handle for the GATT indications
@@ -651,7 +652,7 @@ int gattlib_register_notification(gatt_connection_t* connection, gattlib_event_h
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_register_indication(gatt_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data);
+int gattlib_register_indication(gattlib_connection_t* connection, gattlib_event_handler_t indication_handler, void* user_data);
 
 #if 0 // Disable until https://github.com/labapart/gattlib/issues/75 is resolved
 /**
@@ -662,7 +663,7 @@ int gattlib_register_indication(gatt_connection_t* connection, gattlib_event_han
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi);
+int gattlib_get_rssi(gattlib_connection_t *connection, int16_t *rssi);
 #endif
 
 /**
@@ -677,7 +678,7 @@ int gattlib_get_rssi(gatt_connection_t *connection, int16_t *rssi);
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *rssi);
+int gattlib_get_rssi_from_mac(gattlib_adapter_t* adapter, const char *mac_address, int16_t *rssi);
 
 /**
  * @brief Function to retrieve Advertisement Data from a MAC Address
@@ -691,7 +692,7 @@ int gattlib_get_rssi_from_mac(void *adapter, const char *mac_address, int16_t *r
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_get_advertisement_data(gatt_connection_t *connection,
+int gattlib_get_advertisement_data(gattlib_connection_t *connection,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size);
 
@@ -708,7 +709,7 @@ int gattlib_get_advertisement_data(gatt_connection_t *connection,
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
-int gattlib_get_advertisement_data_from_mac(void *adapter, const char *mac_address,
+int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const char *mac_address,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size);
 

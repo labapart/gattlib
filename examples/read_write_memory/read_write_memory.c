@@ -48,7 +48,7 @@ struct connect_ble_params {
 
 void *connect_ble(void *arg) {
 	struct connect_ble_params *params = arg;
-	gatt_connection_t* connection;
+	gattlib_connection_t* connection;
 	int ret, i;
 	size_t len;
 

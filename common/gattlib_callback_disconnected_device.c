@@ -7,7 +7,7 @@
 #include "gattlib_internal.h"
 
 #if defined(WITH_PYTHON)
-void gattlib_disconnected_device_python_callback(gatt_connection_t* connection, void *user_data) {
+void gattlib_disconnected_device_python_callback(gattlib_connection_t* connection, void *user_data) {
 	struct gattlib_python_args* args = user_data;
 	PyObject *result;
 	PyGILState_STATE d_gstate;
@@ -30,7 +30,7 @@ void gattlib_disconnected_device_python_callback(gatt_connection_t* connection, 
 }
 #endif
 
-void gattlib_on_disconnected_device(gatt_connection_t* connection) {
+void gattlib_on_disconnected_device(gattlib_connection_t* connection) {
 	if (gattlib_has_valid_handler(&connection->on_disconnection)) {
 		g_rec_mutex_lock(&connection->on_disconnection.mutex);
 
@@ -49,10 +49,10 @@ void gattlib_on_disconnected_device(gatt_connection_t* connection) {
 	}
 
 	// Signal the device is now disconnected
-	g_mutex_lock(&connection->device_mutex);
+	g_mutex_lock(&connection->device->device_mutex);
 	connection->disconnection_wait.value = true;
 	g_cond_broadcast(&connection->disconnection_wait.condition);
-	g_mutex_unlock(&connection->device_mutex);
+	g_mutex_unlock(&connection->device->device_mutex);
 
 	// Clean GATTLIB connection on disconnection
 	gattlib_connection_free(connection);
