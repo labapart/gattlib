@@ -4,7 +4,7 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
-cmake_minimum_required(VERSION 3.25.1)
+cmake_minimum_required(VERSION 3.22.0)
 
 # Add Cross-Compilation support when the environment variables
 # CROSS_COMPILE and SYSROOT are defined

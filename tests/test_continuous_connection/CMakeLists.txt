@@ -19,7 +19,7 @@
 #  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-cmake_minimum_required(VERSION 3.25.1)
+cmake_minimum_required(VERSION 3.22.0)
 
 find_package(PkgConfig REQUIRED)
 
