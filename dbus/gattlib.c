@@ -22,6 +22,7 @@ static void _on_device_connect(gattlib_connection_t* connection) {
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_device_is_valid(connection->device)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "_on_device_connect: Device not valid");
 		goto EXIT;
 	}
 
@@ -142,6 +143,7 @@ static gboolean _stop_connect_func(gpointer data) {
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_device_is_valid(connection->device)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "_stop_connect_func: Device not valid");
 		goto EXIT;
 	}
 
@@ -199,6 +201,7 @@ int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_connect: Adapter not valid");
 		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
@@ -415,6 +418,7 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 	}
 
 	if (!gattlib_device_is_valid(connection->device)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_discover_primary: Device not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_DEVICE_DISCONNECTED;
 	}
@@ -507,6 +511,7 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 	}
 
 	if (!gattlib_device_is_valid(connection->device)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_discover_primary: Device not valid");
 		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
 	}
@@ -668,6 +673,7 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_device_is_valid(connection->device)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_discover_char_range: Device not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_DEVICE_DISCONNECTED;
 	}
@@ -927,6 +933,7 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_device_is_valid(connection->device)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_discover_char_range: Device not valid");
 		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
 	}
@@ -1057,6 +1064,7 @@ int get_bluez_device_from_mac(struct _gattlib_adapter *adapter, const char *mac_
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "get_bluez_device_from_mac: Adapter not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_ADAPTER_CLOSE;
 	}
@@ -1105,6 +1113,7 @@ int gattlib_get_rssi(gattlib_connection_t *connection, int16_t *rssi)
 	}
 
 	if (!gattlib_device_is_valid(connection->device)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_get_rssi: Device not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_DEVICE_DISCONNECTED;
 	}

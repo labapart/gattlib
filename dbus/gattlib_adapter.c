@@ -145,6 +145,7 @@ static void device_manager_on_added_device1_signal(const char* device1_path, gat
 		g_rec_mutex_lock(&m_gattlib_mutex);
 
 		if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+			GATTLIB_LOG(GATTLIB_ERROR, "device_manager_on_added_device1_signal: Adapter not valid");
 			g_rec_mutex_unlock(&m_gattlib_mutex);
 			g_object_unref(device1);
 			return;
@@ -225,6 +226,7 @@ on_interface_proxy_properties_changed (GDBusObjectManagerClient *device_manager,
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "on_interface_proxy_properties_changed: Adapter not valid");
 		goto EXIT;
 	}
 
@@ -298,6 +300,7 @@ static gboolean _stop_scan_on_timeout(gpointer data) {
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "_stop_scan_on_timeout: Adapter not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return FALSE;
 	}
@@ -329,6 +332,7 @@ static void* _ble_scan_loop_thread(void* args) {
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "_ble_scan_loop_thread: Adapter not valid (1)");
 		goto EXIT;
 	}
 
@@ -356,6 +360,7 @@ static void* _ble_scan_loop_thread(void* args) {
 
 	// Confirm gattlib_adapter is still valid
 	if (!gattlib_adapter_is_valid(gattlib_adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "_ble_scan_loop_thread: Adapter not valid (2)");
 		goto EXIT;
 	}
 
@@ -490,6 +495,7 @@ int gattlib_adapter_scan_enable_with_filter(gattlib_adapter_t* adapter, uuid_t *
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_adapter_scan_enable_with_filter: Adapter not valid (1)");
 		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
@@ -524,6 +530,7 @@ int gattlib_adapter_scan_enable_with_filter(gattlib_adapter_t* adapter, uuid_t *
 
 	// Ensure the adapter is still valid when we get the mutex again
 	if (!gattlib_adapter_is_valid(adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_adapter_scan_enable_with_filter: Adapter not valid (2)");
 		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
@@ -546,6 +553,7 @@ int gattlib_adapter_scan_enable_with_filter_non_blocking(gattlib_adapter_t* adap
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_adapter_scan_enable_with_filter_non_blocking: Adapter not valid (2)");
 		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
@@ -584,6 +592,7 @@ int gattlib_adapter_scan_disable(gattlib_adapter_t* adapter) {
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_adapter_scan_disable: Adapter not valid");
 		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
@@ -650,6 +659,7 @@ int gattlib_adapter_close(gattlib_adapter_t* adapter) {
     g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_adapter_close: Adapter not valid");
 		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}

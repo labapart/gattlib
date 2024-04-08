@@ -54,11 +54,13 @@ static gpointer _gattlib_connected_device_thread(gpointer data) {
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_connection_is_connected(connection)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "_gattlib_connected_device_thread: Device is not connected");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return NULL;
 	}
 
 	if (!gattlib_has_valid_handler(&connection->on_connection)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "_gattlib_connected_device_thread: Handler is not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return NULL;
 	}
@@ -85,6 +87,7 @@ static void* _connected_device_thread_args_allocator(va_list args) {
 
 void gattlib_on_connected_device(gattlib_connection_t* connection) {
 	if (!gattlib_device_is_valid(connection->device)) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_on_connected_device: Device is not valid");
 		return;
 	}
 
