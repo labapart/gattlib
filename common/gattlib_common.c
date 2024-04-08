@@ -20,7 +20,7 @@ int gattlib_register_notification(gattlib_connection_t* connection, gattlib_even
 		goto EXIT;
 	}
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_register_notification: Device not valid");
 		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
@@ -58,7 +58,7 @@ int gattlib_register_indication(gattlib_connection_t* connection, gattlib_event_
 		goto EXIT;
 	}
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_register_indication: Device not valid");
 		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
@@ -93,7 +93,7 @@ int gattlib_register_on_disconnect(gattlib_connection_t *connection, gattlib_dis
 		goto EXIT;
 	}
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_register_on_disconnect: Device not valid");
 		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;

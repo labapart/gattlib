@@ -87,7 +87,7 @@ static void* _connected_device_thread_args_allocator(va_list args) {
 }
 
 void gattlib_on_connected_device(gattlib_connection_t* connection) {
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_on_connected_device: Device is not valid");
 		return;
 	}

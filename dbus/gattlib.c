@@ -21,7 +21,7 @@ static void _on_device_connect(gattlib_connection_t* connection) {
 
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "_on_device_connect: Device not valid");
 		goto EXIT;
 	}
@@ -142,7 +142,7 @@ static gboolean _stop_connect_func(gpointer data) {
 
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "_stop_connect_func: Device not valid");
 		goto EXIT;
 	}
@@ -424,7 +424,7 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_discover_primary: Device not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_DEVICE_DISCONNECTED;
@@ -517,7 +517,7 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 		goto EXIT;
 	}
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_discover_primary: Device not valid");
 		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
@@ -679,7 +679,7 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 	// Increase bluez_device object reference counter to avoid to keep locking the mutex
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_discover_char_range: Device not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_DEVICE_DISCONNECTED;
@@ -939,7 +939,7 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_discover_char_range: Device not valid");
 		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
@@ -1119,7 +1119,7 @@ int gattlib_get_rssi(gattlib_connection_t *connection, int16_t *rssi)
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_get_rssi: Device not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_DEVICE_DISCONNECTED;

@@ -125,7 +125,7 @@ int gattlib_get_advertisement_data(gattlib_connection_t *connection,
 		return GATTLIB_INVALID_PARAMETER;
 	}
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return GATTLIB_DEVICE_DISCONNECTED;
 	}

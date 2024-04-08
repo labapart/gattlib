@@ -33,7 +33,7 @@ void gattlib_disconnected_device_python_callback(gattlib_connection_t* connectio
 void gattlib_on_disconnected_device(gattlib_connection_t* connection) {
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
-	if (!gattlib_device_is_valid(connection->device)) {
+	if (!gattlib_connection_is_valid(connection)) {
 		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_on_disconnected_device: Device not valid");
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return;

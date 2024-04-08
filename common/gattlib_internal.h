@@ -133,6 +133,13 @@ int gattlib_adapter_unref(gattlib_adapter_t* adapter);
 bool gattlib_device_is_valid(gattlib_device_t* device);
 int gattlib_device_ref(gattlib_device_t* device);
 int gattlib_device_unref(gattlib_device_t* device);
+/**
+ * This function is similar to 'gattlib_device_is_valid()' except we check if
+ * the connection (connected or not) still belongs to a valid device.
+ *
+ * It is to avoid to use 'connection->device' when the device has been freed
+ */
+bool gattlib_connection_is_valid(gattlib_connection_t* connection);
 bool gattlib_connection_is_connected(gattlib_connection_t* connection);
 
 void gattlib_handler_dispatch_to_thread(struct gattlib_handler* handler, void (*python_callback)(),

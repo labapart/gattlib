@@ -103,15 +103,50 @@ bool gattlib_device_is_valid(gattlib_device_t* device) {
     return device_is_valid.found;
 }
 
-struct _connection_is_connected {
+struct _connection_is_valid {
 	gattlib_connection_t* connection;
-	bool is_connected;
+	bool is_valid;
 };
 
 static gint _is_device_connection(gconstpointer a, gconstpointer b) {
 	const gattlib_device_t* device = a;
 	return (&device->connection == b) ? 0 : -1; // We need to return 0 when it matches
 }
+
+static void _gattlib_connection_is_valid(gpointer data, gpointer user_data) {
+	gattlib_adapter_t* adapter = data;
+	struct _connection_is_valid* connection_is_valid = user_data;
+
+	//printf("_gattlib_connection_is_connected: Check device in adapter:%s\n", adapter->id);
+
+	GSList *device_entry = g_slist_find_custom(adapter->devices, connection_is_valid->connection, _is_device_connection);
+	if (device_entry == NULL) {
+		//printf("_gattlib_connection_is_connected: Did not find device %s\n", connection_is_connected->connection->device->device_id);
+		return;
+	}
+
+	connection_is_valid->is_valid = true;
+}
+
+bool gattlib_connection_is_valid(gattlib_connection_t* connection) {
+	struct _connection_is_valid connection_is_valid = {
+		.connection = connection,
+		.is_valid = false
+	};
+
+    g_rec_mutex_lock(&m_gattlib_mutex);
+	//printf("gattlib_connection_is_connected A");
+    g_slist_foreach(m_adapter_list, _gattlib_connection_is_valid, &connection_is_valid);
+	//printf("gattlib_connection_is_connected B");
+    g_rec_mutex_unlock(&m_gattlib_mutex);
+
+	return connection_is_valid.is_valid;
+}
+
+struct _connection_is_connected {
+	gattlib_connection_t* connection;
+	bool is_connected;
+};
 
 static void _gattlib_connection_is_connected(gpointer data, gpointer user_data) {
 	gattlib_adapter_t* adapter = data;
