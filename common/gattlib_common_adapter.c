@@ -110,14 +110,14 @@ struct _connection_is_connected {
 
 static gint _is_device_connection(gconstpointer a, gconstpointer b) {
 	const gattlib_device_t* device = a;
-	return (&device->connection == b);
+	return (&device->connection == b) ? 0 : -1; // We need to return 0 when it matches
 }
 
 static void _gattlib_connection_is_connected(gpointer data, gpointer user_data) {
 	gattlib_adapter_t* adapter = data;
 	struct _connection_is_connected* connection_is_connected = user_data;
 
-	GSList *device_entry = g_slist_find_custom(adapter->devices, user_data, _is_device_connection);
+	GSList *device_entry = g_slist_find_custom(adapter->devices, connection_is_connected->connection, _is_device_connection);
 	if (device_entry == NULL) {
 		return;
 	}
