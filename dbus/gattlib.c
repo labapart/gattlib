@@ -288,7 +288,10 @@ int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 	return GATTLIB_SUCCESS;
 
 FREE_DEVICE:
+	g_rec_mutex_lock(&m_gattlib_mutex);
 	free(device->connection.backend.device_object_path);
+	device->connection.backend.device_object_path = NULL;
+	g_rec_mutex_unlock(&m_gattlib_mutex);
 
 	// destroy default adapter
 	if(adapter == NULL) {
@@ -327,7 +330,11 @@ void gattlib_connection_free(gattlib_connection_t* connection) {
 		connection->backend.connection_timeout_id = 0;
 	}
 
-	free(connection->backend.device_object_path);
+	if (connection->backend.device_object_path != NULL) {
+		free(connection->backend.device_object_path);
+		connection->backend.device_object_path = NULL;
+	}
+
 	g_list_free_full(connection->backend.dbus_objects, g_object_unref);
 
 	disconnect_all_notifications(&connection->backend);
