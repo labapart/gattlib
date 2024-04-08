@@ -54,7 +54,8 @@ static gpointer _gattlib_connected_device_thread(gpointer data) {
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_connection_is_connected(connection)) {
-		GATTLIB_LOG(GATTLIB_ERROR, "_gattlib_connected_device_thread: Device is not connected");
+		GATTLIB_LOG(GATTLIB_ERROR, "_gattlib_connected_device_thread: Device is not connected (state:%s)",
+			device_state_str[connection->device->state]);
 		g_rec_mutex_unlock(&m_gattlib_mutex);
 		return NULL;
 	}

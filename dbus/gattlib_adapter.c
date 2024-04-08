@@ -687,6 +687,7 @@ int gattlib_adapter_close(gattlib_adapter_t* adapter) {
 	GATTLIB_LOG(GATTLIB_DEBUG, "Close bluetooth adapter %s", adapter->name);
 
 	if (adapter->backend.ble_scan.is_scanning) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "Bluetooth adapter %s was scanning. We stop the scan", adapter->name);
 		gattlib_adapter_scan_disable(adapter);
 
 		_wait_scan_loop_stop_scanning(adapter);
