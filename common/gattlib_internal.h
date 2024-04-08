@@ -68,6 +68,9 @@ struct _gattlib_adapter {
 	// Context specific to the backend implementation (eg: dbus backend)
 	struct _gattlib_adapter_backend backend;
 
+	// BLE adapter id (could be its DBUS device path on Linux)
+	char* id;
+
 	// BLE adapter name
 	char* name;
 
@@ -121,6 +124,7 @@ extern GSList *m_adapter_list;
 // This structure is used for inter-thread communication
 extern struct gattlib_signal m_gattlib_signal;
 
+gattlib_adapter_t* gattlib_adapter_from_id(const char* adapter_id);
 bool gattlib_adapter_is_valid(gattlib_adapter_t* adapter);
 bool gattlib_adapter_is_scanning(gattlib_adapter_t* adapter);
 int gattlib_adapter_ref(gattlib_adapter_t* adapter);

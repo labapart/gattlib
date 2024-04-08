@@ -28,9 +28,20 @@ int gattlib_adapter_open(const char* adapter_name, gattlib_adapter_t** adapter) 
 		adapter_name = GATTLIB_DEFAULT_ADAPTER;
 	}
 
-	GATTLIB_LOG(GATTLIB_DEBUG, "Open bluetooth adapter %s", adapter_name);
-
 	snprintf(object_path, sizeof(object_path), "/org/bluez/%s", adapter_name);
+
+	// Check if adapter has already be loaded
+	g_rec_mutex_lock(&m_gattlib_mutex);
+	*adapter = gattlib_adapter_from_id(object_path);
+	if (*adapter != NULL) {
+		GATTLIB_LOG(GATTLIB_DEBUG, "Bluetooth adapter %s has already been opened. Re-use it", adapter_name);
+		gattlib_adapter_ref(*adapter);
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+		return GATTLIB_SUCCESS;
+	}
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+
+	GATTLIB_LOG(GATTLIB_DEBUG, "Open bluetooth adapter %s", adapter_name);
 
 	adapter_proxy = org_bluez_adapter1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
@@ -58,6 +69,7 @@ int gattlib_adapter_open(const char* adapter_name, gattlib_adapter_t** adapter) 
 	}
 
 	// Initialize stucture
+	gattlib_adapter->id = strdup(object_path);
 	gattlib_adapter->name = strdup(adapter_name);
 	gattlib_adapter->reference_counter = 1;
 	gattlib_adapter->backend.adapter_proxy = adapter_proxy;
@@ -651,11 +663,6 @@ int gattlib_adapter_close(gattlib_adapter_t* adapter) {
 	bool are_devices_disconnected;
 	int ret = GATTLIB_SUCCESS;
 
-	//
-	// TODO: Should we use reference counting to be able to open multiple times an adapter
-	//       without freeing it on the first gattlib_adapter_close()
-	//
-
     g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
@@ -688,9 +695,6 @@ int gattlib_adapter_close(gattlib_adapter_t* adapter) {
 
 	// Unref/Free the adapter
 	gattlib_adapter_unref(adapter);
-
-	// Remove adapter from the global list
-	m_adapter_list = g_slist_remove(m_adapter_list, adapter);
 
 EXIT:
 	g_rec_mutex_unlock(&m_gattlib_mutex);
@@ -730,12 +734,20 @@ int gattlib_adapter_unref(gattlib_adapter_t* adapter) {
 		adapter->backend.adapter_proxy = NULL;
 	}
 
+	if (adapter->id != NULL) {
+		free(adapter->id);
+		adapter->id = NULL;
+	}
+
 	if (adapter->name != NULL) {
 		free(adapter->name);
 		adapter->name = NULL;
 	}
 
 	gattlib_devices_free(adapter);
+
+	// Remove adapter from the global list
+	m_adapter_list = g_slist_remove(m_adapter_list, adapter);
 
 	free(adapter);
 

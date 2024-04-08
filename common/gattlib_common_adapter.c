@@ -10,6 +10,38 @@
 // It could happen when using Python wrapper.
 GSList *m_adapter_list;
 
+static int stricmp(char const *a, char const *b) {
+    for (;; a++, b++) {
+        int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
+        if (d != 0 || !*a)
+            return d;
+    }
+}
+
+static gint _is_adapter_id(gconstpointer a, gconstpointer b) {
+	const gattlib_adapter_t* adapter = a;
+	const char* adapter_id = b;
+
+	return stricmp(adapter->id, adapter_id);
+}
+
+gattlib_adapter_t* gattlib_adapter_from_id(const char* adapter_id) {
+	gattlib_adapter_t* adapter = NULL;
+
+	g_rec_mutex_lock(&m_gattlib_mutex);
+
+	GSList *adapter_entry = g_slist_find_custom(m_adapter_list, adapter_id, _is_adapter_id);
+	if (adapter_entry == NULL) {
+		goto EXIT;
+	}
+
+	adapter = adapter_entry->data;
+
+EXIT:
+	g_rec_mutex_unlock(&m_gattlib_mutex);
+	return adapter;
+}
+
 bool gattlib_adapter_is_valid(gattlib_adapter_t* adapter) {
 	bool is_valid;
 
