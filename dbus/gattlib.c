@@ -199,7 +199,7 @@ int gattlib_connect(gattlib_adapter_t* adapter, const char *dst,
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
 
@@ -416,7 +416,7 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 
 	if (!gattlib_device_is_valid(connection->device)) {
 		g_rec_mutex_unlock(&m_gattlib_mutex);
-		return GATTLIB_INVALID_PARAMETER;
+		return GATTLIB_DEVICE_DISCONNECTED;
 	}
 
 	// Increase 'bluez_device' reference counter to avoid to keep the lock longer
@@ -507,7 +507,7 @@ int gattlib_discover_primary(gattlib_connection_t* connection, gattlib_primary_s
 	}
 
 	if (!gattlib_device_is_valid(connection->device)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
 	}
 
@@ -669,7 +669,7 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 
 	if (!gattlib_device_is_valid(connection->device)) {
 		g_rec_mutex_unlock(&m_gattlib_mutex);
-		return GATTLIB_INVALID_PARAMETER;
+		return GATTLIB_DEVICE_DISCONNECTED;
 	}
 
 	OrgBluezDevice1* bluez_device = connection->backend.bluez_device;
@@ -927,7 +927,7 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_device_is_valid(connection->device)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
 	}
 
@@ -1058,7 +1058,7 @@ int get_bluez_device_from_mac(struct _gattlib_adapter *adapter, const char *mac_
 
 	if (!gattlib_adapter_is_valid(adapter)) {
 		g_rec_mutex_unlock(&m_gattlib_mutex);
-		return GATTLIB_INVALID_PARAMETER;
+		return GATTLIB_ADAPTER_CLOSE;
 	}
 
 	if (adapter->backend.adapter_proxy == NULL) {
@@ -1106,7 +1106,7 @@ int gattlib_get_rssi(gattlib_connection_t *connection, int16_t *rssi)
 
 	if (!gattlib_device_is_valid(connection->device)) {
 		g_rec_mutex_unlock(&m_gattlib_mutex);
-		return GATTLIB_INVALID_PARAMETER;
+		return GATTLIB_DEVICE_DISCONNECTED;
 	}
 
 	// device is actually a GObject. Increasing its reference counter prevents to

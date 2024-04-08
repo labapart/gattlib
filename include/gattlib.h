@@ -52,6 +52,8 @@ extern "C" {
 #define GATTLIB_NO_ADAPTER             8
 #define GATTLIB_BUSY                   9
 #define GATTLIB_UNEXPECTED             10
+#define GATTLIB_ADAPTER_CLOSE          11
+#define GATTLIB_DEVICE_DISCONNECTED    12
 #define GATTLIB_ERROR_MODULE_MASK      0xF0000000
 #define GATTLIB_ERROR_DBUS             0x10000000
 #define GATTLIB_ERROR_BLUEZ            0x20000000

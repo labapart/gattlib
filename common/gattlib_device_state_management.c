@@ -50,7 +50,7 @@ int gattlib_device_set_state(gattlib_adapter_t* adapter, const char* device_id, 
     g_rec_mutex_lock(&m_gattlib_mutex);
 
     if (!gattlib_adapter_is_valid(adapter)) {
-        ret = GATTLIB_INVALID_PARAMETER;
+        ret = GATTLIB_ADAPTER_CLOSE;
         goto EXIT;
     }
 

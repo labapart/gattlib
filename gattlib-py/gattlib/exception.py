@@ -15,6 +15,8 @@ GATTLIB_DEVICE_NOT_CONNECTED = 7
 GATTLIB_NO_ADAPTER = 8
 GATTLIB_BUSY = 9
 GATTLIB_UNEXPECTED = 10
+GATTLIB_ADAPTER_CLOSE = 11
+GATTLIB_DEVICE_DISCONNECTED = 12
 
 GATTLIB_ERROR_MODULE_MASK      = 0xF0000000
 GATTLIB_ERROR_DBUS             = 0x10000000
@@ -50,6 +52,12 @@ class NotSupported(GattlibException):
     pass
 
 class NotConnected(GattlibException):
+    pass
+
+class AdapterClose(GattlibException):
+    pass
+
+class Disconnected(GattlibException):
     pass
 
 class DeviceError(GattlibException):
@@ -96,6 +104,10 @@ def handle_return(ret):
         raise Busy()
     elif ret == GATTLIB_UNEXPECTED:
         raise Unexpected()
+    elif ret == GATTLIB_ADAPTER_CLOSE:
+        raise AdapterClose()
+    elif ret == GATTLIB_DEVICE_DISCONNECTED:
+        raise Disconnected()
     elif (ret & GATTLIB_ERROR_MODULE_MASK) == GATTLIB_ERROR_DBUS:
         raise DBusError((ret >> 8) & 0xFFF, ret & 0xFFFF)
     elif ret == -22: # From '-EINVAL'

@@ -127,7 +127,7 @@ int gattlib_get_advertisement_data(gattlib_connection_t *connection,
 
 	if (!gattlib_device_is_valid(connection->device)) {
 		g_rec_mutex_unlock(&m_gattlib_mutex);
-		return GATTLIB_INVALID_PARAMETER;
+		return GATTLIB_DEVICE_DISCONNECTED;
 	}
 
 	// device is actually a GObject. Increasing its reference counter prevents to

@@ -490,7 +490,7 @@ int gattlib_adapter_scan_enable_with_filter(gattlib_adapter_t* adapter, uuid_t *
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
 
@@ -524,7 +524,7 @@ int gattlib_adapter_scan_enable_with_filter(gattlib_adapter_t* adapter, uuid_t *
 
 	// Ensure the adapter is still valid when we get the mutex again
 	if (!gattlib_adapter_is_valid(adapter)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
 
@@ -546,7 +546,7 @@ int gattlib_adapter_scan_enable_with_filter_non_blocking(gattlib_adapter_t* adap
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
 
@@ -584,7 +584,7 @@ int gattlib_adapter_scan_disable(gattlib_adapter_t* adapter) {
 	g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
 
@@ -650,7 +650,7 @@ int gattlib_adapter_close(gattlib_adapter_t* adapter) {
     g_rec_mutex_lock(&m_gattlib_mutex);
 
 	if (!gattlib_adapter_is_valid(adapter)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_ADAPTER_CLOSE;
 		goto EXIT;
 	}
 

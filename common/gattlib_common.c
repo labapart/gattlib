@@ -21,7 +21,7 @@ int gattlib_register_notification(gattlib_connection_t* connection, gattlib_even
 	}
 
 	if (!gattlib_device_is_valid(connection->device)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
 	}
 
@@ -58,7 +58,7 @@ int gattlib_register_indication(gattlib_connection_t* connection, gattlib_event_
 	}
 
 	if (!gattlib_device_is_valid(connection->device)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
 	}
 
@@ -92,7 +92,7 @@ int gattlib_register_on_disconnect(gattlib_connection_t *connection, gattlib_dis
 	}
 
 	if (!gattlib_device_is_valid(connection->device)) {
-		ret = GATTLIB_INVALID_PARAMETER;
+		ret = GATTLIB_DEVICE_DISCONNECTED;
 		goto EXIT;
 	}
 
