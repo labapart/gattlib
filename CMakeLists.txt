@@ -13,10 +13,10 @@ include(CrossCompilation.cmake)
 project(gattlib)
 
 #TODO: Gattlib examples must be ported to new gattlib_connect()
-option(GATTLIB_BUILD_EXAMPLES "Build GattLib examples" NO)
+option(GATTLIB_BUILD_EXAMPLES "Build GattLib examples" YES)
 option(GATTLIB_SHARED_LIB "Build GattLib as a shared library" YES)
 option(GATTLIB_BUILD_DOCS "Build GattLib docs" NO)
-option(GATTLIB_PYTHON_INTERFACE "Build GattLib Python Interface" YES)
+option(GATTLIB_PYTHON_INTERFACE "Build GattLib Python Interface" NO)
 option(GATTLIB_ENABLE_ADDRESS_SANITIZER "Enable address sanitizer" NO)
 
 find_package(PkgConfig REQUIRED)
