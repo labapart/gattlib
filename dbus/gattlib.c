@@ -843,7 +843,7 @@ EXIT:
 static void add_characteristics_from_service(struct _gattlib_connection_backend* backend, GDBusObjectManager *device_manager,
 			const char* service_object_path,
 			unsigned int start, unsigned int end,
-			gattlib_characteristic_t* characteristic_list, int* count)
+			gattlib_characteristic_t* characteristic_list, int count_max, int* count)
 {
 	GError *error = NULL;
 
@@ -885,6 +885,7 @@ static void add_characteristics_from_service(struct _gattlib_connection_backend*
             continue;
         }
 		if (strcmp(property_value, service_object_path)) {
+			// This GATT characteristic is not for the current GATT service. Ignore it
 			g_object_unref(characteristic);
 			continue;
 		} else {
@@ -896,6 +897,12 @@ static void add_characteristics_from_service(struct _gattlib_connection_backend*
 
 			// Check if handle is in range
 			if ((handle < start) || (handle > end)) {
+				continue;
+			}
+
+			// Sanity check to avoid buffer overflow
+			if (*count >= count_max) {
+				GATTLIB_LOG(GATTLIB_WARNING, "Skip GATT characteristic %s. Not enough space in the GATT characteristic array.", object_path);
 				continue;
 			}
 
@@ -996,6 +1003,12 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 			if (interface) {
 				g_object_unref(interface);
 
+				// Sanity check to avoid buffer overflow
+				if (count >= count_max) {
+					GATTLIB_LOG(GATTLIB_WARNING, "Skip battery characteristic. Not enough space in the GATT characteristic array.");
+					continue;
+				}
+
 				characteristic_list[count].handle = 0;
 				characteristic_list[count].value_handle = 0;
 				characteristic_list[count].properties = GATTLIB_CHARACTERISTIC_READ | GATTLIB_CHARACTERISTIC_NOTIFY;
@@ -1038,7 +1051,8 @@ int gattlib_discover_char_range(gattlib_connection_t* connection, uint16_t start
 		}
 
 		// Add all characteristics attached to this service
-		add_characteristics_from_service(&connection->backend, device_manager, object_path, start, end, characteristic_list, &count);
+		add_characteristics_from_service(&connection->backend, device_manager, object_path, start, end, characteristic_list,
+			count_max, &count);
 		g_object_unref(service_proxy);
 	}
 
