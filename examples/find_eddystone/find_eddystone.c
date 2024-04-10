@@ -45,7 +45,7 @@ const char* m_adapter_name;
  */
 void on_eddystone_found(gattlib_adapter_t* adapter, const char* addr, const char* name,
 		gattlib_advertisement_data_t *advertisement_data, size_t advertisement_data_count,
-		uint16_t manufacturer_id, uint8_t *manufacturer_data, size_t manufacturer_data_size,
+		gattlib_manufacturer_data_t* manufacturer_data, size_t manufacturer_data_count,
 		void *user_data)
 {
 	puts("Found Eddystone device");

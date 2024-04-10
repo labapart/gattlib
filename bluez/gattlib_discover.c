@@ -303,15 +303,14 @@ int gattlib_discover_desc(gattlib_connection_t* connection, gattlib_descriptor_t
  * @param mac_address is the MAC address of the device to get the RSSI
  * @param advertisement_data is an array of Service UUID and their respective data
  * @param advertisement_data_count is the number of elements in the advertisement_data array
- * @param manufacturer_id is the ID of the Manufacturer ID
- * @param manufacturer_data is the data following Manufacturer ID
- * @param manufacturer_data_size is the size of manufacturer_data
+ * @param manufacturer_data is an array of `gattlib_manufacturer_data_t`
+ * @param manufacturer_data_count is the number of entry in `gattlib_manufacturer_data_t` array
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_get_advertisement_data(gattlib_connection_t *connection,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
-		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
+		gattlib_manufacturer_data_t** manufacturer_data, size_t* manufacturer_data_count)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }
@@ -323,15 +322,14 @@ int gattlib_get_advertisement_data(gattlib_connection_t *connection,
  * @param mac_address is the MAC address of the device to get the RSSI
  * @param advertisement_data is an array of Service UUID and their respective data
  * @param advertisement_data_count is the number of elements in the advertisement_data array
- * @param manufacturer_id is the ID of the Manufacturer ID
- * @param manufacturer_data is the data following Manufacturer ID
- * @param manufacturer_data_size is the size of manufacturer_data
+ * @param manufacturer_data is an array of `gattlib_manufacturer_data_t`
+ * @param manufacturer_data_count is the number of entry in `gattlib_manufacturer_data_t` array
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const char *mac_address,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
-		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
+		gattlib_manufacturer_data_t** manufacturer_data, size_t* manufacturer_data_count)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }

@@ -30,27 +30,29 @@ static void on_eddystone_discovered_device(gattlib_adapter_t* adapter, const cha
 	struct on_eddystone_discovered_device_arg *callback_data = user_data;
 	gattlib_advertisement_data_t *advertisement_data = NULL;
 	size_t advertisement_data_count;
-	uint16_t manufacturer_id;
-	uint8_t *manufacturer_data = NULL;
-	size_t manufacturer_data_size;
+	gattlib_manufacturer_data_t* manufacturer_data = NULL;
+	size_t manufacturer_data_count = 0;
 	int ret;
 
 	ret = gattlib_get_advertisement_data_from_mac(adapter, addr,
 			&advertisement_data, &advertisement_data_count,
-			&manufacturer_id, &manufacturer_data, &manufacturer_data_size);
+			&manufacturer_data, &manufacturer_data_count);
 	if (ret != 0) {
 		return;
 	}
 
 	callback_data->discovered_device_cb(adapter, addr, name,
 			advertisement_data, advertisement_data_count,
-			manufacturer_id, manufacturer_data, manufacturer_data_size,
+			manufacturer_data, manufacturer_data_count,
 			callback_data->user_data);
 
 	if (advertisement_data != NULL) {
 		free(advertisement_data);
 	}
 	if (manufacturer_data != NULL) {
+		for (uintptr_t i = 0; i < manufacturer_data_count; i++) {
+			free(manufacturer_data[i].data);
+		}
 		free(manufacturer_data);
 	}
 }

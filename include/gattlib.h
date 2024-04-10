@@ -164,6 +164,15 @@ typedef struct {
 	size_t   data_length;  /**< Length of data attached to the GATT Service */
 } gattlib_advertisement_data_t;
 
+/**
+ * Structure to represent manufacturer data from GATT advertisement packet
+ */
+typedef struct {
+	uint16_t manufacturer_id;
+	uint8_t* data;
+	size_t data_size;
+} gattlib_manufacturer_data_t;
+
 typedef void (*gattlib_event_handler_t)(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data);
 
 /**
@@ -192,14 +201,13 @@ typedef void (*gattlib_discovered_device_t)(gattlib_adapter_t* adapter, const ch
  * @param name is the name of BLE device if advertised
  * @param advertisement_data is an array of Service UUID and their respective data
  * @param advertisement_data_count is the number of elements in the advertisement_data array
- * @param manufacturer_id is the ID of the Manufacturer ID
- * @param manufacturer_data is the data following Manufacturer ID
- * @param manufacturer_data_size is the size of manufacturer_data
+ * @param manufacturer_data is an array of `gattlib_manufacturer_data_t`
+ * @param manufacturer_data_count is the number of entry in `gattlib_manufacturer_data_t` array
  * @param user_data  Data defined when calling `gattlib_register_on_disconnect()`
  */
 typedef void (*gattlib_discovered_device_with_data_t)(gattlib_adapter_t* adapter, const char* addr, const char* name,
 		gattlib_advertisement_data_t *advertisement_data, size_t advertisement_data_count,
-		uint16_t manufacturer_id, uint8_t *manufacturer_data, size_t manufacturer_data_size,
+		gattlib_manufacturer_data_t* manufacturer_data, size_t manufacturer_data_count,
 		void *user_data);
 
 /**
@@ -688,15 +696,14 @@ int gattlib_get_rssi_from_mac(gattlib_adapter_t* adapter, const char *mac_addres
  * @param connection Active GATT connection
  * @param advertisement_data is an array of Service UUID and their respective data
  * @param advertisement_data_count is the number of elements in the advertisement_data array
- * @param manufacturer_id is the ID of the Manufacturer ID
- * @param manufacturer_data is the data following Manufacturer ID
- * @param manufacturer_data_size is the size of manufacturer_data
+ * @param manufacturer_data is an array of `gattlib_manufacturer_data_t`
+ * @param manufacturer_data_count is the number of entry in `gattlib_manufacturer_data_t` array
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_get_advertisement_data(gattlib_connection_t *connection,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
-		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size);
+		gattlib_manufacturer_data_t** manufacturer_data, size_t* manufacturer_data_count);
 
 /**
  * @brief Function to retrieve Advertisement Data from a MAC Address
@@ -705,15 +712,14 @@ int gattlib_get_advertisement_data(gattlib_connection_t *connection,
  * @param mac_address is the MAC address of the device to get the RSSI
  * @param advertisement_data is an array of Service UUID and their respective data
  * @param advertisement_data_count is the number of elements in the advertisement_data array
- * @param manufacturer_id is the ID of the Manufacturer ID
- * @param manufacturer_data is the data following Manufacturer ID
- * @param manufacturer_data_size is the size of manufacturer_data
+ * @param manufacturer_data is an array of `gattlib_manufacturer_data_t`
+ * @param manufacturer_data_count is the number of entry in `gattlib_manufacturer_data_t` array
  *
  * @return GATTLIB_SUCCESS on success or GATTLIB_* error code
  */
 int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const char *mac_address,
 		gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
-		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size);
+		gattlib_manufacturer_data_t** manufacturer_data, size_t* manufacturer_data_count);
 
 /**
  * @brief Convert a UUID into a string

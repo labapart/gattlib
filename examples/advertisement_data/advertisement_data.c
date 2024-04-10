@@ -38,14 +38,13 @@ static const char* adapter_name;
 static void ble_advertising_device(gattlib_adapter_t* adapter, const char* addr, const char* name, void *user_data) {
 	gattlib_advertisement_data_t *advertisement_data;
 	size_t advertisement_data_count;
-	uint16_t manufacturer_id;
-	uint8_t *manufacturer_data;
-	size_t manufacturer_data_size;
+	gattlib_manufacturer_data_t* manufacturer_data = NULL;
+	size_t manufacturer_data_count = 0;
 	int ret;
 
 	ret = gattlib_get_advertisement_data_from_mac(adapter, addr,
 			&advertisement_data, &advertisement_data_count,
-			&manufacturer_id, &manufacturer_data, &manufacturer_data_size);
+			&manufacturer_data, &manufacturer_data_count);
 	if (ret != 0) {
 		return;
 	}
@@ -56,10 +55,13 @@ static void ble_advertising_device(gattlib_adapter_t* adapter, const char* addr,
 		printf("Device %s: ", addr);
 	}
 
-	for (size_t i = 0; i < manufacturer_data_size; i++) {
-		printf("%02x ", manufacturer_data[i]);
+	for (size_t i = 0; i < manufacturer_data_count; i++) {
+		printf("- Manufacturer data for id 0x%x: ", manufacturer_data[i].manufacturer_id);
+		for (size_t j = 0; j < manufacturer_data[i].data_size; j++) {
+			printf("%02x ", manufacturer_data[i].data[j]);
+		}
+		printf("\n");
 	}
-	printf("\n");
 }
 
 static void* ble_task(void *arg) {
