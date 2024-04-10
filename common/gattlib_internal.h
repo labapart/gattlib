@@ -165,7 +165,7 @@ int gattlib_devices_are_disconnected(gattlib_adapter_t* adapter);
 int gattlib_devices_free(gattlib_adapter_t* adapter);
 
 #ifdef DEBUG
-void gattlib_devices_dump_state(gattlib_adapter_t* adapter);
+void gattlib_adapter_dump_state(gattlib_adapter_t* adapter);
 #endif
 
 #if defined(WITH_PYTHON)

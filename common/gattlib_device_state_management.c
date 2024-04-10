@@ -184,8 +184,10 @@ static void _gattlib_device_dump_state(gpointer data, gpointer user_data) {
     GATTLIB_LOG(GATTLIB_DEBUG, "\t%s: %s", device->device_id, device_state_str[device->state]);
 }
 
-void gattlib_devices_dump_state(gattlib_adapter_t* adapter) {
+void gattlib_adapter_dump_state(gattlib_adapter_t* adapter) {
     g_rec_mutex_lock(&m_gattlib_mutex);
+
+    GATTLIB_LOG(GATTLIB_ERROR, "gattlib_devices_dump_state: Adapter is_scanning:%d", adapter->backend.ble_scan.is_scanning);
 
     if (!gattlib_adapter_is_valid(adapter)) {
         GATTLIB_LOG(GATTLIB_ERROR, "gattlib_devices_dump_state: Adapter not valid");
