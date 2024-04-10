@@ -690,8 +690,18 @@ int gattlib_adapter_close(gattlib_adapter_t* adapter) {
 		GATTLIB_LOG(GATTLIB_DEBUG, "Bluetooth adapter %s was scanning. We stop the scan", adapter->name);
 		gattlib_adapter_scan_disable(adapter);
 
+		// We must release gattlib mutex to not block the library
+		// We must also increase reference counter to not wait for a thread that has been freed
+		GThread *scan_loop_thread = adapter->backend.ble_scan.scan_loop_thread;
+		g_thread_ref(scan_loop_thread);
+		g_rec_mutex_unlock(&m_gattlib_mutex);
+
 		_wait_scan_loop_stop_scanning(adapter);
+
 		g_thread_join(adapter->backend.ble_scan.scan_loop_thread);
+		// At this stage scan_loop_thread should have completed
+		g_rec_mutex_lock(&m_gattlib_mutex);
+		g_thread_unref(scan_loop_thread);
 	}
 
 	// Unref/Free the adapter
