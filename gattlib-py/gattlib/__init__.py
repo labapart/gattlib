@@ -103,6 +103,16 @@ class GattlibAdvertisementData(Structure):
                 ("data", c_void_p),
                 ("data_length", c_size_t)]
 
+# typedef struct {
+# 	uint16_t manufacturer_id;
+# 	uint8_t* data;
+# 	size_t data_size;
+# } gattlib_manufacturer_data_t;
+class GattlibManufacturerData(Structure):
+    _fields_ = [("manufacturer_id", c_ushort),
+                ("data", c_void_p),
+                ("data_size", c_size_t)]
+
 
 # int gattlib_adapter_open(const char* adapter_name, gattlib_adapter_t** adapter);
 gattlib_adapter_open = gattlib.gattlib_adapter_open
@@ -212,13 +222,13 @@ gattlib_get_rssi_from_mac.argtypes = [c_void_p, c_char_p, POINTER(c_int16)]
 # 		 gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_count,
 # 		 gattlib_manufacturer_data_t** manufacturer_data, size_t* manufacturer_data_count)
 gattlib_get_advertisement_data = gattlib.gattlib_get_advertisement_data
-gattlib_get_advertisement_data.argtypes = [c_void_p, POINTER(POINTER(GattlibAdvertisementData)), POINTER(c_size_t), POINTER(c_uint16), POINTER(c_void_p), POINTER(c_size_t)]
+gattlib_get_advertisement_data.argtypes = [c_void_p, POINTER(POINTER(GattlibAdvertisementData)), POINTER(c_size_t), POINTER(POINTER(GattlibManufacturerData)), POINTER(c_size_t)]
 
 # int gattlib_get_advertisement_data_from_mac(gattlib_adapter_t* adapter, const char *mac_address,
 #        gattlib_advertisement_data_t **advertisement_data, size_t *advertisement_data_length,
 #        gattlib_manufacturer_data_t** manufacturer_data, size_t* manufacturer_data_count)
 gattlib_get_advertisement_data_from_mac = gattlib.gattlib_get_advertisement_data_from_mac
-gattlib_get_advertisement_data_from_mac.argtypes = [c_void_p, c_char_p, POINTER(POINTER(GattlibAdvertisementData)), POINTER(c_size_t), POINTER(c_uint16), POINTER(c_void_p), POINTER(c_size_t)]
+gattlib_get_advertisement_data_from_mac.argtypes = [c_void_p, c_char_p, POINTER(POINTER(GattlibAdvertisementData)), POINTER(c_size_t), POINTER(POINTER(GattlibManufacturerData)), POINTER(c_size_t)]
 
 # int gattlib_mainloop_python(PyObject *handler, PyObject *user_data)
 gattlib_mainloop = gattlib.gattlib_mainloop_python

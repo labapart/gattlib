@@ -9,7 +9,7 @@ from uuid import UUID
 
 from gattlib import *
 from .device import Device
-from .exception import handle_return, AdapterNotOpened
+from .exception import handle_return
 from .uuid import gattlib_uuid_to_int
 
 GATTLIB_DISCOVER_FILTER_USE_UUID = (1 << 0)
@@ -238,18 +238,16 @@ class Adapter:
 
         _advertisement_data = POINTER(GattlibAdvertisementData)()
         _advertisement_data_count = c_size_t(0)
-        _manufacturer_id = c_uint16(0)
-        _manufacturer_data = c_void_p(None)
+        _manufacturer_data = POINTER(GattlibManufacturerData)()
         _manufacturer_data_len = c_size_t(0)
 
         ret = gattlib_get_advertisement_data_from_mac(self._adapter, mac_address,
                                                       byref(_advertisement_data), byref(_advertisement_data_count),
-                                                      byref(_manufacturer_id),
                                                       byref(_manufacturer_data), byref(_manufacturer_data_len))
         handle_return(ret)
 
         advertisement_data = {}
-        manufacturer_data = None
+        manufacturer_data = {}
 
         for i in range(0, _advertisement_data_count.value):
             service_data = _advertisement_data[i]
@@ -264,15 +262,21 @@ class Adapter:
 
             advertisement_data[uuid] = data
 
-        if _manufacturer_data_len.value > 0:
-            pointer_type = POINTER(c_byte * _manufacturer_data_len.value)
-            c_bytearray = cast(_manufacturer_data, pointer_type)
+        for i in range(0, _manufacturer_data_len.value):
+            _manufacturer_data = _manufacturer_data[i]
 
-            manufacturer_data = bytearray(_manufacturer_data_len.value)
-            for i in range(_manufacturer_data_len.value):
-                manufacturer_data[i] = c_bytearray.contents[i] & 0xFF
+            pointer_type = POINTER(c_byte * _manufacturer_data.data_size.value)
+            c_bytearray = cast(_manufacturer_data.data, pointer_type)
+
+            data = bytearray(_manufacturer_data.data_size.value)
+            for j in range(_manufacturer_data.data_size.value):
+                data[j] = c_bytearray.contents[j] & 0xFF
+
+            manufacturer_data[_manufacturer_data.manufacturer_id] = data
+
+            gattlib_free_mem(_manufacturer_data.data)
 
         gattlib_free_mem(_advertisement_data)
         gattlib_free_mem(_manufacturer_data)
 
-        return advertisement_data, _manufacturer_id.value, manufacturer_data
+        return advertisement_data, manufacturer_data
