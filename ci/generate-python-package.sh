@@ -28,8 +28,8 @@ mkdir ${gattlib_py_package_dir}/ci/
 cp -r ${ROOT_PATH}/ci/install-bluez.sh ${gattlib_py_package_dir}/ci/
 
 # Create MANIFEST.in
-rm -f MANIFEST.in
-cat <<EOT >> MANIFEST.in
+rm -f ${gattlib_py_package_dir}/MANIFEST.in
+cat <<EOT >> ${gattlib_py_package_dir}/MANIFEST.in
 graft common
 graft bluez
 graft dbus
@@ -51,7 +51,7 @@ python3 -m cibuildwheel --output-dir dist
 python setup.py sdist
 
 # Move generated artifact to project root path
-ls dist/*
+rm -Rf ${ROOT_PATH}/dist
 mv dist ${ROOT_PATH}
 
 popd

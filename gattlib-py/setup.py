@@ -14,6 +14,8 @@ from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
 import subprocess
 
+SETUP_DIR = os.path.dirname(os.path.realpath(__file__))
+
 # Name of the directory containing the python sources
 python_module_name = "gattlib"
 # Specified where the CMakeLists.txt is located
@@ -23,14 +25,28 @@ native_source_dir = os.environ.get("NATIVE_SOURCE_DIR", ".")
 git_version_command = subprocess.Popen(['git', 'describe', '--abbrev=7', '--dirty', '--always', '--tags'],
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 stdout, stderr = git_version_command.communicate()
-git_version = stdout.decode('utf-8').strip()
+if git_version_command.returncode == 0:
+    git_version = stdout.decode('utf-8').strip()
+else:
+    git_version = None
 
 #
 # Create '_version.py'
 #
 package_version = os.environ.get('GATTLIB_PY_VERSION', git_version)
-with open(os.path.join("gattlib", "_version.py"), "w") as f:
-    f.write(f"__version__ = \"{package_version}\"\n")
+
+GATTLIB_VERSION_FILE = os.path.join(SETUP_DIR, "gattlib", "_version.py")
+
+# Case we are building from source package
+if package_version is None:
+    with open(GATTLIB_VERSION_FILE, "r") as f:
+        gattlib_version_statement = f.read()
+        res = re.search(r'__version__ = "(.*)"', gattlib_version_statement)
+        package_version = res.group(1)
+
+if package_version:
+    with open(GATTLIB_VERSION_FILE, "w") as f:
+        f.write(f"__version__ = \"{package_version}\"\n")
 
 
 class CMakeExtension(Extension):
@@ -163,7 +179,7 @@ setup(
     author_email="olivier@labapart.com",
     description="Python wrapper for gattlib library",
     url="https://github.com/labapart/gattlib/gattlib-py",
-    long_description=open('README.md').read(),
+    long_description=open(os.path.join(SETUP_DIR, 'README.md')).read(),
     long_description_content_type='text/markdown',
     packages=find_packages(),
     install_requires=[
