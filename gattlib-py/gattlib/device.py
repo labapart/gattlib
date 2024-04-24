@@ -4,16 +4,17 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
+"""Gattlib Device API"""
+
 from __future__ import annotations
-import logging
 import uuid
 import threading
 from typing import TYPE_CHECKING
 
-from gattlib import *
-from .exception import handle_return, DeviceError, InvalidParameter
+from gattlib import *   #pylint: disable=wildcard-import,unused-wildcard-import
+from .exception import handle_return, InvalidParameter
 from .gatt import GattService, GattCharacteristic
-from .uuid import gattlib_uuid_to_int
+from .helpers import convert_gattlib_advertisement_c_data_to_dict
 
 if TYPE_CHECKING:
     from .adapter import Adapter
@@ -31,10 +32,10 @@ CONNECTION_OPTIONS_LEGACY_DEFAULT = \
 
 
 class Device:
-
+    """GATT device"""
     def __init__(self, adapter: Adapter, addr: str, name: str = None):
         self._adapter = adapter
-        if type(addr) == str:
+        if isinstance(addr, str):
             self._addr = addr.encode("utf-8")
         else:
             self._addr = addr
@@ -45,8 +46,12 @@ class Device:
         # We use a lock on disconnection to ensure the memory is safely freed
         self._disconnection_lock = threading.Lock()
 
+        self._services: dict[int, GattService] = {}
+        self._characteristics: dict[int, GattCharacteristic] = {}
+
         self.on_connection_callback = None
         self.on_connection_error_callback = None
+        self.disconnection_callback = None
 
         # Keep track if notification handler has been initialized
         self._is_notification_init = False
@@ -65,6 +70,7 @@ class Device:
 
     @property
     def connection(self):
+        """Return Gattlib connection C handle."""
         if self._connection:
             return self._connection
         else:
@@ -72,9 +78,11 @@ class Device:
 
     @property
     def is_connected(self) -> bool:
+        """Return True if the device is connected."""
         return (self._connection is not None)
 
     def connect(self, options=CONNECTION_OPTIONS_LEGACY_DEFAULT):
+        """Connect the device."""
         def _on_connection(adapter: c_void_p, mac_address: c_char_p, connection: c_void_p, error: c_int, user_data: py_object):
             if error:
                 self._connection = None
@@ -86,7 +94,7 @@ class Device:
         if self._adapter is None:
             adapter = None
         else:
-            adapter = self._adapter._adapter
+            adapter = self._adapter._adapter  #pylint: disable=protected-access
 
         ret = gattlib_connect(adapter, self._addr, options,
                               gattlib_connected_device_python_callback,
@@ -94,16 +102,19 @@ class Device:
         handle_return(ret)
 
     def on_connection(self, user_data: py_object):
-        if self.on_connection_callback:
-            self.on_connection_callback(self, user_data)
+        """Method called on device connection."""
+        if callable(self.on_connection_callback):
+            self.on_connection_callback(self, user_data)  #pylint: disable=not-callable
 
     def on_connection_error(self, error: c_int, user_data: py_object):
+        """Method called on device connection error."""
         logger.error("Failed to connect due to error '0x%x'", error)
-        if self.on_connection_error_callback:
-            self.on_connection_error_callback(self, error, user_data)
+        if callable(self.on_connection_error_callback):
+            self.on_connection_error_callback(self, error, user_data)  #pylint: disable=not-callable
 
     @property
     def rssi(self):
+        """Return connection RSSI."""
         _rssi = c_int16(0)
         if self._connection:
             ret = gattlib_get_rssi(self._connection, byref(_rssi))
@@ -113,56 +124,50 @@ class Device:
             return self._adapter.get_rssi_from_mac(self._addr)
 
     def register_on_disconnect(self, callback, user_data=None):
+        """Register disconnection callback."""
         self.disconnection_callback = callback
 
         def on_disconnection(user_data):
-            self._disconnection_lock.acquire()
+            with self._disconnection_lock:
+                if self.disconnection_callback:
+                    self.disconnection_callback()
 
-            if self.disconnection_callback:
-                self.disconnection_callback()
+                # On disconnection, we do not need the list of GATT services and GATT characteristics
+                if self._services_ptr:
+                    gattlib_free_mem(self._services_ptr)
+                    self._services_ptr = None
+                if self._characteristics_ptr:
+                    gattlib_free_mem(self._characteristics_ptr)
+                    self._characteristics_ptr = None
 
-            # On disconnection, we do not need the list of GATT services and GATT characteristics
-            if self._services_ptr:
-                gattlib_free_mem(self._services_ptr)
-                self._services_ptr = None
-            if self._characteristics_ptr:
-                gattlib_free_mem(self._characteristics_ptr)
-                self._characteristics_ptr = None
-
-            # Reset the connection handler
-            self._connection = None
-
-            self._disconnection_lock.release()
+                # Reset the connection handler
+                self._connection = None
 
         gattlib_register_on_disconnect(self.connection,
                                        gattlib_disconnected_device_python_callback,
                                        gattlib_python_callback_args(on_disconnection, user_data))
 
     def disconnect(self, wait_disconnection: bool = False):
-        self._connection_lock.acquire()
-        try:
+        """Disconnect connected device."""
+        with self._connection_lock:
             if self._connection:
                 ret = gattlib_disconnect(self.connection, wait_disconnection)
                 handle_return(ret)
             self._connection = None
-        finally:
-            self._connection_lock.release()
 
     def discover(self):
-        #
-        # Discover GATT Services
-        #
+        """Discover GATT Services."""
         self._services_ptr = POINTER(GattlibPrimaryService)()
-        _services_count = c_int(0)
-        ret = gattlib_discover_primary(self.connection, byref(self._services_ptr), byref(_services_count))
+        services_count = c_int(0)
+        ret = gattlib_discover_primary(self.connection, byref(self._services_ptr), byref(services_count))
         handle_return(ret)
 
         self._services = {}
-        for i in range(0, _services_count.value):
+        for i in range(0, services_count.value):
             service = GattService(self, self._services_ptr[i])
             self._services[service.short_uuid] = service
 
-            logger.debug("Service UUID:0x%x" % service.short_uuid)
+            logger.debug("Service UUID:0x%x", service.short_uuid)
 
         #
         # Discover GATT Characteristics
@@ -177,62 +182,33 @@ class Device:
             characteristic = GattCharacteristic(self, self._characteristics_ptr[i])
             self._characteristics[characteristic.short_uuid] = characteristic
 
-            logger.debug("Characteristic UUID:0x%x" % characteristic.short_uuid)
+            logger.debug("Characteristic UUID:0x%x", characteristic.short_uuid)
 
     def get_advertisement_data(self):
-        _advertisement_data = POINTER(GattlibAdvertisementData)()
-        _advertisement_data_count = c_size_t(0)
-        _manufacturer_data = POINTER(GattlibManufacturerData)()
-        _manufacturer_data_len = c_size_t(0)
+        """Return advertisement and manufacturer data of the device."""
+        advertisement_data = POINTER(GattlibAdvertisementData)()
+        advertisement_data_count = c_size_t(0)
+        manufacturer_data = POINTER(GattlibManufacturerData)()
+        manufacturer_data_count = c_size_t(0)
 
         if self._connection is None:
-            ret = gattlib_get_advertisement_data_from_mac(self._adapter._adapter, self._addr,
-                                                          byref(_advertisement_data), byref(_advertisement_data_count),
-                                                          byref(_manufacturer_data), byref(_manufacturer_data_len))
+            ret = gattlib_get_advertisement_data_from_mac(self._adapter._adapter, self._addr,  #pylint: disable=protected-access
+                                                          byref(advertisement_data), byref(advertisement_data_count),
+                                                          byref(manufacturer_data), byref(manufacturer_data_count))
         else:
             ret = gattlib_get_advertisement_data(self._connection,
-                                                 byref(_advertisement_data), byref(_advertisement_data_count),
-                                                 byref(_manufacturer_data), byref(_manufacturer_data_len))
+                                                 byref(advertisement_data), byref(advertisement_data_count),
+                                                 byref(manufacturer_data), byref(manufacturer_data_count))
 
         handle_return(ret)
 
-        advertisement_data = {}
-        manufacturer_data = {}
-
-        for i in range(0, _advertisement_data_count.value):
-            service_data = _advertisement_data[i]
-            uuid = gattlib_uuid_to_int(service_data.uuid)
-
-            pointer_type = POINTER(c_byte * service_data.data_length)
-            c_bytearray = cast(service_data.data, pointer_type)
-
-            data = bytearray(service_data.data_length)
-            for i in range(service_data.data_length):
-                data[i] = c_bytearray.contents[i] & 0xFF
-
-            advertisement_data[uuid] = data
-
-        for i in range(0, _manufacturer_data_len.value):
-            _manufacturer_data = _manufacturer_data[i]
-
-            pointer_type = POINTER(c_byte * _manufacturer_data.data_size.value)
-            c_bytearray = cast(_manufacturer_data.data, pointer_type)
-
-            data = bytearray(_manufacturer_data.data_size.value)
-            for j in range(_manufacturer_data.data_size.value):
-                data[j] = c_bytearray.contents[j] & 0xFF
-
-            manufacturer_data[_manufacturer_data.manufacturer_id] = data
-
-            gattlib_free_mem(_manufacturer_data.data)
-
-        gattlib_free_mem(_advertisement_data)
-        gattlib_free_mem(_manufacturer_data)
-
-        return advertisement_data, manufacturer_data
+        return convert_gattlib_advertisement_c_data_to_dict(  #pylint: disable=protected-access
+            advertisement_data, advertisement_data_count,
+            manufacturer_data, manufacturer_data_count)
 
     @property
-    def services(self):
+    def services(self) -> dict[int, GattService]:
+        """Return a GATT Service dictionary - the GATT UUID being the key."""
         if not hasattr(self, '_services'):
             logger.warning("Start GATT discovery implicitly")
             self.discover()
@@ -240,7 +216,8 @@ class Device:
         return self._services
 
     @property
-    def characteristics(self):
+    def characteristics(self) -> dict[int, GattCharacteristic]:
+        """Return a GATT Characteristic dictionary - the GATT UUID being the key."""
         if not hasattr(self, '_characteristics'):
             logger.warning("Start GATT discovery implicitly")
             self.discover()
@@ -248,16 +225,17 @@ class Device:
         return self._characteristics
 
     @staticmethod
-    def notification_callback(uuid_str, data, data_len, user_data):
+    def _notification_callback(uuid_str, data, data_len, user_data):
+        """Helper method to call back characteristic callback."""
         this = user_data
 
         notification_uuid = uuid.UUID(uuid_str)
 
         short_uuid = notification_uuid.int
-        if short_uuid not in this._gatt_characteristic_callbacks:
+        if short_uuid not in this._gatt_characteristic_callbacks:  #pylint: disable=protected-access
             raise RuntimeError("UUID '%s' is expected to be part of the notification list")
-        else:
-            characteristic_callback = this._gatt_characteristic_callbacks[short_uuid]
+
+        characteristic_callback = this._gatt_characteristic_callbacks[short_uuid]  #pylint: disable=protected-access
 
         # value = bytearray(data_len)
         # for i in range(data_len):
@@ -281,7 +259,7 @@ class Device:
 
         gattlib_register_notification(self._connection,
                                       gattlib_notification_device_python_callback,
-                                      gattlib_python_callback_args(Device.notification_callback, self))
+                                      gattlib_python_callback_args(Device._notification_callback, self))
 
     def _notification_add_gatt_characteristic_callback(self, gatt_characteristic, callback, user_data):
         if not callable(callback):

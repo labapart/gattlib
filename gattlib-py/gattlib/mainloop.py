@@ -4,6 +4,8 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
+"""Module for exposing main loop for Gattlib execution."""
+
 import threading
 import time
 import traceback
@@ -19,7 +21,7 @@ task_exception: Exception = None
 
 def _user_thread_main(task):
     """Main entry point for the thread that will run user's code."""
-    global gobject_mainloop, task_returned_code, task_exception
+    global task_returned_code, task_exception
 
     try:
         # Wait for GLib main loop to start running before starting user code.
@@ -32,7 +34,7 @@ def _user_thread_main(task):
 
         # Run user's code.
         task_returned_code = task()
-    except Exception as ex:
+    except Exception as ex:  #pylint: disable=broad-except
         logger.error("Exception in %s: %s: %s", task, type(ex), str(ex))
         traceback.print_exception(type(ex), ex, ex.__traceback__)
         task_exception = ex
@@ -40,7 +42,12 @@ def _user_thread_main(task):
         gobject_mainloop.quit()
 
 def run_mainloop_with(task):
-    global gobject_mainloop, task_returned_code, task_exception
+    """
+    Run main loop with the given task.
+
+    The main loop ends when the task has completed.
+    """
+    global gobject_mainloop
 
     if gobject_mainloop:
         raise RuntimeError("A mainloop is already running")

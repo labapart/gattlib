@@ -4,19 +4,22 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
+"""Module to manipulate Gattlib UUID in Python environment."""
+
 import re
 from uuid import UUID
 
-from gattlib import *
+from gattlib import *  #pylint: disable=wildcard-import,unused-wildcard-import
 
 SDP_UUID16 = 0x19
 SDP_UUID32 = 0x1A
 SDP_UUID128 = 0x1C
 
-GATT_STANDARD_UUID_FORMAT = re.compile("(\S+)-0000-1000-8000-00805f9b34fb", flags=re.IGNORECASE)
+GATT_STANDARD_UUID_FORMAT = re.compile(r"(\S+)-0000-1000-8000-00805f9b34fb", flags=re.IGNORECASE)
 
 
-def gattlib_uuid_to_uuid(gattlib_uuid):
+def gattlib_uuid_to_uuid(gattlib_uuid) -> UUID:
+    """Convert Gattlib UUID to Python UUID"""
     if gattlib_uuid.type == SDP_UUID16:
         return UUID(fields=(gattlib_uuid.value.uuid16, 0x0000, 0x1000, 0x80, 0x00, 0x00805f9b34fb))
     elif gattlib_uuid.type == SDP_UUID32:
@@ -25,10 +28,11 @@ def gattlib_uuid_to_uuid(gattlib_uuid):
         data = bytes(gattlib_uuid.value.uuid128.data)
         return UUID(bytes=data)
     else:
-        return ValueError("Gattlib UUID not recognized (type:0x%x)" % gattlib_uuid.type)
+        return ValueError(f"Gattlib UUID not recognized (type:0x{gattlib_uuid.type:02x})")
 
 
-def gattlib_uuid_to_int(gattlib_uuid):
+def gattlib_uuid_to_int(gattlib_uuid) -> int:
+    """Convert Gattlib UUID to integer."""
     if gattlib_uuid.type == SDP_UUID16:
         return gattlib_uuid.value.uuid16
     elif gattlib_uuid.type == SDP_UUID32:
@@ -37,10 +41,11 @@ def gattlib_uuid_to_int(gattlib_uuid):
         data = bytes(gattlib_uuid.value.uuid128.data)
         return int.from_bytes(data, byteorder='big')
     else:
-        return ValueError("Gattlib UUID not recognized (type:0x%x)" % gattlib_uuid.type)
+        return ValueError(f"Gattlib UUID not recognized (type:0x{gattlib_uuid.type:02x})")
 
 
 def gattlib_uuid_str_to_int(uuid_str: str) -> int:
+    """Convert uuid string to integer"""
     # Check if the string could already encode a UUID16 or UUID32
     if len(uuid_str) <= 8:
         return int(uuid_str, 16)

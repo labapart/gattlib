@@ -679,8 +679,8 @@ int gattlib_get_rssi(gattlib_connection_t *connection, int16_t *rssi);
 /**
  * @brief Function to retrieve RSSI from a MAC Address
  *
- * @note: This function is mainly used before a connection is established. Once the connection
- * established, the function `gattlib_get_rssi()` should be preferred.
+ * @note: This function must be used before a connection is established. Once the connection
+ * established, the function will return a null RSSI.
  *
  * @param adapter is the adapter the new device has been seen
  * @param mac_address is the MAC address of the device to get the RSSI

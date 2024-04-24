@@ -4,6 +4,8 @@
 # Copyright (c) 2016-2024, Olivier Martin <olivier@labapart.org>
 #
 
+"""Gattlib Exceptions"""
+
 GATTLIB_SUCCESS = 0
 GATTLIB_INVALID_PARAMETER = 1
 GATTLIB_NOT_FOUND = 2
@@ -25,42 +27,43 @@ GATTLIB_ERROR_INTERNAL         = 0x80000000
 
 
 class GattlibException(Exception):
-    pass
+    """Generic Gattlib exception."""
 
 class NoAdapter(GattlibException):
-    pass
+    """Gattlib exception raised when no adapter is present."""
 
 class Busy(GattlibException):
-    pass
+    """Gattlib busy exception."""
 
 class Unexpected(GattlibException):
-    pass
+    """Gattlib unexpected exception."""
 
 class AdapterNotOpened(GattlibException):
-    pass
+    """Gattlib exception raised when adapter is not opened yet."""
 
 class InvalidParameter(GattlibException):
-    pass
+    """Gattlib invalid parameter exception."""
 
 class NotFound(GattlibException):
-    pass
+    """Gattlib not found exception."""
 
 class OutOfMemory(GattlibException):
-    pass
+    """Gattlib out of memory exception."""
 
 class NotSupported(GattlibException):
-    pass
+    """Gattlib not supported exception."""
 
 class NotConnected(GattlibException):
-    pass
+    """Gattlib exception raised when device is not connected."""
 
 class AdapterClose(GattlibException):
-    pass
+    """Gattlib exception raised when the adapter is closed."""
 
 class Disconnected(GattlibException):
-    pass
+    """Gattlib exception raised when the device is disconnected."""
 
 class DeviceError(GattlibException):
+    """Gattlib device exception."""
     def __init__(self, adapter: str = None, mac_address: str = None) -> None:
         self.adapter = adapter
         self.mac_address = mac_address
@@ -69,48 +72,50 @@ class DeviceError(GattlibException):
         return f"Error with device {self.mac_address} on adapter {self.adapter}"
 
 class DBusError(GattlibException):
+    """Gattlib DBUS exception."""
     def __init__(self, domain: int, code: int) -> None:
         self.domain = domain
         self.code = code
 
     def __str__(self) -> str:
         if self.domain == 238 and self.code == 60964:
-            return f"DBus Error: le-connection-abort-by-local"
+            return "DBus Error: le-connection-abort-by-local"
         elif self.domain == 238 and self.code == 60952:
-            return f"DBus Error: Timeout was reached"
+            return "DBus Error: Timeout was reached"
         elif self.domain == 238 and self.code == 60964:
-            return f"DBus Error: Timeout was reached"
+            return "DBus Error: Timeout was reached"
         else:
             return f"DBus Error domain={self.domain},code={self.code}"
 
 def handle_return(ret):
+    """Function to convert gattlib error to Python exception."""
     if ret == GATTLIB_INVALID_PARAMETER:
         raise InvalidParameter()
-    elif ret == GATTLIB_NOT_FOUND:
+    if ret == GATTLIB_NOT_FOUND:
         raise NotFound()
-    elif ret == GATTLIB_OUT_OF_MEMORY:
+    if ret == GATTLIB_OUT_OF_MEMORY:
         raise OutOfMemory()
-    elif ret == GATTLIB_TIMEOUT:
+    if ret == GATTLIB_TIMEOUT:
         raise TimeoutError()
-    elif ret == GATTLIB_NOT_SUPPORTED:
+    if ret == GATTLIB_NOT_SUPPORTED:
         raise NotSupported()
-    elif ret == GATTLIB_DEVICE_ERROR:
+    if ret == GATTLIB_DEVICE_ERROR:
         raise DeviceError()
-    elif ret == GATTLIB_DEVICE_NOT_CONNECTED:
+    if ret == GATTLIB_DEVICE_NOT_CONNECTED:
         raise NotConnected()
-    elif ret == GATTLIB_NO_ADAPTER:
+    if ret == GATTLIB_NO_ADAPTER:
         raise NoAdapter()
-    elif ret == GATTLIB_BUSY:
+    if ret == GATTLIB_BUSY:
         raise Busy()
-    elif ret == GATTLIB_UNEXPECTED:
+    if ret == GATTLIB_UNEXPECTED:
         raise Unexpected()
-    elif ret == GATTLIB_ADAPTER_CLOSE:
+    if ret == GATTLIB_ADAPTER_CLOSE:
         raise AdapterClose()
-    elif ret == GATTLIB_DEVICE_DISCONNECTED:
+    if ret == GATTLIB_DEVICE_DISCONNECTED:
         raise Disconnected()
-    elif (ret & GATTLIB_ERROR_MODULE_MASK) == GATTLIB_ERROR_DBUS:
+    if (ret & GATTLIB_ERROR_MODULE_MASK) == GATTLIB_ERROR_DBUS:
         raise DBusError((ret >> 8) & 0xFFF, ret & 0xFFFF)
-    elif ret == -22: # From '-EINVAL'
+    if ret == -22: # From '-EINVAL'
         raise ValueError("Gattlib value error")
-    elif ret != 0:
-        raise RuntimeError("Gattlib exception %d" % ret)
+    if ret != 0:
+        raise RuntimeError(f"Gattlib exception {ret}")
