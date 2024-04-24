@@ -2,7 +2,7 @@
  *
  *  GattLib - GATT Library
  *
- *  Copyright (C) 2016-2021  Olivier Martin <olivier@labapart.org>
+ *  Copyright (C) 2016-2024  Olivier Martin <olivier@labapart.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -22,8 +22,9 @@
  */
 
 #include <assert.h>
+#include <ctype.h>
 #include <glib.h>
-#include <signal.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -33,13 +34,28 @@
 
 #include "gattlib.h"
 
-static uuid_t g_notify_uuid;
-static uuid_t g_write_uuid;
+#define BLE_SCAN_TIMEOUT   10
 
-static GMainLoop *m_main_loop;
+static struct {
+	char *adapter_name;
+	char* mac_address;
+	uuid_t gatt_notification_uuid;
+	uuid_t gatt_write_uuid;
+	long int gatt_write_data;
+} m_argument;
 
-void notification_handler(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data) {
-	int i;
+// Declaration of thread condition variable
+static pthread_cond_t m_connection_terminated = PTHREAD_COND_INITIALIZER;
+
+// declaring mutex
+static pthread_mutex_t m_connection_terminated_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void usage(char *argv[]) {
+	printf("%s <device_address> <notification_characteristic_uuid> [<write_characteristic_uuid> <write_characteristic_data>]\n", argv[0]);
+}
+
+static void notification_handler(const uuid_t* uuid, const uint8_t* data, size_t data_length, void* user_data) {
+	uintptr_t i;
 
 	printf("Notification Handler: ");
 
@@ -49,94 +65,127 @@ void notification_handler(const uuid_t* uuid, const uint8_t* data, size_t data_l
 	printf("\n");
 }
 
-static void on_user_abort(int arg) {
-	g_main_loop_quit(m_main_loop);
+static void on_device_connect(gattlib_adapter_t* adapter, const char *dst, gattlib_connection_t* connection, int error, void* user_data) {
+	int ret;
+
+	if (m_argument.gatt_write_data != 0) {
+		ret = gattlib_write_char_by_uuid(connection, &m_argument.gatt_write_uuid, &m_argument.gatt_write_data, 1);
+		if (ret != GATTLIB_SUCCESS) {
+		}
+
+	}
+
+	ret = gattlib_register_notification(connection, notification_handler, NULL);
+	if (ret) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to register notification callback.");
+		goto EXIT;
+	}
+
+	ret = gattlib_notification_start(connection, &m_argument.gatt_notification_uuid);
+	if (ret) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Fail to start notification.");
+		goto EXIT;
+	}
+
+	GATTLIB_LOG(GATTLIB_INFO, "Wait for notification for 20 seconds...");
+	g_usleep(20 * G_USEC_PER_SEC);
+
+EXIT:
+	gattlib_disconnect(connection, false /* wait_disconnection */);
+
+	pthread_mutex_lock(&m_connection_terminated_lock);
+	pthread_cond_signal(&m_connection_terminated);
+	pthread_mutex_unlock(&m_connection_terminated_lock);
 }
 
-static void usage(char *argv[]) {
-	printf("%s <device_address> <notification_characteristic_uuid> [<write_characteristic_uuid> <write_characteristic_hex_data> ...]\n", argv[0]);
+static int stricmp(char const *a, char const *b) {
+    for (;; a++, b++) {
+        int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
+        if (d != 0 || !*a)
+            return d;
+    }
 }
 
+static void ble_discovered_device(gattlib_adapter_t* adapter, const char* addr, const char* name, void *user_data) {
+	int ret;
+	int16_t rssi;
+
+	if (stricmp(addr, m_argument.mac_address) != 0) {
+		return;
+	}
+
+	ret = gattlib_get_rssi_from_mac(adapter, addr, &rssi);
+	if (ret == 0) {
+		GATTLIB_LOG(GATTLIB_INFO, "Found bluetooth device '%s' with RSSI:%d", m_argument.mac_address, rssi);
+	} else {
+		GATTLIB_LOG(GATTLIB_INFO, "Found bluetooth device '%s'", m_argument.mac_address);
+	}
+
+	ret = gattlib_connect(adapter, addr, GATTLIB_CONNECTION_OPTIONS_NONE, on_device_connect, NULL);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to connect to the bluetooth device '%s'", addr);
+	}
+}
+
+static void* ble_task(void* arg) {
+	char* addr = arg;
+	gattlib_adapter_t* adapter;
+	int ret;
+
+	ret = gattlib_adapter_open(m_argument.adapter_name, &adapter);
+	if (ret) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to open adapter.");
+		return NULL;
+	}
+
+	ret = gattlib_adapter_scan_enable(adapter, ble_discovered_device, BLE_SCAN_TIMEOUT, addr);
+	if (ret) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to scan.");
+		return NULL;
+	}
+
+	// Wait for the device to be connected
+	pthread_mutex_lock(&m_connection_terminated_lock);
+	pthread_cond_wait(&m_connection_terminated, &m_connection_terminated_lock);
+	pthread_mutex_unlock(&m_connection_terminated_lock);
+
+	return NULL;
+}
 
 int main(int argc, char *argv[]) {
 	int ret;
-	int argid;
-	gattlib_connection_t* connection;
 
 	if (argc < 3) {
 		usage(argv);
 		return 1;
 	}
 
-	if (gattlib_string_to_uuid(argv[2], strlen(argv[2]) + 1, &g_notify_uuid) < 0) {
+	if (gattlib_string_to_uuid(argv[2], strlen(argv[2]) + 1, &m_argument.gatt_notification_uuid) < 0) {
 		usage(argv);
 		return 1;
 	}
 
-	if (argc > 3) {
-		if (gattlib_string_to_uuid(argv[3], strlen(argv[3]) + 1, &g_write_uuid) < 0) {
+	if (argc == 5) {
+		if (gattlib_string_to_uuid(argv[3], strlen(argv[3]) + 1, &m_argument.gatt_write_uuid) < 0) {
 			usage(argv);
 			return 1;
 		}
+
+		sscanf(argv[4], "%ld", &m_argument.gatt_write_data);
 	}
-
-#ifdef GATTLIB_LOG_BACKEND_SYSLOG
-	openlog("gattlib_notification", LOG_CONS | LOG_NDELAY | LOG_PERROR | LOG_PID, LOG_USER);
-	setlogmask(LOG_UPTO(LOG_DEBUG));
-#endif
-
-	connection = gattlib_connect(NULL, argv[1], GATTLIB_CONNECTION_OPTIONS_LEGACY_DEFAULT);
-	if (connection == NULL) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Fail to connect to the bluetooth device.");
-		return 1;
-	}
-
-	gattlib_register_notification(connection, notification_handler, NULL);
 
 #ifdef GATTLIB_LOG_BACKEND_SYSLOG
 	openlog("gattlib_notification", LOG_CONS | LOG_NDELAY | LOG_PERROR, LOG_USER);
-	setlogmask(LOG_UPTO(LOG_DEBUG));
+	setlogmask(LOG_UPTO(LOG_INFO));
 #endif
 
-	ret = gattlib_notification_start(connection, &g_notify_uuid);
-	if (ret) {
-		GATTLIB_LOG(GATTLIB_ERROR, "Fail to start notification.");
-		goto DISCONNECT;
+	m_argument.adapter_name = NULL;
+	m_argument.mac_address = argv[1];
+
+	ret = gattlib_mainloop(ble_task, NULL);
+	if (ret != GATTLIB_SUCCESS) {
+		GATTLIB_LOG(GATTLIB_ERROR, "Failed to create gattlib mainloop");
 	}
 
-	// Optional byte writes to make to trigger notifications
-	for (argid = 4; argid < argc; argid ++) {
-		unsigned char data[256];
-		char * charp;
-		unsigned char * datap;
-		for (charp = argv[4], datap = data; charp[0] && charp[1]; charp += 2, datap ++) {
-			sscanf(charp, "%02hhx", datap);
-		}
-		ret = gattlib_write_char_by_uuid(connection, &g_write_uuid, data, datap - data);
-
-		if (ret != GATTLIB_SUCCESS) {
-			if (ret == GATTLIB_NOT_FOUND) {
-				GATTLIB_LOG(GATTLIB_ERROR, "Could not find GATT Characteristic with UUID %s.", argv[3]);
-			} else {
-				GATTLIB_LOG(GATTLIB_ERROR, "Error while writing GATT Characteristic with UUID %s (ret:%d)",
-					argv[3], ret);
-			}
-			goto DISCONNECT;
-		}
-	}
-
-	// Catch CTRL-C
-	signal(SIGINT, on_user_abort);
-
-	m_main_loop = g_main_loop_new(NULL, 0);
-	g_main_loop_run(m_main_loop);
-
-	// In case we quit the main loop, clean the connection
-	gattlib_notification_stop(connection, &g_notify_uuid);
-	g_main_loop_unref(m_main_loop);
-
-DISCONNECT:
-	gattlib_disconnect(connection, false /* wait_disconnection */);
-	puts("Done");
-	return ret;
+	return 0;
 }
