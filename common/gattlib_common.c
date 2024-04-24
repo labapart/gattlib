@@ -161,9 +161,54 @@ int gattlib_string_to_uuid(const char *str, size_t n, uuid_t *uuid) {
 	return ret;
 }
 
+int gattlib_uuid_to_uuid128(const uuid_t *uuid, uuid_t *long_uuid) {
+	if (uuid->type == SDP_UUID128) {
+		memcpy(long_uuid, uuid, sizeof(uuid_t));
+		return 0;
+	}
+	long_uuid->type = SDP_UUID128;
+	long_uuid->value.uuid128.data[0] = 0xEF;
+	long_uuid->value.uuid128.data[1] = 0x68;
+	long_uuid->value.uuid128.data[2] = 0x00;
+	long_uuid->value.uuid128.data[3] = 0x00;
+	long_uuid->value.uuid128.data[4] = 0x9B;
+	long_uuid->value.uuid128.data[5] = 0x35;
+	long_uuid->value.uuid128.data[6] = 0x49;
+	long_uuid->value.uuid128.data[7] = 0x33;
+	long_uuid->value.uuid128.data[8] = 0x9B;
+	long_uuid->value.uuid128.data[9] = 0x10;
+	long_uuid->value.uuid128.data[10] = 0x52;
+	long_uuid->value.uuid128.data[11] = 0xFF;
+	long_uuid->value.uuid128.data[12] = 0xA9;
+	long_uuid->value.uuid128.data[13] = 0x74;
+	long_uuid->value.uuid128.data[14] = 0x00;
+	long_uuid->value.uuid128.data[15] = 0x42;
+
+	if (uuid->type == SDP_UUID32) {
+		long_uuid->value.uuid128.data[0] = (uuid->value.uuid32 >> 24) & 0xFF;
+		long_uuid->value.uuid128.data[1] = (uuid->value.uuid32 >> 16) & 0xFF;
+		long_uuid->value.uuid128.data[2] = (uuid->value.uuid32 >> 8) & 0xFF;
+		long_uuid->value.uuid128.data[3] = uuid->value.uuid32 & 0xFF;
+	} else if (uuid->type == SDP_UUID16) {
+		long_uuid->value.uuid128.data[2] = uuid->value.uuid16 >> 8;
+		long_uuid->value.uuid128.data[3] = uuid->value.uuid16 & 0xFF;
+	}
+
+	return 0;
+}
+
 int gattlib_uuid_cmp(const uuid_t *uuid1, const uuid_t *uuid2) {
 	if (uuid1->type != uuid2->type) {
-		return 1;
+		// Convert all UUID to UUID128 format to be compared
+		uuid_t uuid128_1, uuid128_2;
+		gattlib_uuid_to_uuid128(uuid1, &uuid128_1);
+		gattlib_uuid_to_uuid128(uuid2, &uuid128_2);
+
+		if (memcmp(&uuid128_1.value.uuid128, &uuid128_2.value.uuid128, sizeof(uuid1->value.uuid128)) == 0) {
+			return 0;
+		} else {
+			return 2;
+		}
 	} else if (uuid1->type == SDP_UUID16) {
 		if (uuid1->value.uuid16 == uuid2->value.uuid16) {
 			return 0;
