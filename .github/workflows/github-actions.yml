@@ -50,6 +50,14 @@ jobs:
       - run: sudo apt install libbluetooth-dev
       - run: mkdir build && pushd build && cmake -DCMAKE_BUILD_TYPE=Release -DGATTLIB_PYTHON_INTERFACE=OFF .. && make
 
+  test-pylint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install PyGObject>=3.44.0
+      - run: python3 -m pip install pylint
+      - run: python3 -m pylint gattlib-py/gattlib --rcfile gattlib-py/.pylintrc
+
   generate-python-binary-packages:
     runs-on: ubuntu-latest
     steps:
