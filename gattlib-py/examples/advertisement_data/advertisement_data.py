@@ -15,7 +15,7 @@ args = parser.parse_args()
 
 
 def on_discovered_ble_device(device, user_data):
-    advertisement_data, manufacturer_id, manufacturer_data = device.get_advertisement_data()
+    advertisement_data, manufacturer_data = device.get_advertisement_data()
     print("Device Advertisement Data: %s" % manufacturer_data)
 
 
