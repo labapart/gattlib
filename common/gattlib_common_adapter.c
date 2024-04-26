@@ -4,6 +4,8 @@
  * Copyright (c) 2021-2024, Olivier Martin <olivier@labapart.org>
  */
 
+#include <ctype.h>
+
 #include "gattlib_internal.h"
 
 // Keep track of the allocated adapters to avoid an adapter to be freed twice.
