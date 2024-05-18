@@ -2,8 +2,12 @@
 .vscode/
 
 # Generated files
+.build
 build
 __pycache__
 MANIFEST.in
 dist
 gattlib-py/gattlib_py.egg-info/
+
+# Python
+/venv*
