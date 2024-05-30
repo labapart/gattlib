@@ -60,15 +60,12 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 			}
 
 			// Copy manufacturer data to structure
-			GVariant* value;
-			g_variant_get(values, "ay", &iter);
-			size_t index = 0;
+			for (unsigned int j = 0; j < (*manufacturer_data)[i].data_size; j++)
+			{
+				GVariant *v = g_variant_get_child_value(values, j);
 
-			while ((value = g_variant_iter_next_value(iter)) != NULL) {
-				g_variant_get(value, "y", (*manufacturer_data)[i].data[index++]);
-				g_variant_unref(value);
+				(*manufacturer_data)[i].data[j] = g_variant_get_byte(v);
 			}
-			g_variant_iter_free(iter);
 		}
 	}
 
