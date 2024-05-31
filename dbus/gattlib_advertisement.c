@@ -107,8 +107,29 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 
 		*advertisement_data = advertisement_data_ptr;
 	} else {
-		*advertisement_data_count = 0;
-		*advertisement_data = NULL;
+		const gchar* const* service_strs = org_bluez_device1_get_uuids(bluez_device1);
+		if (service_strs && (*service_strs)) {
+			uuid_t uuid;
+			int ret, len = strlen((char *)*service_strs);
+			if (!len) goto error_return;
+
+			ret = gattlib_string_to_uuid((char *)*service_strs, len, &uuid);
+			if (ret) goto error_return;
+
+			*advertisement_data = calloc(sizeof(gattlib_advertisement_data_t), 1);
+			if (!(*advertisement_data)) {
+				*advertisement_data_count = 0;
+				return GATTLIB_OUT_OF_MEMORY;
+			}
+			*advertisement_data_count = 1;
+			memcpy(&(*advertisement_data)[0].uuid, &uuid, sizeof(uuid));
+		}
+		else
+		{
+		error_return:
+			*advertisement_data_count = 0;
+			*advertisement_data = NULL;
+		}
 	}
 
 	return GATTLIB_SUCCESS;
