@@ -24,9 +24,9 @@ cmake_minimum_required(VERSION 3.22.0)
 find_package(PkgConfig REQUIRED)
 
 pkg_search_module(GATTLIB REQUIRED gattlib)
-pkg_search_module(PCRE REQUIRED libpcre)
+pkg_search_module(PCRE2-8 REQUIRED libpcre2-8)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 
 add_executable(test_continuous_connection test_continuous_connection.c)
 target_include_directories(test_continuous_connection PRIVATE ${GLIB_INCLUDE_DIRS})
-target_link_libraries(test_continuous_connection ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${PCRE_LIBRARIES} ${GLIB_LDFLAGS} pthread)
+target_link_libraries(test_continuous_connection ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${PCRE2-8_LIBRARIES} ${GLIB_LDFLAGS} pthread)

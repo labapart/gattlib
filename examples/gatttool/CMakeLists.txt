@@ -25,7 +25,7 @@ find_package(PkgConfig REQUIRED)
 
 pkg_search_module(GATTLIB REQUIRED gattlib)
 pkg_search_module(GLIB REQUIRED glib-2.0)
-pkg_search_module(PCRE REQUIRED libpcre)
+pkg_search_module(PCRE2-8 REQUIRED libpcre2-8)
 
 include_directories(${CMAKE_SOURCE_DIR}/common ${GLIB_INCLUDE_DIRS})
 
@@ -52,4 +52,4 @@ endif()
 set(gatttool_SRCS gatttool.c interactive.c utils.c)
 
 add_executable(gatttool ${gatttool_SRCS})
-target_link_libraries(gatttool ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${GLIB_LDFLAGS} ${PCRE_LIBRARIES} readline tinfo pthread)
+target_link_libraries(gatttool ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${GLIB_LDFLAGS} ${PCRE2-8_LIBRARIES} readline tinfo pthread)

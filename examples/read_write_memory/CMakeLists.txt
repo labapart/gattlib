@@ -25,10 +25,10 @@ find_package(PkgConfig REQUIRED)
 
 pkg_search_module(GATTLIB REQUIRED gattlib)
 pkg_search_module(GLIB REQUIRED glib-2.0)
-pkg_search_module(PCRE REQUIRED libpcre)
+pkg_search_module(PCRE2-8 REQUIRED libpcre2-8)
 
 include_directories(${GLIB_INCLUDE_DIRS})
 set(read_write_memory_SRCS read_write_memory.c)
 
 add_executable(read_write_memory ${read_write_memory_SRCS})
-target_link_libraries(read_write_memory ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${GLIB_LDFLAGS} ${PCRE_LIBRARIES} pthread)
+target_link_libraries(read_write_memory ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${GLIB_LDFLAGS} ${PCRE2-8_LIBRARIES} pthread)
