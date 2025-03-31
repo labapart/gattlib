@@ -70,7 +70,7 @@ endif()
 include_directories($ENV{SYSROOT}/usr/include $ENV{SYSROOT}/usr/include/${TOOLCHAIN_MACHINE})
 
 # Workaround as some library are installed in $ENV{SYSROOT}/lib/${TOOLCHAIN_MACHINE}
-# such as libpcre.so (required by glib-2.0)
+# such as libpcre2-8.so (required by glib-2.0)
 link_directories($ENV{SYSROOT}/lib/${TOOLCHAIN_MACHINE})
 link_directories($ENV{SYSROOT}/usr/lib/${TOOLCHAIN_MACHINE})
 

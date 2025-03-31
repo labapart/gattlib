@@ -24,9 +24,9 @@ cmake_minimum_required(VERSION 3.22.0)
 find_package(PkgConfig REQUIRED)
 
 pkg_search_module(GATTLIB REQUIRED gattlib)
-pkg_search_module(PCRE REQUIRED libpcre)
+pkg_search_module(PCRE2-8 REQUIRED libpcre2-8)
 
 set(read_write_SRCS read_write.c)
 
 add_executable(read_write ${read_write_SRCS})
-target_link_libraries(read_write ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${PCRE_LIBRARIES} pthread)
+target_link_libraries(read_write ${GATTLIB_LIBRARIES} ${GATTLIB_LDFLAGS} ${PCRE2-8_LIBRARIES} pthread)
