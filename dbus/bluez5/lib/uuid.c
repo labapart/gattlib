@@ -139,12 +139,12 @@ int bt_uuid_cmp(const bt_uuid_t *uuid1, const bt_uuid_t *uuid2)
 int bt_uuid_to_string(const bt_uuid_t *uuid, char *str, size_t n)
 {
 	bt_uuid_t tmp;
-	unsigned int   data0;
-	unsigned short data1;
-	unsigned short data2;
-	unsigned short data3;
-	unsigned int   data4;
-	unsigned short data5;
+	uint32_t       data0;
+	uint16_t       data1;
+    uint16_t       data2;
+	uint16_t       data3;
+	uint32_t       data4;
+	uint16_t       data5;
 	const uint8_t *data;
 
 	if (!uuid || uuid->type == BT_UUID_UNSPEC) {
