@@ -111,6 +111,8 @@ void gattlib_on_connected_device(gattlib_connection_t* connection);
 void gattlib_on_disconnected_device(gattlib_connection_t* connection);
 // Invoke when a new device receive a GATT notification
 void gattlib_on_gatt_notification(gattlib_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length);
+// Invoke when a new device receives a GATT indication
+void gattlib_on_gatt_indication(gattlib_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length);
 
 void disconnect_all_notifications(struct _gattlib_connection_backend* backend);
 

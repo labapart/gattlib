@@ -146,7 +146,7 @@ static gboolean on_handle_characteristic_indication(
 							MAX_LEN_UUID_STR + 1,
 							&uuid);
 
-					gattlib_on_gatt_notification(connection, &uuid, data, data_length);
+					gattlib_on_gatt_indication(connection, &uuid, data, data_length);
 					break;
 				}
 			}
