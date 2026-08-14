@@ -112,3 +112,20 @@ void gattlib_on_gatt_notification(gattlib_connection_t* connection, const uuid_t
 		g_error_free(error);
 	}
 }
+
+void gattlib_on_gatt_indication(gattlib_connection_t* connection, const uuid_t* uuid, const uint8_t* data, size_t data_length) {
+	GError *error = NULL;
+
+	assert(connection->indication.thread_pool != NULL);
+
+	void* arg = _notification_device_thread_args_allocator(connection, uuid, data, data_length);
+	if (arg == NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_on_gatt_indication: Failed to allocate arguments for thread");
+		return;
+	}
+	g_thread_pool_push(connection->indication.thread_pool, arg, &error);
+	if (error != NULL) {
+		GATTLIB_LOG(GATTLIB_ERROR, "gattlib_on_gatt_indication: Failed to push thread in pool: %s", error->message);
+		g_error_free(error);
+	}
+}
